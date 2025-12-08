@@ -1,0 +1,2646 @@
+simulator lang=spectre
+
+section base
+
+ahdl_include "./veriloga/ovcheck_mos_alt.va"
+ahdl_include "./veriloga/ovcheck_pwl_alt.va"
+ahdl_include "./veriloga/ovcheck_ldmos_hci_tddb_alt.va"
+ahdl_include "./veriloga/parcheck3.va"
+ahdl_include "./veriloga/selfheating_monitor_nofeedback.va"
+
+parameters
+// global SOA parameters
++ global_tmin      = 0    // Minimum time outside of SOA before a warning is issued
++ global_tdelay    = 0    // Time after start of transient that checking is activated
++ global_vballmsg  = 1.0  // All SOA messages if set to 1 (otherwise only give an overview at the end)
++ global_stop      = 0    // Stop simulation on SOA violation when STOP==1
++ tcelsius0        = 273.15
+
+// duration limits
++ tmaxfrac0 = 0
++ tmaxfrac1 = 0.01   //  1%
++ tmaxfrac2 = 0.10   // 10%
++ tmaxfrac3 = -1     // review
+
+// MOS junctions
++ tref_soa        = 25
++ ap_fwd_ref      = 0.9943      // limit at tref_soa
++ ap_fwd_T        = -0.0006    // -1.0mV/degC
++ ap_fwd          = ap_fwd_ref + ap_fwd_T * (temp - tref_soa)
++ ap_no_check     = 999.00    // high value, for branches that are not monitored
++ ap_gc_lv        = 1.65      // maximum oxide voltage in LV devices
+
+// HV devices
++ ap_gc_hv        = 5.5  // maximum oxide voltage in HV devices
++ ap_fwd_hv       = 1.2  // maximum forward junction voltage in HV devices
++ ap_gc_lv_oxrisk = 1.32 // maximum oxide voltage in HV devices for oxrisk check
++ ap_gc_hv_oxrisk = 4.4  // maximum oxide voltage in HV devices for oxrisk check
+
+// metal resistors
++ dtmax_rm        = 5    // maximum T-rise in degC
++ theat           = 1e-7 // thermal time constant (in seconds)
+
+endsection base
+
+
+// OXrisk part
+
+section soacheck_mos_core_oxrisk_shared
+model ovcheck_mos_core_oxrisk ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-1.32       vhigh1=1.32           branch1="V(g,b)"      message1="Vgb_OXrisk"
++ vlow2=-1.32       vhigh2=1.32           branch2="V(g,s)"      message2="Vgs_OXrisk"       
++ vlow3=-1.32       vhigh3=1.32           branch3="V(g,d)"      message3="Vgd_OXrisk"       
+endsection soacheck_mos_core_oxrisk_shared
+
+section soacheck_mos_5v_oxrisk_shared
+model ovcheck_mos_5v_oxrisk ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-4.4        vhigh1=4.4           branch1="V(g,b)"      message1="Vgb_OXrisk"
++ vlow2=-4.4        vhigh2=4.4           branch2="V(g,s)"      message2="Vgs_OXrisk"       
++ vlow3=-4.4        vhigh3=4.4           branch3="V(g,d)"      message3="Vgd_OXrisk"       
+endsection soacheck_mos_5v_oxrisk_shared
+
+section soacheck_cap_low_oxrisk_shared
+model ovcheck_cap_low_oxrisk ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-1.32        vhigh=1.32           branch1="V(t,nw)"      message1="Vtnw_OXrisk"
+endsection soacheck_cap_low_oxrisk_shared
+
+section soacheck_cap_mid_oxrisk_shared
+model ovcheck_cap_mid_oxrisk ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-4.4         vhigh=4.4            branch1="V(t,nw)"      message1="Vtnw_OXrisk"
+endsection soacheck_cap_mid_oxrisk_shared
+
+section soacheck_cap_high_oxrisk_shared
+model ovcheck_cap_high_oxrisk ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-5.6         vhigh=5.6            branch1="V(t,b)"      message1="Vtb_OXrisk"
+endsection soacheck_cap_high_oxrisk_shared
+
+
+
+// Sub part for mosfet
+
+section soacheck_mosfet_sub_shared
+model ovcheck_mosfet_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70.0       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-70.0       vhigh2=120.0          branch2="V(s,sub)"
++ vlow3=-70.0       vhigh3=120.0          branch3="V(b,sub)"
+endsection soacheck_mosfet_sub_shared
+
+
+// Sub part for caps
+
+section soacheck_cap_sub_shared
+model ovcheck_cap_sub ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-70.0        vhigh=120.0          branch1="V(nw,sub)"
+endsection soacheck_cap_sub_shared
+
+section soacheck_cap_90_well_shared
+model ovcheck_cap_90_well ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70.0        vhigh1=120.0          branch1="V(t,well)"
++ vlow2=-70.0        vhigh2=120.0          branch2="V(b,well)"
+endsection soacheck_cap_90_well_shared
+
+section soacheck_cap_45_well_shared
+model ovcheck_cap_45_well ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-45.0        vhigh=45.0            branch1="V(b,nw)"
+endsection soacheck_cap_45_well_shared
+
+section soacheck_cap_box_sub_n_shared
+model ovcheck_cap_box_sub_n ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-70.0        vhigh=120.0          branch1="V(n,sub)"
+endsection soacheck_cap_box_sub_n_shared
+
+section soacheck_cap_box_sub_p_shared
+model ovcheck_cap_box_sub_p ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-70.0        vhigh=120.0          branch1="V(p,sub)"
+endsection soacheck_cap_box_sub_p_shared
+
+
+// Sub part for diodes
+
+section soacheck_diode_sub_n_shared
+model ovcheck_diode_sub_n ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-70.0        vhigh=120.0             branch1="V(n,sub)"
+endsection soacheck_diode_sub_n_shared
+
+section soacheck_diode_sub_p_shared
+model ovcheck_diode_sub_p ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-70.0        vhigh=120.0             branch1="V(p,sub)"
+endsection soacheck_diode_sub_p_shared
+
+
+// Sub part for HV MOSFET devices
+
+section soacheck_nld_sub_shared
+model ovcheck_nld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=70             branch2="V(sub,s)"
+endsection soacheck_nld_sub_shared
+
+section soacheck_pld_sub_shared
+model ovcheck_pld_sub ovcheck
++ tmaxfrac=tmaxfrac0
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ vlow=-70        vhigh=120.0             branch1="V(s,sub)"
+endsection soacheck_pld_sub_shared
+
+section soacheck_hv_nmos_sub_shared
+model ovcheck_hv_nmos_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=30             branch2="V(sub,b)"
+endsection soacheck_hv_nmos_sub_shared
+
+section soacheck_hv_pmos_sub_shared
+model ovcheck_hv_pmos_sub ovcheck
++ tmaxfrac=tmaxfrac0
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ vlow=-70.0        vhigh=120.0             branch1="V(b,sub)"
+endsection soacheck_hv_pmos_sub_shared
+
+
+
+// multi-level part for mosfet
+
+section soacheck_nmos_core_shared
+model ovcheck_0 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vhigh_ds_on  = 1.84   	 
++ vhigh_ds_off = 3.00
++ vhigh_gc     = 2.07
++ vlow_gc      = -2.07
++ vhigh_gb_on  = ap_no_check
++ vlow_gb_on   = -ap_no_check
++ message_vds  = "AMR"
++ message_vgs  = "AMR"
++ message_vgd  = "AMR"
++ message_vgb  = "AMR"
++ message_vsb  = "AMR"
++ message_vdb  = "AMR"
++ param        = "vth"
++ device       = device
+model ovcheck_1 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vhigh_ds_on  = 1.71
++ vhigh_ds_off = 1.88
++ vhigh_gc     = 1.97
++ vlow_gc      = -1.97
++ vhigh_gb_on  = ap_no_check
++ vlow_gb_on   = -ap_no_check
++ param        = "vth"
++ device       = device
+model ovcheck_2 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vhigh_ds_on  = 1.65
++ vhigh_ds_off = 1.82
++ vhigh_gc     = 1.65
++ vlow_gc      = -1.65
++ vhigh_gb_on  = 3.30
++ vlow_gb_on   = -2.07
++ vfwd_jun_on  = ap_no_check
++ vrev_jun_on  = -3.30
++ vfwd_jun_off = ap_no_check
++ vrev_jun_off = -3.30
++ param        = "vth"
++ device       = device
+endsection soacheck_nmos_core_shared
+
+section soacheck_pmos_core_shared
+model ovcheck_0 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vhigh_ds_on  = 2.08   	 
++ vhigh_ds_off = 3.00
++ vhigh_gc     = 1.95
++ vlow_gc      = -1.95
++ vhigh_gb_on  = ap_no_check
++ vlow_gb_on   = -ap_no_check
++ message_vds  = "AMR"
++ message_vgs  = "AMR"
++ message_vgd  = "AMR"
++ message_vgb  = "AMR"
++ message_vsb  = "AMR"
++ message_vdb  = "AMR"
++ param        = "vth"
++ device       = device
++ pmosvthsign  = -1
+model ovcheck_1 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vhigh_ds_on  = 1.89
++ vhigh_ds_off = 2.07
++ vhigh_gc     = 1.85
++ vlow_gc      = -1.85
++ vhigh_gb_on  = ap_no_check
++ vlow_gb_on   = -ap_no_check
++ param        = "vth"
++ device       = device
++ pmosvthsign  = -1
+model ovcheck_2 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vhigh_ds_on  = 1.65
++ vhigh_ds_off = 1.82
++ vhigh_gc     = 1.65
++ vlow_gc      = -1.65
++ vhigh_gb_on  = 3.30
++ vlow_gb_on   = -1.95
++ vfwd_jun_on  = ap_no_check
++ vrev_jun_on  = -3.30
++ vfwd_jun_off = ap_no_check
++ vrev_jun_off = -3.30
++ param        = "vth"
++ device       = device
++ pmosvthsign  = -1
+endsection soacheck_pmos_core_shared
+
+section soacheck_nmos_5v_shared
+model ovcheck_0 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vhigh_ds_on  = 5.77   	 
++ vhigh_ds_off = 6.35
++ vhigh_gc     = 7.10
++ vlow_gc      = -7.10
++ vhigh_gb_on  = ap_no_check
++ vlow_gb_on   = -ap_no_check
++ message_vds  = "AMR"
++ message_vgs  = "AMR"
++ message_vgd  = "AMR"
++ message_vgb  = "AMR"
++ message_vsb  = "AMR"
++ message_vdb  = "AMR"
++ param        = "vth"
++ device       = device
+model ovcheck_1 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vhigh_ds_on  = 5.61
++ vhigh_ds_off = 6.17
++ vhigh_gc     = 6.65
++ vlow_gc      = -6.65
++ vhigh_gb_on  = ap_no_check
++ vlow_gb_on   = -ap_no_check
++ param        = "vth"
++ device       = device
+model ovcheck_2 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vhigh_ds_on  = 5.50
++ vhigh_ds_off = 6.05
++ vhigh_gc     = 5.50
++ vlow_gc      = -5.50
++ vhigh_gb_on  = 7.10
++ vlow_gb_on   = -7.10
++ vfwd_jun_on  = ap_no_check
++ vrev_jun_on  = -8.0
++ vfwd_jun_off = ap_no_check
++ vrev_jun_off = -8.0
++ param        = "vth"
++ device       = device
+endsection soacheck_nmos_5v_shared
+
+section soacheck_pmos_5v_shared
+model ovcheck_0 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vhigh_ds_on  = 5.91   	 
++ vhigh_ds_off = 6.51
++ vhigh_gc     = 6.92
++ vlow_gc      = -6.92
++ vhigh_gb_on  = ap_no_check
++ vlow_gb_on   = -ap_no_check
++ message_vds  = "AMR"
++ message_vgs  = "AMR"
++ message_vgd  = "AMR"
++ message_vgb  = "AMR"
++ message_vsb  = "AMR"
++ message_vdb  = "AMR"
++ param        = "vth"
++ device       = device
++ pmosvthsign  = -1
+model ovcheck_1 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vhigh_ds_on  = 5.64
++ vhigh_ds_off = 6.20
++ vhigh_gc     = 6.60
++ vlow_gc      = -6.60
++ vhigh_gb_on  = ap_no_check
++ vlow_gb_on   = -ap_no_check
++ param        = "vth"
++ device       = device
++ pmosvthsign  = -1
+model ovcheck_2 ovcheckva_mos2
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vhigh_ds_on  = 5.50
++ vhigh_ds_off = 6.05
++ vhigh_gc     = 5.50
++ vlow_gc      = -5.50
++ vhigh_gb_on  = 6.92
++ vlow_gb_on   = -6.92
++ vfwd_jun_on  = ap_no_check
++ vrev_jun_on  = -6.8
++ vfwd_jun_off = ap_no_check
++ vrev_jun_off = -6.8
++ param        = "vth"
++ device       = device
++ pmosvthsign  = -1
+endsection soacheck_pmos_5v_shared
+
+
+// Metal resistors part
+
+section rm_10hv_soa_shared // shared SOA code for all metal resistors
+parameters
++ weff_soa = w + dw_um // in um; used for resistance estimate
++ reff_soa = rsh_soa * leff_soa / weff_soa
+parameters // Idc, IPeak, Irms
++ vmax_rm_dc = jdc_rm * weff1_soa * reff_soa
++ vmax_rm_peak = jpeak_rm * weff1_soa * reff_soa
++ irms_max = 1.0e-3 * sqrt(jdc_rms * weff1_soa * (weff1_soa + dw_rms)) // in Ampere 
+model irms_rm ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-1.0  vhigh=dtmax_rm branch1="V(dt)" message1="Irms: self heating exceeds 5 degC."
+model idc_rm ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-vmax_rm_dc vhigh=vmax_rm_dc branch1="V(d,s)"
++ message1="Max. dc-current exceeded (violations are allowed for limited time)." 
+model ipeak_rm ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-vmax_rm_peak vhigh=vmax_rm_peak branch1="V(d,s)"
++ message1="Max. peak current exceeded (violations <100ns may be allowed)." 
+sh_dummy (d s dt) shmonitor_nofeedback
++ r=reff_soa
++ irms_max=irms_max
++ dtmax=dtmax_rm
++ theat=theat
+soacheck_rms (dt 0) irms_rm
+soacheck_dc (d s) idc_rm
+soacheck_peak (d s) ipeak_rm
+endsection rm_10hv_soa_shared
+
+
+// Poly resistors part
+
+section rpoly_10hv_voltage_soa_shared // shared voltage SOA code for all poly resistors
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-45         vhigh1=45           branch1="V(d,well)"
++ vlow2=-45         vhigh2=45           branch2="V(s,well)"
++ vlow3=-70         vhigh3=120          branch3="V(well,sub)"
+soacheck1 (d well s well well sub 0 0 0 0 0 0) ovcheck_1
+endsection rpoly_10hv_voltage_soa_shared
+
+section rpoly_10hv_current_soa_shared // shared current SOA code for all poly resistors
+model ovcheck_2 parcheckva3
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ param="ibody"
++ plow=-jmax_poly   phigh=jmax_poly     message1="Max. peak current exceeded."
+model ovcheck_3 parcheckva3
++ tmin=100n tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ param="ibody"
++ plow=-jmax_poly_100ns phigh=jmax_poly_100ns message1="Max. dc current exceeded (violations <100ns may be allowed)."
+model ovcheck_4 parcheckva3
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ param="ibody"
++ plow=-jmax_poly_sh   phigh=jmax_poly_sh     message1="Self-heating current exceeded."
+endsection rpoly_10hv_current_soa_shared
+
+section rpoly_10hv_current_simple_soa_shared // shared current SOA code for all simple poly resistors
+parameters
++ rsh_soa         = rsh0
++ leff_soa        = l + dl_um
++ weff_soa        = w + dw_um
++ reff_soa  = rsh_soa * leff_soa / weff_soa
+parameters // Idc, IPeak
++ vmax_poly_dc   = jmax_poly * reff_soa
++ vmax_poly_peak = jmax_poly_100ns * reff_soa
++ vmax_poly_sh   = jmax_poly_sh * reff_soa
+model idc_poly ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-vmax_poly_dc vhigh=vmax_poly_dc branch1="V(d,s)"
++ message1="Max. current exceeded." 
+model ipeak_poly ovcheck
++ tmin=100n tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-vmax_poly_peak vhigh=vmax_poly_peak branch1="V(d,s)"
++ message1="Max. current exceeded (violations <100ns may be allowed)." 
+model ish_poly ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-vmax_poly_sh vhigh=vmax_poly_sh branch1="V(d,s)"
++ message1="Self-heating current exceeded." 
+soacheck_dc (d s) idc_poly
+soacheck_peak (d s) ipeak_poly
+soacheck_sh (d s) ish_poly
+endsection rpoly_10hv_current_simple_soa_shared
+
+
+
+//HCI-TDDB part
+
+section hci_tddb_atype_soa_shared
+parameters soa_hcitddb_vdswc = soa_hcitddb_vdsref + soa_hcitddb_wfac * ln(1e-6 * w / soa_hcitddb_wref) + soa_hcitddb_tfac * (1 / (temp + tcelsius0) - 1 / soa_hcitddb_tref)
+model hcitddb ovcheckva_ldmos_hci_tddb
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ message1="HCI-TDDB risk; use Life Time Estimator for accurate assessment."
++ tmaxfrac=tmaxfrac0
++ a_high=soa_hcitddb_a
++ b=soa_hcitddb_b
++ vds_wc=soa_hcitddb_vdswc
++ vgs_wc=soa_hcitddb_vgswc
++ branch1="V(d,s)"
++ device=device
+soacheck_hcitddb (d g s) hcitddb device=device
+endsection hci_tddb_atype_soa_shared
+
+section hci_tddb_btype_soa_shared
+parameters 
++ soa_hcitddb_woffset    = soa_hcitddb_wfac * ln(1e-6 * w / soa_hcitddb_wref)
++ soa_hcitddb_b0_eff     = soa_hcitddb_b0 + soa_hcitddb_woffset
++ soa_hcitddb_b1_eff     = soa_hcitddb_b1 + soa_hcitddb_woffset
++ soa_hcitddb_b2_eff     = soa_hcitddb_b2 + soa_hcitddb_woffset
++ soa_hcitddb_b3_eff     = soa_hcitddb_b3 + soa_hcitddb_woffset
++ soa_hcitddb_b4_eff     = soa_hcitddb_b4 + soa_hcitddb_woffset
+model hcitddb ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ message1="HCI-TDDB risk; use Life Time Estimator for accurate assessment."
++ branch1="V(s,d)"
++ tmaxfrac=tmaxfrac0
++ device=device
++ vlim1=-soa_hcitddb_b0_eff   vc1=-soa_hcitddb_p1
++ vlim2=-soa_hcitddb_b1_eff   vc2=-soa_hcitddb_p2
++ vlim3=-soa_hcitddb_b2_eff   vc3=-soa_hcitddb_p3
++ vlim4=-soa_hcitddb_b3_eff   vc4=-soa_hcitddb_p4
++ vlim5=-soa_hcitddb_b4_eff   vc5=-soa_hcitddb_p5
+soacheck_hcitddb (s d s g) hcitddb device=device
+endsection hci_tddb_btype_soa_shared
+
+
+///////////////////
+// Device SOA model
+///////////////////
+
+// LV n-type MOSFET
+
+section nmos_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_nmos_core_shared
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck0 (d g s b) ovcheck_0 type=1 inst2probe="mnmos_10hv_i" device="nmos"
+soacheck1 (d g s b) ovcheck_1 type=1 inst2probe="mnmos_10hv_i" device="nmos"
+soacheck2 (d g s b) ovcheck_2 type=1 inst2probe="mnmos_10hv_i" device="nmos"
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_mos_core_oxrisk_shared
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_core_oxrisk
+}
+endsection nmos_10hv_soa
+
+section nmos_ll_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_nmos_core_shared
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck0 (d g s b) ovcheck_0 type=1 inst2probe="mnmos_ll_10hv_i" device="nmos_ll"
+soacheck1 (d g s b) ovcheck_1 type=1 inst2probe="mnmos_ll_10hv_i" device="nmos_ll"
+soacheck2 (d g s b) ovcheck_2 type=1 inst2probe="mnmos_ll_10hv_i" device="nmos_ll"
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_mos_core_oxrisk_shared
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_core_oxrisk
+}
+endsection nmos_ll_10hv_soa
+
+section nmos_ull_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_nmos_core_shared
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck0 (d g s b) ovcheck_0 type=1 inst2probe="mnmos_ull_10hv_i" device="nmos_ull"
+soacheck1 (d g s b) ovcheck_1 type=1 inst2probe="mnmos_ull_10hv_i" device="nmos_ull"
+soacheck2 (d g s b) ovcheck_2 type=1 inst2probe="mnmos_ull_10hv_i" device="nmos_ull"
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_mos_core_oxrisk_shared
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_core_oxrisk
+}
+endsection nmos_ull_10hv_soa
+
+section nmos_ana_10hv_soa
+parameters
++ soa_hv_vmax = 3
++ soa_hv_vmax_oxrisk = 2.4
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_lv            vhigh1=ap_gc_lv          branch1="V(g,b)"
++ vlow2=-soa_hv_vmax         vhigh2=ap_gc_lv          branch2="V(g,s)"
++ vlow3=-soa_hv_vmax         vhigh3=ap_gc_lv          branch3="V(g,d)"
++ vlow4=-ap_fwd_hv   	     vhigh4=soa_hv_vmax       branch4="V(s,b)"
++ vlow5=-ap_no_check         vhigh5=soa_hv_vmax       branch5="V(d,b)"
++ vlow6=-soa_hv_vmax         vhigh6=soa_hv_vmax       branch6="V(d,s)"
+soacheck1 (g b g s g d s b d b d s) ovcheck_1
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_4 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_lv_oxrisk    	   vhigh1=ap_gc_lv_oxrisk           branch1="V(g,b)"      message1="Vgb_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk        vhigh2=ap_gc_lv_oxrisk           branch2="V(g,s)"      message2="Vgs_OXrisk"       
++ vlow3=-soa_hv_vmax_oxrisk        vhigh3=ap_gc_lv_oxrisk           branch3="V(g,d)"      message3="Vgd_OXrisk"       
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_4
+}
+endsection nmos_ana_10hv_soa
+
+section nmos3_zvt_10hv_soa
+parameters
++ soa_hv_vmax = 3
++ soa_hv_vmax_oxrisk = 2.4
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_lv            vhigh1=ap_gc_lv          branch1="V(g,b)"
++ vlow2=-ap_gc_lv            vhigh2=ap_gc_lv          branch2="V(g,s)"
++ vlow3=-soa_hv_vmax         vhigh3=ap_gc_lv          branch3="V(g,d)"
++ vlow4=-ap_fwd_hv           vhigh4=ap_gc_lv          branch4="V(s,b)"
++ vlow5=-ap_no_check         vhigh5=soa_hv_vmax       branch5="V(d,b)"
++ vlow6=-soa_hv_vmax	     vhigh6=soa_hv_vmax       branch6="V(d,s)"
+soacheck1 (g b g s g d s b d b d s) ovcheck_1
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_mos_zvt_oxrisk ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_lv_oxrisk       vhigh1=ap_gc_lv_oxrisk           branch1="V(g,b)"      message1="Vgb_OXrisk"
++ vlow2=-ap_gc_lv_oxrisk       vhigh2=ap_gc_lv_oxrisk           branch2="V(g,s)"      message2="Vgs_OXrisk"       
++ vlow3=-soa_hv_vmax_oxrisk    vhigh3=soa_hv_vmax_oxrisk        branch3="V(g,d)"      message3="Vgd_OXrisk"       
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_zvt_oxrisk
+}
+endsection nmos3_zvt_10hv_soa
+
+
+// LV p-type MOSFET
+
+section pmos_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_pmos_core_shared
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck0 (d g s b) ovcheck_0 type=-1 inst2probe="mpmos_10hv_i" device="pmos"
+soacheck1 (d g s b) ovcheck_1 type=-1 inst2probe="mpmos_10hv_i" device="pmos"
+soacheck2 (d g s b) ovcheck_2 type=-1 inst2probe="mpmos_10hv_i" device="pmos"
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_mos_core_oxrisk_shared
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_core_oxrisk
+}
+endsection pmos_10hv_soa
+
+section pmos_ll_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_pmos_core_shared
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck0 (d g s b) ovcheck_0 type=-1 inst2probe="mpmos_ll_10hv_i" device="pmos_ll"
+soacheck1 (d g s b) ovcheck_1 type=-1 inst2probe="mpmos_ll_10hv_i" device="pmos_ll"
+soacheck2 (d g s b) ovcheck_2 type=-1 inst2probe="mpmos_ll_10hv_i" device="pmos_ll"
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_mos_core_oxrisk_shared
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_core_oxrisk
+}
+endsection pmos_ll_10hv_soa
+
+section pmos_ull_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_pmos_core_shared
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck0 (d g s b) ovcheck_0 type=-1 inst2probe="mpmos_ull_10hv_i" device="pmos_ull"
+soacheck1 (d g s b) ovcheck_1 type=-1 inst2probe="mpmos_ull_10hv_i" device="pmos_ull"
+soacheck2 (d g s b) ovcheck_2 type=-1 inst2probe="mpmos_ull_10hv_i" device="pmos_ull"
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_mos_core_oxrisk_shared
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_core_oxrisk
+}
+endsection pmos_ull_10hv_soa
+
+section pmos_ana_10hv_soa
+parameters
++ soa_hv_vmax = 3
++ soa_hv_vmax_oxrisk = 2.4
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_lv        vhigh1=ap_gc_lv             branch1="V(b,g)"
++ vlow2=-soa_hv_vmax     vhigh2=ap_gc_lv             branch2="V(s,g)"
++ vlow3=-soa_hv_vmax     vhigh3=ap_gc_lv             branch3="V(d,g)"
++ vlow4=-ap_fwd_hv       vhigh4=soa_hv_vmax          branch4="V(b,s)"
++ vlow5=-ap_no_check     vhigh5=soa_hv_vmax          branch5="V(b,d)"
++ vlow6=-soa_hv_vmax     vhigh6=soa_hv_vmax          branch6="V(s,d)"
+soacheck1 (b g s g d g b s b d s d) ovcheck_1
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_4 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_lv_oxrisk    	   vhigh1=ap_gc_lv_oxrisk           branch1="V(b,g)"      message1="Vbg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk        vhigh2=ap_gc_lv_oxrisk           branch2="V(s,g)"      message2="Vsg_OXrisk"       
++ vlow3=-soa_hv_vmax_oxrisk        vhigh3=ap_gc_lv_oxrisk           branch3="V(d,g)"      message3="Vdg_OXrisk"       
+soacheck4 (b g s g d g 0 0 0 0 0 0) ovcheck_4
+}
+endsection pmos_ana_10hv_soa
+
+
+// 5V MOSFET
+
+section nmos5_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_nmos_5v_shared
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck0 (d g s b) ovcheck_0 type=1 inst2probe="mnmos5_10hv_i" device="nmos5"
+soacheck1 (d g s b) ovcheck_1 type=1 inst2probe="mnmos5_10hv_i" device="nmos5"
+soacheck2 (d g s b) ovcheck_2 type=1 inst2probe="mnmos5_10hv_i" device="nmos5"
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_mos_5v_oxrisk_shared
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_5v_oxrisk
+}
+endsection nmos5_10hv_soa
+
+section pmos5_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_pmos_5v_shared
+include "soachecks_top.scs" section=soacheck_mosfet_sub_shared
+soacheck0 (d g s b) ovcheck_0 type=-1 inst2probe="mpmos5_10hv_i" device="pmos5"
+soacheck1 (d g s b) ovcheck_1 type=-1 inst2probe="mpmos5_10hv_i" device="pmos5"
+soacheck2 (d g s b) ovcheck_2 type=-1 inst2probe="mpmos5_10hv_i" device="pmos5"
+soacheck3 (d sub s sub b sub 0 0 0 0 0 0) ovcheck_mosfet_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_mos_5v_oxrisk_shared
+soacheck4 (g b g s g d 0 0 0 0 0 0) ovcheck_mos_5v_oxrisk
+}
+endsection pmos5_10hv_soa
+
+
+// Capacitors
+
+section cglv_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_sub_shared
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-1.95        vhigh=1.95           branch1="V(t,nw)"          message1= "AMR"
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vlow=-1.85        vhigh=1.85           branch1="V(t,nw)"
+model ovcheck_2 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vlow=-1.65        vhigh=1.65           branch1="V(t,nw)"
+soacheck0 (t nw) ovcheck_0
+soacheck1 (t nw) ovcheck_1
+soacheck2 (t nw) ovcheck_2
+soacheck3 (nw sub) ovcheck_cap_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_cap_low_oxrisk_shared
+soacheck4 (t nw) ovcheck_cap_low_oxrisk
+}
+endsection cglv_10hv_soa
+
+section cghv_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_sub_shared
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-6.92        vhigh=6.92           branch1="V(t,nw)"          message1= "AMR"
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vlow=-6.6         vhigh=6.6            branch1="V(t,nw)"
+model ovcheck_2 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vlow=-5.5         vhigh=5.5            branch1="V(t,nw)"
+soacheck0 (t nw) ovcheck_0
+soacheck1 (t nw) ovcheck_1
+soacheck2 (t nw) ovcheck_2
+soacheck3 (nw sub) ovcheck_cap_sub
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_cap_mid_oxrisk_shared
+soacheck4 (t nw) ovcheck_cap_mid_oxrisk
+}
+endsection cghv_10hv_soa
+
+section cdp_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_sub_shared
+include "soachecks_top.scs" section=soacheck_cap_45_well_shared
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-8.69         vhigh=8.69           branch1="V(t,b)"          message1= "AMR"
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vlow=-7.61         vhigh=7.61           branch1="V(t,b)"
+model ovcheck_2 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vlow=-7.0          vhigh=7.0            branch1="V(t,b)"
+soacheck0 (t b) ovcheck_0
+soacheck1 (t b) ovcheck_1
+soacheck2 (t b) ovcheck_2
+soacheck3 (nw sub) ovcheck_cap_sub
+soacheck4 (b nw) ovcheck_cap_45_well
+}
+if (enable_risk_assessment == 1) {
+include "soachecks_top.scs" section=soacheck_cap_high_oxrisk_shared
+soacheck5 (t b) ovcheck_cap_high_oxrisk
+}
+endsection cdp_10hv_soa
+
+section cfrlv_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_90_well_shared
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-19.72         vhigh=19.72           branch1="V(t,b)"          message1= "AMR"
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vlow=-17.11         vhigh=17.11           branch1="V(t,b)"
+model ovcheck_2 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vlow=-15.0          vhigh=15.0            branch1="V(t,b)"
+soacheck0 (t b) ovcheck_0
+soacheck1 (t b) ovcheck_1
+soacheck2 (t b) ovcheck_2
+soacheck3 (t well b well 0 0 0 0 0 0 0 0) ovcheck_cap_90_well
+}
+endsection cfrlv_10hv_soa
+
+section cfr45_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_90_well_shared
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-55.09         vhigh=55.09           branch1="V(t,b)"          message1= "AMR"
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vlow=-50.77         vhigh=50.77           branch1="V(t,b)"
+model ovcheck_2 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vlow=-45.0          vhigh=45.0            branch1="V(t,b)"
+soacheck0 (t b) ovcheck_0
+soacheck1 (t b) ovcheck_1
+soacheck2 (t b) ovcheck_2
+soacheck3 (t well b well 0 0 0 0 0 0 0 0) ovcheck_cap_90_well
+}
+endsection cfr45_10hv_soa
+
+section cfr90_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_90_well_shared
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-100.0         vhigh=100.0           branch1="V(t,b)"          message1= "AMR"
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vlow=-95.0         vhigh=95.0           branch1="V(t,b)"
+model ovcheck_2 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vlow=-90.0         vhigh=90.0          branch1="V(t,b)"
+soacheck0 (t b) ovcheck_0
+soacheck1 (t b) ovcheck_1
+soacheck2 (t b) ovcheck_2
+soacheck3 (t well b well 0 0 0 0 0 0 0 0) ovcheck_cap_90_well
+}
+endsection cfr90_10hv_soa
+
+section cfr120_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_90_well_shared
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-130.0         vhigh=130.0           branch1="V(t,b)"          message1= "AMR"
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac1
++ vlow=-125.0         vhigh=125.0           branch1="V(t,b)"
+model ovcheck_2 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac2
++ vlow=-120.0         vhigh=120.0          branch1="V(t,b)"
+soacheck0 (t b) ovcheck_0
+soacheck1 (t b) ovcheck_1
+soacheck2 (t b) ovcheck_2
+soacheck3 (t well b well 0 0 0 0 0 0 0 0) ovcheck_cap_90_well
+}
+endsection cfr120_10hv_soa
+
+
+section clgo_box_sub_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-10        vhigh=0.6           branch1="V(p,n)"
+soacheck0 (p n) ovcheck_0
+include "soachecks_top.scs" section=soacheck_cap_box_sub_n_shared
+soacheck1 (n sub) ovcheck_cap_box_sub_n
+}
+endsection clgo_box_sub_10hv_soa
+
+section cnwtub_box_sub_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_box_sub_n_shared
+soacheck1 (n sub) ovcheck_cap_box_sub_n
+}
+endsection cnwtub_box_sub_10hv_soa
+
+section cdgoptub_box_sub_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_box_sub_n_shared
+soacheck1 (n sub) ovcheck_cap_box_sub_n
+}
+endsection cdgoptub_box_sub_10hv_soa
+
+section cpwtub_box_sub_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_box_sub_p_shared
+soacheck1 (p sub) ovcheck_cap_box_sub_p
+}
+endsection cpwtub_box_sub_10hv_soa
+
+section cpwtub_box_sub_float_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_box_sub_p_shared
+soacheck1 (p sub) ovcheck_cap_box_sub_p
+}
+endsection cpwtub_box_sub_float_10hv_soa
+
+section cdgontub_box_sub_10hv_soa
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=soacheck_cap_box_sub_p_shared
+soacheck1 (p sub) ovcheck_cap_box_sub_p
+}
+endsection cdgontub_box_sub_10hv_soa
+
+
+// Diodes
+
+section dz5_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-5.8         vhigh=ap_fwd          branch1="V(p,n)"
+soacheck0 (p n) ovcheck_0
+include "soachecks_top.scs" section=soacheck_diode_sub_n_shared
+soacheck1 (n sub) ovcheck_diode_sub_n
+}
+endsection dz5_10hv_soa
+
+section dz5b_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-5.8         vhigh=ap_fwd          branch1="V(p,n)"
+soacheck0 (p n) ovcheck_0
+include "soachecks_top.scs" section=soacheck_diode_sub_n_shared
+soacheck1 (n sub) ovcheck_diode_sub_n
+}
+endsection dz5b_10hv_soa
+
+section drsf45b_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-45         vhigh=ap_fwd          branch1="V(p,n)"
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-42.0        vhigh1=120.0             branch1="V(p,sub)"
++ vlow2=-ap_no_check        vhigh2=120       branch2="V(n,sub)"
+soacheck0 (p n) ovcheck_0
+//include "soachecks_top.scs" section=soacheck_diode_sub_p_shared
+soacheck1 (p sub n sub 0 0 0 0 0 0 0 0) ovcheck_1
+}
+endsection drsf45b_10hv_soa
+
+section drsf90b_10hv_soa
+if (enable_soa == 1) {
+parameters v_pos_margin=10
+model ovcheck_0 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ device="drsf90b"
++ message1="V(n,p) > min(90,90+V(p,sub))"
++ vlim1=-v_pos_margin	vc1=-90-v_pos_margin	vlim2=90	vc2=0	branch1="V(n,p)"
+soacheck0 (n p p sub) ovcheck_0
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-ap_no_check         vhigh=ap_fwd          branch1="V(p,n)"
+model ovcheck_2 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-40.0        vhigh1=120.0             branch1="V(p,sub)"
++ vlow2=-ap_no_check        vhigh2=120       branch2="V(n,sub)"
+soacheck1 (p n) ovcheck_1
+//include "soachecks_top.scs" section=soacheck_diode_sub_p_shared
+soacheck2 (p sub n sub 0 0 0 0 0 0 0 0) ovcheck_2
+}
+endsection drsf90b_10hv_soa
+
+section dnplus_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-6         vhigh=ap_fwd          branch1="V(p,n)"
+soacheck0 (p n) ovcheck_0
+}
+endsection dnplus_10hv_soa
+
+section dpplus_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-6         vhigh=ap_fwd          branch1="V(p,n)"
+soacheck0 (p n) ovcheck_0
+}
+endsection dpplus_10hv_soa
+
+section dpldd_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-6         vhigh=ap_fwd          branch1="V(p,n)"
+soacheck0 (p n) ovcheck_0
+}
+endsection dpldd_10hv_soa
+
+section dnfet_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-8         vhigh=ap_fwd          branch1="V(p,n)"
+model ovcheck_2 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70.0        vhigh1=ap_no_check             branch1="V(p,sub)"
++ vlow2=-ap_no_check        vhigh2=120      branch2="V(n,sub)"
+soacheck0 (p n) ovcheck_0
+//include "soachecks_top.scs" section=soacheck_diode_sub_p_shared
+soacheck1 (p sub n sub 0 0 0 0 0 0 0 0) ovcheck_2
+}
+endsection dnfet_10hv_soa
+
+section dpfet_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_0 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-8.5         vhigh=ap_fwd          branch1="V(p,n)"
+soacheck0 (p n) ovcheck_0
+include "soachecks_top.scs" section=soacheck_diode_sub_n_shared
+soacheck1 (n sub) ovcheck_diode_sub_n
+}
+endsection dpfet_10hv_soa
+
+
+// BJT
+
+section npn_b_10hv_soa
+parameters
++ ap_rev_vbe = (drift < 0.5) ? 10.0 : 6.0
+if (enable_soa == 1) {
+model ovcheck_npn_b ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70                vhigh1=120.0          branch1="V(c,sub)"
++ vlow2=-ap_no_check       vhigh2=45             branch2="V(c,b)"
++ vlow3=-ap_no_check       vhigh3=20             branch3="V(c,e)"
++ vlow4=-ap_no_check       vhigh4=ap_rev_vbe     branch4="V(e,b)"
+soacheck1 (c sub c b c e e b 0 0 0 0) ovcheck_npn_b
+}
+endsection npn_b_10hv_soa
+
+section pnp_10hv_soa
+parameters
++ ap_rev_vbe = (drift < 0.5) ? 17.0 : 12.0
+if (enable_soa == 1) {
+model ovcheck_pnp ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check   vhigh1=45             branch1="V(b,c)"
++ vlow2=-ap_no_check   vhigh2=45             branch2="V(e,c)"
++ vlow3=-70.0          vhigh3=120.0          branch3="V(e,sub)"
+model ovcheck_pnp_vbe ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="pnp"
++ message1="V(b,e) > 2.0 and V(b,c) < 3.0"
++ vlim1=2.0          vc1=3.0  vlim2=ap_rev_vbe   vc2=3.0   branch1="V(b,e)"
+soacheck1 (b c  e c  e sub 0 0 0 0 0 0) ovcheck_pnp
+soacheck2 (b e b c) ovcheck_pnp_vbe
+}
+endsection pnp_10hv_soa
+
+section pnp_iso_10hv_soa
+include "soachecks_top.scs" section=pnp_10hv_soa
+parameters
++ ap_fwd_e_iso1 = -0.002269 * temp + 0.695428
++ ap_fwd_e_iso2 = -0.002468 * temp + 0.669367
++ ap_fwd_e_iso3 = -0.002653 * temp + 0.620257
++ size_max_bjt = (we > le) ? we : le
++ ap_fwd_e_iso = (size_max_bjt > 11.85) ? ap_fwd_e_iso3 :
++                (size_max_bjt >  6.54) ? ap_fwd_e_iso2 : ap_fwd_e_iso1
+if (enable_soa == 1) {
+model ovcheck_pnp_iso ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=45             branch1="V(iso,c)"
++ vlow2=-0.2               vhigh2=0.2            branch2="V(iso,b)"
++ vlow3=-ap_no_check       vhigh3=ap_fwd_e_iso   branch3="V(e,iso)"
+soacheck3 (iso c  iso b e iso 0 0  0 0  0 0) ovcheck_pnp_iso
+}
+endsection pnp_iso_10hv_soa
+
+
+
+// Voltage Markers
+
+section vms_15_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-15         vhigh=15            branch1="V(d,s)" 
+soacheck1 (d s) ovcheck_1
+}
+endsection vms_15_10hv_soa
+
+section vms_30_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-30         vhigh=30            branch1="V(d,s)" 
+soacheck1 (d s) ovcheck_1
+}
+endsection vms_30_10hv_soa
+
+section vms_45_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-45         vhigh=45            branch1="V(d,s)" 
+soacheck1 (d s) ovcheck_1
+}
+endsection vms_45_10hv_soa
+
+section vms_60_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-60         vhigh=60            branch1="V(d,s)" 
+soacheck1 (d s) ovcheck_1
+}
+endsection vms_60_10hv_soa
+
+section vms_105_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-105         vhigh=105            branch1="V(d,s)" 
+soacheck1 (d s) ovcheck_1
+}
+endsection vms_105_10hv_soa
+
+section vms_115_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-115         vhigh=115            branch1="V(d,s)" 
+soacheck1 (d s) ovcheck_1
+}
+endsection vms_115_10hv_soa
+
+section vms_165_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-165         vhigh=165            branch1="V(d,s)" 
+soacheck1 (d s) ovcheck_1
+}
+endsection vms_165_10hv_soa
+
+
+
+// NLD Devices
+
+section nld5_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=ap_gc_hv           branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+include "soachecks_top.scs" section=soacheck_nld_sub_shared
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk      	 vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld5_10hv_soa
+
+section nld5_lvt_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=ap_gc_hv           branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+include "soachecks_top.scs" section=soacheck_nld_sub_shared
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk      	 vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld5_lvt_10hv_soa
+
+section nld10_10hv_soa
+parameters
++ soa_hv_vmax = 10
++ soa_hv_vmax_oxrisk = 8
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+include "soachecks_top.scs" section=soacheck_nld_sub_shared
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld10_10hv_soa
+
+section nld30b_10hv_soa
+parameters
++ soa_hv_vmax = 30
++ soa_hv_vmax_oxrisk = 24
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nld30b"
++ message1="V(d,s) > -4.8691*V(g,s)+49.601"
++ vlim1=soa_hv_vmax     vc1=4.03	vlim2=22.82           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+include "soachecks_top.scs" section=soacheck_nld_sub_shared
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld30b_10hv_soa
+
+section nld45b_10hv_soa
+parameters
++ soa_hv_vmax = 45
++ soa_hv_vmax_oxrisk = 36
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nld45b"
++ message1="V(d,s) > -8.455*V(g,s)+76.332"
++ vlim1=soa_hv_vmax     vc1=3.71	vlim2=29.83           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+model ovcheck_nld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=30             branch2="V(sub,s)"
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld45b_10hv_soa
+
+section nld45b_he_10hv_soa
+parameters
++ soa_hv_vmax = 45
++ soa_hv_vmax_oxrisk = 36
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nld45b_he"
++ message1="V(d,s) > -7.03*V(g,s)+82.555"
++ vlim1=soa_hv_vmax     vc1=5.34	vlim2=43.89           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+model ovcheck_nld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=30             branch2="V(sub,s)"
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld45b_he_10hv_soa
+
+section nld45b_tlp_10hv_soa
+parameters
++ soa_hv_vmax = 45
++ soa_hv_vmax_oxrisk = 36
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nld45b_tlp"
++ message1="V(d,s) > -10.545*V(g,s)+97.328"
++ vlim1=soa_hv_vmax     vc1=4.96	vlim2=39.33           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+model ovcheck_nld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=42             branch2="V(sub,s)"
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld45b_tlp_10hv_soa
+
+section nld65b_10hv_soa
+parameters
++ soa_hv_vmax = 65
++ soa_hv_vmax_oxrisk = 52
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nld65b"
++ message1="V(d,s) > -10.45*V(g,s)+110.68"
++ vlim1=soa_hv_vmax     vc1=4.37	vlim2=53.21           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+model ovcheck_nld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=38            branch2="V(sub,s)"
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld65b_10hv_soa
+
+section nld90b_10hv_soa
+parameters
++ soa_hv_vmax = 90
++ soa_hv_vmax_oxrisk = 72
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nld90b"
++ message1="V(d,s) > -19.095*V(g,s)+160.88"
++ vlim1=soa_hv_vmax     vc1=3.71	vlim2=55.86           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+model ovcheck_nld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=30             branch2="V(sub,s)"
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld90b_10hv_soa
+
+section nld100_10hv_soa
+parameters
++ soa_hv_vmax = 100
++ soa_hv_vmax_oxrisk = 80
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,s)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(g,d)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(d,s)"
+soacheck1 (g s g d d s 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nld100"
++ message1="V(d,s) > -15.227*V(g,s)+143.54"
++ vlim1=soa_hv_vmax     vc1=2.86	vlim2=59.79           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+model ovcheck_nld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=30             branch2="V(sub,s)"
+soacheck3 (d sub sub s 0 0 0 0 0 0 0 0) ovcheck_nld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck5 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nld100_10hv_soa
+
+section nmos120_10hv_soa
+parameters
++ soa_hv_vmax = 120
++ soa_hv_vmax_oxrisk = 96
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,b)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(g,s)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(g,d)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(s,b)"
++ vlow5=-ap_fwd_hv        vhigh5=soa_hv_vmax        branch5="V(d,b)"
++ vlow6=-ap_gc_hv         vhigh6=soa_hv_vmax        branch6="V(d,s)"
+soacheck1 (g b g s g d s b d b d s) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nmos120"
++ message1="V(d,s) > -9.0833*V(g,s)+144.54"
++ vlim1=soa_hv_vmax     vc1=2.70	vlim2=94.58           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+include "soachecks_top.scs" section=soacheck_hv_nmos_sub_shared
+soacheck3 (d sub sub b 0 0 0 0 0 0 0 0) ovcheck_hv_nmos_sub
+model ovcheck_gsub_dsub ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nmos120"
++ message1="20<V(g,sub)<100 and V(d,sub) > 115"
++ vlim1=ap_no_check          vc1=20.0  vlim2=115.0   vc2=20.0   vlim3=115.0   vc3=100.0   vlim4=ap_no_check   vc4=100.0   branch1="V(d,sub)"
+soacheck4 (d sub g sub) ovcheck_gsub_dsub
+model ovcheck_ssub_dsub ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nmos120"
++ message1="20<V(s,sub)<100 and V(d,sub) > 115"
++ vlim1=ap_no_check          vc1=20.0  vlim2=115.0   vc2=20.0   vlim3=115.0   vc3=100.0   vlim4=ap_no_check   vc4=100.0   branch1="V(d,sub)"
+soacheck5 (d sub s sub) ovcheck_ssub_dsub
+model ovcheck_bsub_dsub ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nmos120"
++ message1="20<V(b,sub)<100 and V(d,sub) > 115"
++ vlim1=ap_no_check          vc1=20.0  vlim2=115.0   vc2=20.0   vlim3=115.0   vc3=100.0   vlim4=ap_no_check   vc4=100.0   branch1="V(d,sub)"
+soacheck6 (d sub b sub) ovcheck_bsub_dsub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,s)"	message1="Vgs_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(g,d)"	message2="Vgd_OXrisk"
+soacheck7 (g s g d 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection nmos120_10hv_soa
+
+
+// PLD Devices
+
+section pld5_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=ap_gc_hv           branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+include "soachecks_top.scs" section=soacheck_pld_sub_shared
+soacheck3 (s sub) ovcheck_pld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk      	 vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld5_10hv_soa
+
+section pld10_10hv_soa
+parameters
++ soa_hv_vmax = 10
++ soa_hv_vmax_oxrisk = 8
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+include "soachecks_top.scs" section=soacheck_pld_sub_shared
+soacheck3 (s sub) ovcheck_pld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=soa_hv_vmax_oxrisk        branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld10_10hv_soa
+
+section pld10b_10hv_soa
+parameters
++ soa_hv_vmax        = 10
++ soa_hv_vmax_oxrisk = 8
++ soa_hcitddb_b0     = -15
++ soa_hcitddb_b1     = -9.8745
++ soa_hcitddb_b2     = -8.76
++ soa_hcitddb_b3     = -8.76
++ soa_hcitddb_b4     = -11.76
++ soa_hcitddb_p1     = -0.49008
++ soa_hcitddb_p2     = -0.93578
++ soa_hcitddb_p3     = -1.3519
++ soa_hcitddb_p4     = -1.8951
++ soa_hcitddb_p5     = -3.0303
++ soa_hcitddb_wfac   = 0.25167
++ soa_hcitddb_wref   = 1.00E-02
++ device             = "pld10b"
++ ap_vbsub = (gt_90v == 0) ? 90.0 : 120.0
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+model ovcheck_pld_sub ovcheck
++ tmaxfrac=tmaxfrac0
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ vlow=-70        vhigh=ap_vbsub             branch1="V(s,sub)"
+soacheck3 (s sub) ovcheck_pld_sub
+include "soachecks_top.scs" section=hci_tddb_btype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld10b_10hv_soa
+
+section pld30_10hv_soa
+parameters
++ soa_hv_vmax        = 30
++ soa_hv_vmax_oxrisk = 24
++ soa_hcitddb_a      = 7.5
++ soa_hcitddb_b      = 0.37
++ soa_hcitddb_vdsref = -22.368
++ soa_hcitddb_vgswc  = -1.3849
++ soa_hcitddb_tfac   = 2279.5
++ soa_hcitddb_tref   = 298
++ soa_hcitddb_wfac   = 0.7275
++ soa_hcitddb_wref   = 4e-5
++ device             = "pld30"
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+include "soachecks_top.scs" section=soacheck_pld_sub_shared
+soacheck3 (s sub) ovcheck_pld_sub
+include "soachecks_top.scs" section=hci_tddb_atype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=soa_hv_vmax_oxrisk        branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld30_10hv_soa
+
+section pld30b_10hv_soa
+parameters
++ soa_hv_vmax        = 30
++ soa_hv_vmax_oxrisk = 24
++ soa_hcitddb_b0     = -35      
++ soa_hcitddb_b1     = -24.135  
++ soa_hcitddb_b2     = -20.360  
++ soa_hcitddb_b3     = -20.360  
++ soa_hcitddb_b4     = -31.310  
++ soa_hcitddb_p1     = -0.49382
++ soa_hcitddb_p2     = -0.67311
++ soa_hcitddb_p3     = -0.92399
++ soa_hcitddb_p4     = -1.4490
++ soa_hcitddb_p5     = -3.5930
++ soa_hcitddb_wfac   = 0.56248
++ soa_hcitddb_wref   = 1e-2
++ device             = "pld30b"
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+include "soachecks_top.scs" section=soacheck_pld_sub_shared
+soacheck3 (s sub) ovcheck_pld_sub
+include "soachecks_top.scs" section=hci_tddb_btype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld30b_10hv_soa
+
+section pld45_10hv_soa
+parameters
++ soa_hv_vmax        = 45
++ soa_hv_vmax_oxrisk = 36
++ soa_hcitddb_a      = 14
++ soa_hcitddb_b      = 0.6
++ soa_hcitddb_vdsref = -17.013
++ soa_hcitddb_vgswc  = -2.3757
++ soa_hcitddb_tfac   = 2422.9
++ soa_hcitddb_tref   = 298
++ soa_hcitddb_wfac   = 0.715
++ soa_hcitddb_wref   = 4.00E-05
++ device             = "pld45"
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax      vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="pld45"
++ message1="V(s,d) > -4.75*V(s,g)+66.025"
++ vlim1=soa_hv_vmax     vc1=4.43	vlim2=39.9           vc2=ap_gc_hv	branch1="V(s,d)"
+soacheck2 (s d s g) ovcheck_2
+model ovcheck_pld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70                  vhigh1=120           branch1="V(s,sub)"
++ vlow2=-ap_no_check         vhigh2=70          branch2="V(sub,d)"
+soacheck3 (s sub sub d 0 0 0 0 0 0 0 0) ovcheck_pld_sub
+include "soachecks_top.scs" section=hci_tddb_atype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld45_10hv_soa
+
+section pld45b_10hv_soa
+parameters
++ soa_hv_vmax        = 45
++ soa_hv_vmax_oxrisk = 36
++ soa_hcitddb_b0     = -50
++ soa_hcitddb_b1     = -32.838
++ soa_hcitddb_b2     = -20.9
++ soa_hcitddb_b3     = -20.9
++ soa_hcitddb_b4     = -26.8
++ soa_hcitddb_p1     = -0.85604
++ soa_hcitddb_p2     = -1.1798
++ soa_hcitddb_p3     = -1.9065
++ soa_hcitddb_p4     = -2.445
++ soa_hcitddb_p5     = -3.4775
++ soa_hcitddb_wfac   = 0.63786
++ soa_hcitddb_wref   = 1.00E-02
++ device             = "pld45b"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="pld45b"
++ message1="V(s,d) > -5.6*V(s,g)+70.0"
++ vlim1=soa_hv_vmax     vc1=4.46	vlim2=39.2           vc2=ap_gc_hv	branch1="V(s,d)"
+soacheck2 (s d s g) ovcheck_2
+model ovcheck_pld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70                  vhigh1=120           branch1="V(s,sub)"
++ vlow2=-ap_no_check         vhigh2=70          branch2="V(sub,d)"
+soacheck3 (s sub sub d 0 0 0 0 0 0 0 0) ovcheck_pld_sub
+include "soachecks_top.scs" section=hci_tddb_btype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld45b_10hv_soa
+
+section pld65_10hv_soa
+parameters
++ soa_hv_vmax = 65
++ soa_hv_vmax_oxrisk = 52
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+include "soachecks_top.scs" section=soacheck_pld_sub_shared
+soacheck3 (s sub) ovcheck_pld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld65_10hv_soa
+
+section pld90_10hv_soa
+parameters
++ soa_hv_vmax        = 90
++ soa_hv_vmax_oxrisk = 72
++ soa_hcitddb_a      = 15
++ soa_hcitddb_b      = 0.4
++ soa_hcitddb_vdsref = -22.687
++ soa_hcitddb_vgswc  = -1.3808
++ soa_hcitddb_tfac   = 3666
++ soa_hcitddb_tref   = 298
++ soa_hcitddb_wfac   = 1.215
++ soa_hcitddb_wref   = 4.00E-05
++ device             = "pld90"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+model ovcheck_pld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-40          	     vhigh1=100           branch1="V(s,sub)"
++ vlow2=-ap_no_check         vhigh2=70.0          branch2="V(sub,d)"
+soacheck3 (s sub sub d 0 0 0 0 0 0 0 0) ovcheck_pld_sub
+include "soachecks_top.scs" section=hci_tddb_atype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=soa_hv_vmax_oxrisk        branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld90_10hv_soa
+
+section pld90b_10hv_soa
+parameters
++ soa_hv_vmax        = 90
++ soa_hv_vmax_oxrisk = 72
++ soa_hcitddb_b0     = -95
++ soa_hcitddb_b1     = -32.848
++ soa_hcitddb_b2     = -24.46
++ soa_hcitddb_b3     = -24.46
++ soa_hcitddb_b4     = -47.02
++ soa_hcitddb_p1     = -0.46821
++ soa_hcitddb_p2     = -0.67538
++ soa_hcitddb_p3     = -1.0334
++ soa_hcitddb_p4     = -2.3147
++ soa_hcitddb_p5     = -2.8274
++ soa_hcitddb_wfac   = 0.77096
++ soa_hcitddb_wref   = 1.00E-02
++ device             = "pld90b"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+model ovcheck_pld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70          	     vhigh1=120           branch1="V(s,sub)"
++ vlow2=-ap_no_check         vhigh2=70.0          branch2="V(sub,d)"
+soacheck3 (s sub sub d 0 0 0 0 0 0 0 0) ovcheck_pld_sub
+include "soachecks_top.scs" section=hci_tddb_btype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld90b_10hv_soa
+
+section pld100_10hv_soa
+parameters
++ soa_hv_vmax        = 100
++ soa_hv_vmax_oxrisk = 80
++ soa_hcitddb_b0     = -105
++ soa_hcitddb_b1     = -34.136
++ soa_hcitddb_b2     = -28.3
++ soa_hcitddb_b3     = -28.3
++ soa_hcitddb_b4     = -78.6
++ soa_hcitddb_p1     = -0.36627
++ soa_hcitddb_p2     = -0.78934
++ soa_hcitddb_p3     = -1.137
++ soa_hcitddb_p4     = -1.9696
++ soa_hcitddb_p5     = -2.952
++ soa_hcitddb_wfac   = 1.0262
++ soa_hcitddb_wref   = 1.00E-02
++ device             = "pld100"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+model ovcheck_pld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70                  vhigh1=120           branch1="V(s,sub)"
++ vlow2=-ap_no_check         vhigh2=70.0          branch2="V(sub,d)"
+soacheck3 (s sub sub d 0 0 0 0 0 0 0 0) ovcheck_pld_sub
+include "soachecks_top.scs" section=hci_tddb_btype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld100_10hv_soa
+
+section pld120_10hv_soa
+parameters
++ soa_hv_vmax        = 120
++ soa_hv_vmax_oxrisk = 96
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(s,g)"
++ vlow2=-soa_hv_vmax   	  vhigh2=ap_gc_hv           branch2="V(d,g)"
++ vlow3=-ap_fwd_hv   	  vhigh3=soa_hv_vmax        branch3="V(s,d)"
+soacheck1 (s g d g s d 0 0 0 0 0 0) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="pld120"
++ message1="V(s,d) > -9.08*V(s,g)+161.22"
++ vlim1=soa_hv_vmax     vc1=4.54	vlim2=111.28           vc2=ap_gc_hv	branch1="V(s,d)"
+soacheck2 (s d s g) ovcheck_2
+model ovcheck_pld_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70                  vhigh1=120           branch1="V(s,sub)"
++ vlow2=-ap_no_check         vhigh2=70.0          branch2="V(sub,d)"
+soacheck3 (s sub sub d 0 0 0 0 0 0 0 0) ovcheck_pld_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(s,g)"	message1="Vsg_OXrisk"
++ vlow2=-soa_hv_vmax_oxrisk      vhigh2=ap_gc_hv_oxrisk           branch2="V(d,g)"	message2="Vdg_OXrisk"
+soacheck5 (s g d g 0 0 0 0 0 0 0 0) ovcheck_5
+}
+endsection pld120_10hv_soa
+
+
+
+// HV MOSFETs
+
+
+section nmos10_10hv_soa
+parameters
++ soa_hv_vmax = 10
++ soa_hv_vmax_oxrisk = 8
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv            vhigh1=ap_gc_hv           branch1="V(g,b)"
++ vlow2=-ap_gc_hv            vhigh2=ap_gc_hv           branch2="V(g,s)"
++ vlow3=-soa_hv_vmax         vhigh3=ap_gc_hv           branch3="V(g,d)"
++ vlow4=-ap_fwd_hv           vhigh4=ap_gc_hv           branch4="V(s,b)"
++ vlow5=-ap_fwd_hv           vhigh5=soa_hv_vmax        branch5="V(d,b)"
++ vlow6=-ap_gc_hv            vhigh6=soa_hv_vmax        branch6="V(d,s)"
+soacheck1 (g b g s g d s b d b d s) ovcheck_1
+model ovcheck_hv_nmos_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check       vhigh1=120.0          branch1="V(d,sub)"
++ vlow2=-ap_no_check       vhigh2=70             branch2="V(sub,b)"
+soacheck3 (d sub sub b 0 0 0 0 0 0 0 0) ovcheck_hv_nmos_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,b)"	message1="Vgb_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(g,s)"	message2="Vgs_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=ap_gc_hv_oxrisk           branch3="V(g,d)"	message3="Vgd_OXrisk"
+soacheck5 (g b g s g d 0 0 0 0 0 0) ovcheck_5
+}
+endsection nmos10_10hv_soa
+
+section pmos10_10hv_soa
+parameters
++ soa_hv_vmax = 10
++ soa_hv_vmax_oxrisk = 8
++ ap_vbsub = (ng/2.0-floor(ng/2.0) > 0) ? 45 : (gt_90v == 0 ? 90 : 120)
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(b,g)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(s,g)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(d,g)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(b,s)"
++ vlow5=-ap_fwd_hv        vhigh5=soa_hv_vmax        branch5="V(b,d)"
++ vlow6=-ap_gc_hv         vhigh6=soa_hv_vmax        branch6="V(s,d)"
+soacheck1 (b g s g d g b s b d s d) ovcheck_1
+model ovcheck_3 ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow=-70       vhigh=ap_vbsub            branch1="V(b,sub)" 
+soacheck3 (b sub) ovcheck_3
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(b,g)"	message1="Vbg_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(s,g)"	message2="Vsg_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=ap_gc_hv_oxrisk           branch3="V(d,g)"	message3="Vdg_OXrisk"
+soacheck5 (b g s g d g 0 0 0 0 0 0) ovcheck_5
+}
+endsection pmos10_10hv_soa
+
+section nmos45b_10hv_soa
+parameters
++ soa_hv_vmax = 45
++ soa_hv_vmax_oxrisk = 36
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,b)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(g,s)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(g,d)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(s,b)"
++ vlow5=-ap_fwd_hv        vhigh5=soa_hv_vmax        branch5="V(d,b)"
++ vlow6=-ap_gc_hv         vhigh6=soa_hv_vmax        branch6="V(d,s)"
+soacheck1 (g b g s g d s b d b d s) ovcheck_1
+model ovcheck_2 ovcheckva_pwl
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ device="nmos45b"
++ message1="V(d,s) > -6.4*V(g,s)+77.12"
++ vlim1=soa_hv_vmax     vc1=5.02	vlim2=41.92           vc2=ap_gc_hv	branch1="V(d,s)"
+soacheck2 (d s g s) ovcheck_2
+include "soachecks_top.scs" section=soacheck_hv_nmos_sub_shared
+soacheck3 (d sub sub b 0 0 0 0 0 0 0 0) ovcheck_hv_nmos_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,b)"	message1="Vgb_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(g,s)"	message2="Vgs_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=ap_gc_hv_oxrisk           branch3="V(g,d)"	message3="Vgd_OXrisk"
+soacheck5 (g b g s g d 0 0 0 0 0 0) ovcheck_5
+}
+endsection nmos45b_10hv_soa
+
+section pmos45_10hv_soa
+parameters
++ soa_hv_vmax        = 45
++ soa_hv_vmax_oxrisk = 36
++ soa_hcitddb_a      = 8
++ soa_hcitddb_b      = 0.4
++ soa_hcitddb_vdsref = -21.244
++ soa_hcitddb_vgswc  = -1.5822
++ soa_hcitddb_tfac   = 2710.3
++ soa_hcitddb_tref   = 298
++ soa_hcitddb_wfac   = 0.865
++ soa_hcitddb_wref   = 4.00E-05
++ device             = "pmos45"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(b,g)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(s,g)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(d,g)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(b,s)"
++ vlow5=-ap_no_check      vhigh5=soa_hv_vmax        branch5="V(b,d)"
++ vlow6=-ap_fwd_hv        vhigh6=soa_hv_vmax        branch6="V(s,d)"
+soacheck1 (b g s g d g b s b d s d) ovcheck_1
+include "soachecks_top.scs" section=soacheck_hv_pmos_sub_shared
+soacheck3 (b sub) ovcheck_hv_pmos_sub
+include "soachecks_top.scs" section=hci_tddb_atype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(b,g)"	message1="Vbg_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(s,g)"	message2="Vsg_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=soa_hv_vmax_oxrisk        branch3="V(d,g)"	message3="Vdg_OXrisk"
+soacheck5 (b g s g d g 0 0 0 0 0 0) ovcheck_5
+}
+endsection pmos45_10hv_soa
+
+section pmos45b_10hv_soa
+parameters
++ soa_hv_vmax        = 45
++ soa_hv_vmax_oxrisk = 36
++ soa_hcitddb_b0     = -50      
++ soa_hcitddb_b1     = -31.893  
++ soa_hcitddb_b2     = -25.8    
++ soa_hcitddb_b3     = -25.8    
++ soa_hcitddb_b4     = -28.3    
++ soa_hcitddb_p1     = -0.594
++ soa_hcitddb_p2     = -0.75861
++ soa_hcitddb_p3     = -1.2197
++ soa_hcitddb_p4     = -1.83
++ soa_hcitddb_p5     = -2.705
++ soa_hcitddb_wfac   = 0.951
++ soa_hcitddb_wref   = 1.00E-02
++ device             = "pmos45b"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(b,g)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(s,g)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(d,g)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(b,s)"
++ vlow5=-ap_fwd_hv        vhigh5=soa_hv_vmax        branch5="V(b,d)"
++ vlow6=-ap_gc_hv         vhigh6=soa_hv_vmax        branch6="V(s,d)"
+soacheck1 (b g s g d g b s b d s d) ovcheck_1
+model ovcheck_hv_pmos_sub ovcheck6
++ tmaxfrac=tmaxfrac0
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ vlow1=-ap_no_check        vhigh1=70             branch1="V(sub,d)"
++ vlow2=-70.0        vhigh2=120.0             branch2="V(b,sub)"
+soacheck3 (sub d b sub 0 0 0 0 0 0 0 0) ovcheck_hv_pmos_sub
+include "soachecks_top.scs" section=hci_tddb_btype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(b,g)"	message1="Vbg_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(s,g)"	message2="Vsg_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=ap_gc_hv_oxrisk           branch3="V(d,g)"	message3="Vdg_OXrisk"
+soacheck5 (b g s g d g 0 0 0 0 0 0) ovcheck_5
+}
+endsection pmos45b_10hv_soa
+
+section pmoshs45_10hv_soa
+parameters
++ soa_hv_vmax        = 45
++ soa_hv_vmax_oxrisk = 36
++ soa_hcitddb_a      = 9
++ soa_hcitddb_b      = 0.5
++ soa_hcitddb_vdsref = -21.312
++ soa_hcitddb_vgswc  = -1.6939
++ soa_hcitddb_tfac   = 2710.3
++ soa_hcitddb_tref   = 298
++ soa_hcitddb_wfac   = 0.865
++ soa_hcitddb_wref   = 4.00E-05
++ device             = "pmoshs45"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(b,g)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(s,g)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(d,g)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(b,s)"
++ vlow5=-ap_no_check      vhigh5=soa_hv_vmax        branch5="V(b,d)"
++ vlow6=-ap_gc_hv        vhigh6=soa_hv_vmax        branch6="V(s,d)"
+soacheck1 (b g s g d g b s b d s d) ovcheck_1
+model ovcheck_hv_pmos_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check              vhigh1=45            branch1="V(b,sub)"
++ vlow2=-ap_no_check	          vhigh2=40            branch2="V(sub,d)"
+soacheck3 (b sub sub d 0 0 0 0 0 0 0 0) ovcheck_hv_pmos_sub
+include "soachecks_top.scs" section=hci_tddb_atype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(b,g)"	message1="Vbg_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(s,g)"	message2="Vsg_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=soa_hv_vmax_oxrisk        branch3="V(d,g)"	message3="Vdg_OXrisk"
+soacheck5 (b g s g d g 0 0 0 0 0 0) ovcheck_5
+}
+endsection pmoshs45_10hv_soa
+
+section pmoshs45b_10hv_soa
+parameters
++ soa_hv_vmax        = 45
++ soa_hv_vmax_oxrisk = 36
++ soa_hcitddb_b0     = -50      
++ soa_hcitddb_b1     = -31.626  
++ soa_hcitddb_b2     = -24.2    
++ soa_hcitddb_b3     = -24.2    
++ soa_hcitddb_b4     = -24.8    
++ soa_hcitddb_p1     = -0.62371
++ soa_hcitddb_p2     = -0.75496
++ soa_hcitddb_p3     = -1.25
++ soa_hcitddb_p4     = -1.81
++ soa_hcitddb_p5     = -2.37
++ soa_hcitddb_wfac   = 1.1018
++ soa_hcitddb_wref   = 1.00E-02
++ device             = "pmoshs45b"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(b,g)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(s,g)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(d,g)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(b,s)"
++ vlow5=-ap_fwd_hv        vhigh5=soa_hv_vmax        branch5="V(b,d)"
++ vlow6=-ap_gc_hv         vhigh6=soa_hv_vmax        branch6="V(s,d)"
+soacheck1 (b g s g d g b s b d s d) ovcheck_1
+model ovcheck_hv_pmos_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check              vhigh1=45            branch1="V(b,sub)"
++ vlow2=-ap_no_check	          vhigh2=70            branch2="V(sub,d)"
+soacheck3 (b sub sub d 0 0 0 0 0 0 0 0) ovcheck_hv_pmos_sub
+include "soachecks_top.scs" section=hci_tddb_btype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(b,g)"	message1="Vbg_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(s,g)"	message2="Vsg_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=ap_gc_hv_oxrisk           branch3="V(d,g)"	message3="Vdg_OXrisk"
+soacheck5 (b g s g d g 0 0 0 0 0 0) ovcheck_5
+}
+endsection pmoshs45b_10hv_soa
+
+section nmos90b_10hv_soa
+parameters
++ soa_hv_vmax = 90
++ soa_hv_vmax_oxrisk = 72
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(g,b)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(g,s)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(g,d)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(s,b)"
++ vlow5=-ap_fwd_hv        vhigh5=soa_hv_vmax        branch5="V(d,b)"
++ vlow6=-ap_gc_hv         vhigh6=soa_hv_vmax        branch6="V(d,s)"
+soacheck1 (g b g s g d s b d b d s) ovcheck_1
+include "soachecks_top.scs" section=soacheck_hv_nmos_sub_shared
+soacheck3 (d sub sub b 0 0 0 0 0 0 0 0) ovcheck_hv_nmos_sub
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(g,b)"	message1="Vgb_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(g,s)"	message2="Vgs_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=ap_gc_hv_oxrisk           branch3="V(g,d)"	message3="Vgd_OXrisk"
+soacheck5 (g b g s g d 0 0 0 0 0 0) ovcheck_5
+}
+endsection nmos90b_10hv_soa
+
+section pmos90_10hv_soa
+parameters
++ soa_hv_vmax        = 90
++ soa_hv_vmax_oxrisk = 72
++ soa_hcitddb_a      = 24
++ soa_hcitddb_b      = 0.38
++ soa_hcitddb_vdsref = -39.299
++ soa_hcitddb_vgswc  = -1.5006
++ soa_hcitddb_tfac   = 21098
++ soa_hcitddb_tref   = 298
++ soa_hcitddb_wfac   = 4.545
++ soa_hcitddb_wref   = 4.00E-05
++ device             = "pmos90"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(b,g)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(s,g)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(d,g)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(b,s)"
++ vlow5=-ap_no_check        vhigh5=soa_hv_vmax        branch5="V(b,d)"
++ vlow6=-ap_fwd_hv        vhigh6=soa_hv_vmax        branch6="V(s,d)"
+soacheck1 (b g s g d g b s b d s d) ovcheck_1
+model ovcheck_hv_pmos_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-40               vhigh1=100            branch1="V(b,sub)"
++ vlow2=-ap_no_check      vhigh2=70             branch2="V(sub,d)"
+soacheck3 (b sub sub d 0 0 0 0 0 0 0 0) ovcheck_hv_pmos_sub
+include "soachecks_top.scs" section=hci_tddb_atype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(b,g)"	message1="Vbg_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(s,g)"	message2="Vsg_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=soa_hv_vmax_oxrisk        branch3="V(d,g)"	message3="Vdg_OXrisk"
+soacheck5 (b g s g d g 0 0 0 0 0 0) ovcheck_5
+}
+endsection pmos90_10hv_soa
+
+section pmos90b_10hv_soa
+parameters
++ soa_hv_vmax        = 90
++ soa_hv_vmax_oxrisk = 72
++ soa_hcitddb_b0     = -95
++ soa_hcitddb_b1     = -79.58
++ soa_hcitddb_b2     = -69.8
++ soa_hcitddb_b3     = -69.8
++ soa_hcitddb_b4     = -72.6
++ soa_hcitddb_p1     = -0.65301
++ soa_hcitddb_p2     = -0.83879
++ soa_hcitddb_p3     = -1.23
++ soa_hcitddb_p4     = -1.9857
++ soa_hcitddb_p5     = -2.5457
++ soa_hcitddb_wfac   = 2.2366
++ soa_hcitddb_wref   = 1.00E-02
++ device             = "pmos90b"
+
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_gc_hv         vhigh1=ap_gc_hv           branch1="V(b,g)"
++ vlow2=-ap_gc_hv         vhigh2=ap_gc_hv           branch2="V(s,g)"
++ vlow3=-soa_hv_vmax      vhigh3=ap_gc_hv           branch3="V(d,g)"
++ vlow4=-ap_fwd_hv        vhigh4=ap_gc_hv           branch4="V(b,s)"
++ vlow5=-ap_fwd_hv        vhigh5=soa_hv_vmax        branch5="V(b,d)"
++ vlow6=-ap_gc_hv         vhigh6=soa_hv_vmax        branch6="V(s,d)"
+soacheck1 (b g s g d g b s b d s d) ovcheck_1
+model ovcheck_hv_pmos_sub ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-70               vhigh1=120            branch1="V(b,sub)"
++ vlow2=-ap_no_check      vhigh2=70             branch2="V(sub,d)"
+soacheck3 (b sub sub d 0 0 0 0 0 0 0 0) ovcheck_hv_pmos_sub
+include "soachecks_top.scs" section=hci_tddb_btype_soa_shared
+}
+if (enable_risk_assessment == 1) {
+model ovcheck_5 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow1=-ap_gc_hv_oxrisk         vhigh1=ap_gc_hv_oxrisk           branch1="V(b,g)"	message1="Vbg_OXrisk"
++ vlow2=-ap_gc_hv_oxrisk         vhigh2=ap_gc_hv_oxrisk           branch2="V(s,g)"	message2="Vsg_OXrisk"
++ vlow3=-soa_hv_vmax_oxrisk      vhigh3=ap_gc_hv_oxrisk           branch3="V(d,g)"	message3="Vdg_OXrisk"
+soacheck5 (b g s g d g 0 0 0 0 0 0) ovcheck_5
+}
+endsection pmos90b_10hv_soa
+
+
+// Resistors
+
+
+section rm1_10hv_soa
+parameters
++ weff1_soa = w - 0.04  // in um; used for current-density calculation
++ rsh_soa   = nom_rs_m1*delr_rs_m1
++ leff_soa  = l + dl_m1 // in um
++ jdc_rm    = 4.05e-3
++ jdc_rms   = 367.8
++ dw_rms    = 0.53
++ jpeak_rm  = 4.05e-1
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=rm_10hv_soa_shared
+}
+endsection rm1_10hv_soa
+
+section rm2_10hv_soa
+parameters
++ weff1_soa = w - 0.04  // in um; used for current-density calculation
++ rsh_soa   = nom_rs_m2*delr_rs_m2
++ leff_soa  = l + dl_m2 // in um
++ jdc_rm    = 4.05e-3
++ jdc_rms   = 131.2
++ dw_rms    = 1.21
++ jpeak_rm  = 4.05e-1
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=rm_10hv_soa_shared
+}
+endsection rm2_10hv_soa
+
+section rm3_10hv_soa
+parameters
++ weff1_soa = w - 0.04  // in um; used for current-density calculation
++ rsh_soa   = nom_rs_m3*delr_rs_m3
++ leff_soa  = l + dl_m3 // in um
++ jdc_rm    = 4.8e-3
++ jdc_rms   = 125.1
++ dw_rms    = 1.84
++ jpeak_rm  = 4.8e-1
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=rm_10hv_soa_shared
+}
+endsection rm3_10hv_soa
+
+section rm4_10hv_soa
+parameters
++ weff1_soa = w - 0.04  // in um; used for current-density calculation
++ rsh_soa   = nom_rs_m4*delr_rs_m4
++ leff_soa  = l + dl_m4 // in um
++ jdc_rm    = 4.8e-3
++ jdc_rms   = 89.9
++ dw_rms    = 2.56
++ jpeak_rm  = 4.8e-1
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=rm_10hv_soa_shared
+}
+endsection rm4_10hv_soa
+
+section rulm_10hv_soa
+parameters
++ weff1_soa = w - 0.04  // in um; used for current-density calculation
++ rsh_soa   = nom_rs_ulm*delr_rs_ulm
++ leff_soa  = l + dl_ulm // in um
++ jdc_rm    = 44.1e-3
++ jdc_rms   = 384.0
++ dw_rms    = 10.8
++ jpeak_rm  = 44.1e-1
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=rm_10hv_soa_shared
+}
+endsection rulm_10hv_soa
+
+section ralcap_10hv_soa
+parameters
++ weff1_soa = w   // in um; used for current-density calculation
++ rsh_soa   = nom_rs_alcap*delr_rs_alcap
++ leff_soa  = l + dl_alcap // in um
++ jdc_rm    = 4.2e-3
++ jdc_rms   = 24.15
++ dw_rms    = 6.0
++ jpeak_rm  = 2.1e-1
+if (enable_soa == 1) {
+include "soachecks_top.scs" section=rm_10hv_soa_shared
+}
+endsection ralcap_10hv_soa
+
+section rphv_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check         vhigh1=15           branch1="V(nw,s)"
++ vlow2=-ap_no_check         vhigh2=15           branch2="V(nw,d)"
++ vlow3=-70      	     vhigh3=120          branch3="V(nw,sub)"
+soacheck1 (nw s nw d nw sub 0 0 0 0 0 0) ovcheck_1
+}
+endsection rphv_10hv_soa
+
+section rhvpw_10hv_soa
+if (enable_soa == 1) {
+model ovcheck_1 ovcheck6
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac0
++ vlow1=-ap_no_check         vhigh1=30           branch1="V(nw,s)"
++ vlow2=-ap_no_check         vhigh2=30           branch2="V(nw,d)"
++ vlow3=-70      	     vhigh3=120          branch3="V(nw,sub)"
+soacheck1 (nw s nw d nw sub 0 0 0 0 0 0) ovcheck_1
+}
+endsection rhvpw_10hv_soa
+
+section rpoly0_10hv_soa
+if (enable_soa == 1) {
+parameters
++ jmax_poly       = 1.54e-3 * w * np
++ jmax_poly_100ns = 2.02e-3 * w * np
++ jmax_poly_sh    = 6.50e-4 * w * np
+include "soachecks_top.scs" section=rpoly_10hv_voltage_soa_shared
+include "soachecks_top.scs" section=rpoly_10hv_current_soa_shared
+soacheck_dc   ovcheck_2 device="zrpoly0_10hv"
+soacheck_peak ovcheck_3 device="zrpoly0_10hv"
+soacheck_sh   ovcheck_4 device="zrpoly0_10hv"
+}
+endsection rpoly0_10hv_soa
+
+section rpoly_10hv_soa
+if (enable_soa == 1) {
+parameters
++ jmax_poly       = 2.12e-4 * w * np
++ jmax_poly_100ns = 6.50e-4 * w * np
++ jmax_poly_sh    = 2.12e-5 * w * np
+include "soachecks_top.scs" section=rpoly_10hv_voltage_soa_shared
+include "soachecks_top.scs" section=rpoly_10hv_current_soa_shared
+soacheck_dc   ovcheck_2 device="zrpoly_10hv"
+soacheck_peak ovcheck_3 device="zrpoly_10hv"
+soacheck_sh   ovcheck_4 device="zrpoly_10hv"
+}
+endsection rpoly_10hv_soa
+
+section rpoly_1meg_10hv_soa
+if (enable_soa == 1) {
+parameters
++ jmax_poly       = 3.18e-5
++ jmax_poly_100ns = 1.78e-3
++ jmax_poly_sh    = 3.18e-6
+include "soachecks_top.scs" section=rpoly_10hv_voltage_soa_shared
+include "soachecks_top.scs" section=rpoly_10hv_current_soa_shared
+soacheck_dc   ovcheck_2 device="zrpoly_1meg_10hv"
+soacheck_peak ovcheck_3 device="zrpoly_1meg_10hv"
+soacheck_sh   ovcheck_4 device="zrpoly_1meg_10hv"
+}
+endsection rpoly_1meg_10hv_soa
+
+section rpoly0_10hv_simple_soa
+if (enable_soa == 1) {
+parameters
++ jmax_poly       = 1.54e-3 * w
++ jmax_poly_100ns = 2.02e-3 * w
++ jmax_poly_sh    = 6.50e-4 * w
+include "soachecks_top.scs" section=rpoly_10hv_voltage_soa_shared
+include "soachecks_top.scs" section=rpoly_10hv_current_simple_soa_shared
+}
+endsection rpoly0_10hv_simple_soa
+
+section rpoly_10hv_simple_soa
+if (enable_soa == 1) {
+parameters
++ jmax_poly       = 2.12e-4 * w
++ jmax_poly_100ns = 6.50e-4 * w
++ jmax_poly_sh    = 2.12e-5 * w 
+include "soachecks_top.scs" section=rpoly_10hv_voltage_soa_shared
+include "soachecks_top.scs" section=rpoly_10hv_current_simple_soa_shared
+}
+endsection rpoly_10hv_simple_soa
+
+section rpoly_1meg_10hv_simple_soa
+if (enable_soa == 1) {
+parameters
++ np              = 1 // does not exist in subckt
++ dw_um           = 0 // does not exist in subckt
++ dl_um           = 0 // does not exist in subckt
++ jmax_poly       = 3.18e-5
++ jmax_poly_100ns = 1.78e-3
++ jmax_poly_sh    = 3.18e-6
+include "soachecks_top.scs" section=rpoly_10hv_voltage_soa_shared
+include "soachecks_top.scs" section=rpoly_10hv_current_simple_soa_shared
+}
+endsection rpoly_1meg_10hv_simple_soa

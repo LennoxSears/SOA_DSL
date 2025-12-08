@@ -1,0 +1,78 @@
+
+//
+//  shieldScale.va: scale r3 resistance with modulation by the M1 shield
+//
+//  Version: 1.0.0
+//  Date:    May 18, 2015
+//  Author:  Colin McAndrew
+//
+
+//
+//  The current to be scaled should be from the resistor body only,
+//  it should not include junctions leakage currents or capacitive currents.
+//  The resistance scaling is
+//      rUnshielded*(1.0+vc1*V(d,s))
+//  where vc1 has W, L, and WL geometry scaling and limiting is used
+//  to protect against too large modulation.
+//
+
+`include "disciplines.vams"
+`include "constants.vams"
+
+//
+//  Start of code
+//
+
+module shieldscale(d, s, ds1, ds2);
+
+//
+//  Node definitions
+//
+
+inout      d, s, ds1, ds2;
+electrical d, s, ds1, ds2;
+
+//
+//  Branch definitions
+//
+
+branch (ds1, ds2) b_iSense; // current sensing ports
+branch (d  , s  ) b_ds;     // scaled output current
+
+//
+//  Instance parameters
+//
+
+parameter real w=10.0 from[0.1:inf); // microns
+parameter real l=10.0 from[0.1:inf); // microns
+
+//
+//  General model parameters
+//
+
+parameter integer type  =-1   from[-1  :  1] exclude 0; // must be the same as for the r3 model
+parameter real    vc1inf= 0.0 from(-inf:inf);
+parameter real    vc1w  = 0.0 from(-inf:inf);
+parameter real    vc1l  = 0.0 from(-inf:inf);
+parameter real    vc1wl = 0.0 from(-inf:inf);
+    real vc1, scaleFactor, rMult;
+    real dummy_zero;
+
+analog begin : shieldscaleModel
+
+    dummy_zero = V(d,s)-V(d,s); // workaround to remove AHDLLINT waring
+    vc1          = dummy_zero+vc1inf+(vc1w*l+vc1l*w+vc1wl)/(w*l);
+    scaleFactor  = 1.0-type*vc1*V(b_ds);
+    if (scaleFactor < 0.6) begin
+        rMult        = 0.5+0.1*exp(10.0*(scaleFactor-0.5)-1.0);
+    end else if (scaleFactor > 1.4) begin
+        rMult        = 1.5-0.1*exp(10.0*(1.5-scaleFactor)-1.0);
+    end else begin
+        rMult        = scaleFactor;
+    end
+    //$strobe("%g %g",I(b_iSense),rMult);
+    V(b_iSense) <+ 0.0;               // short-circuit out the sense terminals
+    I(b_ds)     <+ I(b_iSense)/rMult; // scale current inversely as resistance multiplier
+
+end // analog
+endmodule

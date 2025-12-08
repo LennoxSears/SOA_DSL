@@ -1,0 +1,587 @@
+
+//
+//	Verilog-A definition of MOSCAP model
+//
+//	Has full time-dependent solution, and hence proper
+//	deep depletion modeling. Explicit Gildenblat solutions
+//	for both PcStat and Pc.
+//
+//	Colin McAndrew		06/25/13
+//      - removed extraneous small resistors to overcome convergence issues
+//
+//	Colin McAndrew		01/23/02
+//	- updated to be identical with built-in Mica model
+//	  (temperature mapping update, shrink and scale handled,
+//	  alternative calculation of rshsub from rsub and xj implemented)
+//
+//	Starting point is code from Jim Victory.
+//
+//	Colin McAndrew		11/21/01
+//	- got rid of unnecessary nodes (fake 1e12 resistors) in tau delay network
+//	- gate and substrate resistance can be merged, not done for now
+//	- added comments to describe what each section does
+//	- added equivalent circuit diagram, noted instance parameters
+//	- cleaned up some code, reformatted to indent nicely
+//	- added b_ prefix to branches, for clarity
+//	- looks like some improved exp protection should be added in places
+//
+//	g       Rg       gi    ||C    ci      Rac      bi     Rsub      b
+//	o-----/\/\/\-----o-----||-----o-----/\/\/\-----o-----/\/\/\-----o
+//	                 |     ||                      |
+//	                 |                             |
+//	                 |                             |
+//	                 |     ||Cfr                   |
+//	                 ------||-----------------------
+//	                       ||
+//
+//	                 n Qi=QiStatic-ddt(tau*Qi)
+//	        ---------o--------
+//	        |        |       |
+//	        |        |       |
+//	        /        |tau    |
+//	      1 \      -----    (^)QiStatic
+//	     Ohm/      -----     |
+//	        \        |       |
+//	        |        |       |
+//	        |        |       |
+//	        ------------------
+//	                 |
+//	                 |
+//	                 |
+//	                ---
+//	                 -
+//
+//	The model includes a core surface-potential based time-dependent
+//	MOS capacitor model, with parasitic resistances and constant
+//	fringe capacitance.
+//
+
+
+`include "discipline.h"
+
+`define	KB	1.3806226e-23
+`define	QQ	1.6021918e-19
+`define	TABS	2.7315000e+02
+`define	EPS0	8.854e-14
+`define	KSI	11.7
+`define	KOX	3.9
+`define	EM0	0.568384e-15
+`define	HBAR	0.658095e-15
+`define	PI	3.1415926535897932
+`define	TOL	1.0e-3
+`define	SMALL	1.0e-06
+`define	SE	460.517
+`define	KE	1.0e-200
+`define	KIRAN	1.0
+
+`define	LEVEL	2
+
+`define	PGIVEN(p)	p!=0
+`define	GMIN		gmin
+
+// ADMS support
+`define INITIAL_MODEL             @(initial_step("op","dc","ac","noise"))
+`define INITIAL_INSTANCE          @(initial_step("op","dc","ac","noise"))
+`define LOAD
+
+`define description(p,text)        // define parameter description
+`define alias(p,text)              // define alias name for parameter
+`define unit(p,text)               // define parameter unit
+`define spicename(p,text)          // define name "seen" by simulator
+
+// useful macros
+
+`define inout_node(node,description,spicename)   inout node;
+
+`define model_parameter_int(p,defval,desc)     parameter integer p = defval;
+`define model_parameter_real(p,defval,desc)    parameter real    p = defval;
+`define model_variable_real(p)                 real p;
+`define model_local_variable_real(p)           real p;
+
+`define instance_parameter_real(p,defval,desc) parameter real    p = defval;
+`define instance_output_variable_real(p,desc)  real p;
+`define instance_variable_real(p)              real p;
+`define instance_local_variable_real(p)        real p;
+
+module MOSCAP(g,b);
+
+	`inout_node(g,"nnode","Negative node")
+	`inout_node(b,"pnode","Positive node")
+
+	electrical	g,b;
+	electrical	n;		// time constant node
+	electrical	ci;		// other internal nodes
+
+	branch (n)	b_cn;		// internal time-constant node
+//	branch (n)	b_nc;		// 2nd instance to fool topology checker
+
+	branch (g ,ci)	b_ci;		// intrinsic moscap branch
+	branch (g ,b )	b_cf;		// fringe capacitance branch
+	branch (ci,b )	b_b1;		// resistance under cap branch
+
+//
+//	instance parameters and "special" parameters
+//
+
+       	`instance_parameter_real(l,0.0,"Device length")
+	`instance_parameter_real(w,0.0,"Device width")
+	`instance_parameter_real(a,0.0,"Device area")
+//	parameter	real	m	=   1.0		from(0.0:inf];
+	parameter	real	(* integer inherited_mfactor; *)	m = 1.0;
+	`instance_parameter_real(num,1.0,"Device multiplier")
+
+	`model_parameter_real(scale,1.0,"Units conversion scale")
+	`model_parameter_real(shrink,0.0,"Linear shrink")
+	`model_parameter_real(shrink2,0.0,"Areal shrink")
+
+	//w_cm,l_cm,ggate,gsub1,gsub2,gac
+       	`instance_variable_real(w_cm)
+	`instance_variable_real(l_cm)
+        //`instance_variable_real(ggate)  // Variable is defined but not used in the model
+	`instance_variable_real(gsub1)
+	//`instance_variable_real(gsub2) // Variable is defined but not used in the model
+	`instance_variable_real(cfr)
+
+	//w_um,l_um
+	`instance_local_variable_real(w_um)
+	`instance_local_variable_real(l_um)
+
+//
+//	model parameters
+//
+
+	`model_parameter_int(level,`LEVEL,"level")
+	// p=1, n=-1
+	`model_parameter_int(type,+1,"type")
+	`model_parameter_real(trise,0.0,"Temperature rise from ambient")
+	`model_parameter_real(tnom,27.0,"Parameter measurement temperature")
+	`model_parameter_real(tcvfb,0.0,"flatbanf voltage temp coefficient")
+	`model_parameter_real(texg,1.5,"gate resistance temp exponent")
+	`model_parameter_real(texpls,0.0,"S/D resistance temp exponent")
+	`model_parameter_real(texsub,1.5,"substrate temp exponent")
+	`model_parameter_real(texac,0.0,"accumulation mobility temp exponent")
+	`model_parameter_real(cfrl,0.0,"length fringing capacitance")
+	`model_parameter_real(cfrw,0.0,"width fringing capacitance")
+	`model_parameter_real(lg2pls,0.0,"length of gate to rsphpls region")
+	`model_parameter_real(lpls,0.0,"length of rshpls region")
+	`model_parameter_real(rshpls,0.0,"rshpls sheet resistance")
+	`model_parameter_real(uacred,0.0,"accumulation mobility field degradation factor")
+	`model_parameter_real(uac,500.0,"accumulation layer mobility")
+	`model_parameter_real(ngcon,1.0,"number of gate contacts (1 or 2)")
+	`model_parameter_real(dgp0,2.0,"distributed gate resistance parameter")
+	`model_parameter_real(nb,1.0e+17,"Substrate doping per cm^3")
+	`model_parameter_real(rshsub,1.0e+03,"sheet resistance for substrate")
+	`model_parameter_real(tau,0.1,"time constant for rate equation")
+	`model_parameter_real(vfb,0.0,"room temperature flatband voltage")
+	`model_parameter_real(rshg,0.0,"sheet resistance for gate")
+	`model_parameter_real(tox,500.0,"gate oxide thickness units angstroms")
+        `model_parameter_real(uinv,500.0,"inversion layer mobility")
+        `model_parameter_real(rsub,0.0,"resisitivty for substrate")
+        `model_parameter_real(beta,0.0,"Van Dort's const for threshold shift")
+        `model_parameter_real(xjsub,0.0,"well-substrate junction depth")
+        `model_parameter_real(xj,0.0,"well-substrate junction depth")
+        `spicename(xjsub,"xj")
+        `model_parameter_real(seriesr,1.0,"series resistance toggle")
+
+	`model_variable_real(cox)
+	`model_variable_real(gamma)
+	`model_variable_real(ff)
+	`model_variable_real(G)
+	`model_variable_real(G2)
+	`model_variable_real(a_fact)
+	`model_variable_real(x1)
+	`model_variable_real(xg1)
+	`model_variable_real(xg23)
+	`model_variable_real(xn)
+	`model_variable_real(Dn)
+	`model_variable_real(Dnm1)
+	`model_variable_real(margin)
+	`model_variable_real(Vtv)
+	`model_variable_real(vfb_t)
+	//`model_variable_real(rshg_t) //Variable is defined but not used in the model
+	//`model_variable_real(rsub_t) //Variable is defined but not used in the model
+	`model_variable_real(rshsub_t)
+	//`model_variable_real(rshpls_t) //Variable is defined but not used in the model
+	`model_variable_real(uac_t)
+
+	`model_local_variable_real(Tdev)
+	`model_local_variable_real(Tini)
+	`model_local_variable_real(rT)
+	`model_local_variable_real(dT)
+
+	real	Pc,PcStat;
+	real	sgnPc,qgStat,qbStat,qiStat,IqiStat,Iqi,Qqi,Qfr;
+	real	Fneg,Fpos;
+	//real	rgate,rsub1,rsub2;
+	real	rsub1;
+	
+	real	gac,qac;
+	real	phib;
+	real	Vgx,Qg;
+	real    xg,dummy,dummy2,temp;
+	real    xsub,eta,aa,cc,taus,mu,nu,ub;
+	real	yg,zz,y0,D0,D1,xi,pp,qq,ww,A,xbar,omega,x0,uu,P3;
+	real	factrac,sqrtfac,maxs,uacv;
+//	real	meff,Irgate,Irsub1,Irsub2,typeFac;
+	real	meff,Irsub1,typeFac;
+	real	scaleFac,shrinkl,shrinka;
+	real	nomVtv,nomEg,Eg,vemd,vhmd,varg,venc,venv,vniref,vni;
+
+`ifdef KIRAN
+	real	D0m1,D1m1;
+	real	Em1,E1m1;
+`else
+	real	E,E1;
+`endif
+
+	analog begin
+
+	//`INITIAL_MODEL
+	begin	// INITIAL_MODEL
+
+		if (`PGIVEN(shrink))
+			shrinkl	=  1.0-shrink/100.0;
+		else
+			shrinkl	=  1.0;
+		if (`PGIVEN(shrink2))
+			shrinka	=  1.0-shrink2/100.0;
+		else
+			shrinka	=  shrinkl*shrinkl;
+		if (`PGIVEN(scale))
+			scaleFac=  scale;
+		else
+			scaleFac=  1.0;
+
+//
+//	Temperature mappings
+//
+
+		Tini	=  `TABS+tnom;
+		nomVtv	=  (`KB)*Tini/(`QQ);
+		if (Tini < 300.0)
+			nomEg	=  1.1785-(9.025e-5+3.05e-7*Tini)*Tini;
+		else
+			nomEg	=  1.20595-2.7325e-4*Tini;
+		vemd	=  `EM0*pow((0.98*0.19*0.19),(1.0/3.0));
+		vhmd	=  `EM0*pow((0.16*sqrt(0.16)+0.49*sqrt(0.49)),(2.0/3.0));
+		varg	=  0.5*vemd*nomVtv/`PI;
+		venc	=  12.0*sqrt(varg*varg*varg)/(`HBAR*`HBAR*`HBAR);
+		varg	=  0.5*vhmd*nomVtv/`PI;
+		venv	=  2.0*sqrt(varg*varg*varg)/(`HBAR*`HBAR*`HBAR);
+		vniref	=  sqrt(venc*venv)*limexp(-0.5*nomEg/nomVtv);
+
+		Tdev	=  $temperature+trise;
+		if (Tdev < 300.0)
+			Eg	=  1.1785-(9.025e-5+3.05e-7*Tdev)*Tdev;
+		else
+			Eg	=  1.20595-2.7325e-4*Tdev;
+		rT	=  Tdev/Tini;
+		dT	=  Tdev-Tini;
+		Vtv	=  (`KB)*Tdev/(`QQ);
+		vni	=  vniref*pow((Tdev/Tini),1.5)*limexp(-0.5*((Eg/Vtv)-(nomEg/nomVtv)));
+		vfb_t	=  vfb+tcvfb*dT;
+		rshsub_t=  rshsub*pow(rT,texsub);
+		uac_t	=  uac*pow((1/rT),texac);
+		cox	=  `EPS0*`KOX/(tox*1e-8);
+		gamma	=  sqrt(2.0*`EPS0*`KSI*`QQ*nb)/cox;
+		phib	=  2.0*Vtv*ln(nb/vni);
+		ff	=  gamma*cox;
+		G	=  gamma/sqrt(Vtv);
+		G2	=  G*G;
+		ub	=  0.5*phib/Vtv;
+		a_fact	=  1.0+G/sqrt(2);
+		x1	=  1.25;
+		xg1	=  x1+G*sqrt(limexp(-x1)+x1-1.0);
+		xg23	=  ub+G*sqrt(limexp(-ub)+ub-1.0);
+		xn	=  2.0*ub;
+		Dn	=  limexp(-xn);
+`ifdef KIRAN
+		Dnm1	=  Dn-1.0;
+`endif
+		margin	=  1.0e-7;
+		dummy	=  level*beta*uinv*texg*texpls*lg2pls*lpls*rshpls*ngcon*dgp0*rshg*rsub*xjsub*xj;	// unused, stops unused param warning messages
+
+	end	// INITIAL_MODEL
+
+//
+//	Parameter mappings
+//
+
+	//`INITIAL_INSTANCE
+	begin	// INITIAL_INSTANCE
+
+		meff	=  m*num;
+		if (w > 0 && l > 0) begin
+			w_um	=  w*shrinkl*scaleFac*1.0e6;
+			l_um	=  l*shrinkl*scaleFac*1.0e6;
+		end else if (a > 0) begin	// assumed square if instance a specified
+			w_um	=  sqrt(a*shrinka)*scaleFac*1.0e6;
+			l_um	=  w_um;
+		end else begin
+			w_um	=  1.0;
+			l_um	=  w_um;
+		end
+		w_cm	=  w_um*1.0e-4;
+		l_cm	=  l_um*1.0e-4;
+		cfr	=  meff*(cfrw*2*w_um+cfrl*2*l_um);
+		rsub1	=  (rshsub_t*(l_um/8))/(w_um*meff);
+
+//
+//	limit resistance to minimum of 1 milliOhm
+//
+
+		gsub1	=  rsub1>1.0e-3	?	1.0/rsub1	:	1.0e3;
+
+		if (abs(seriesr-1.0) > 1.0e-6) begin
+			gsub1	=  1.0e3;
+		end
+
+	end // INITIAL_INSTANCE
+
+//
+//	Electrical branch constituent relations
+//
+
+	//`LOAD
+	begin	// LOAD
+
+//
+//	Gildenblat solve for static surface potential, from applied terminal biases
+//
+
+		if (type > 0)
+			typeFac =  1.0;
+		else
+			typeFac	= -1.0;
+		Vgx	=  typeFac*(V(b_ci)-vfb_t);
+		xg	=  Vgx/Vtv;
+		if (abs(xg) <= margin)
+`ifdef KIRAN
+			dummy	=  xg/(a_fact)*(1.0-xg*(2.0*Dnm1+1.0)*G/a_fact/a_fact/3.0/sqrt(2));
+`else
+			dummy	=  xg/(a_fact);
+`endif
+		else if (xg < -margin) begin
+			yg	= -xg;
+			zz	=  1.25*yg/(1.0+G/sqrt(2));
+			eta	=  (zz+10.0-sqrt((zz-6.0)*(zz-6.0)+64.0))/2.0;
+			aa	=  (yg-eta)*(yg-eta)+G2*(eta+1.0);
+			cc	=  2.0*(yg-eta)-G2;
+			taus	=  ln(aa/G2)-eta;
+			nu	=  (aa)+(cc);
+			mu	=  nu*nu/(taus)+0.5*(cc)*(cc)-(aa);
+			y0	=  ((eta)+(aa)*nu/(mu+nu/mu*(cc)*((cc)*(cc)/3-(aa))));
+`ifdef KIRAN
+			D0	=  limexp(y0);
+			D0m1	=  D0-1.0;
+			D1	=  limexp(-y0);
+			D1m1	=  D1-1.0;
+			xi	=  1.0-G2*(D0/2.0-Dn*(D0m1-D1m1));
+			pp	=  2.0*(yg-y0)+G2*(D0m1-Dn*(D0m1+D1m1));
+			qq	=  (yg-y0)*(yg-y0)+G2*(y0-D0m1+Dn*(D0m1-D1m1-2.0*y0));
+`else
+			D0	=  limexp(y0);
+			D1	=  1.0/D0;
+			xi	=  1.0-G2*(D0/2.0-Dn*(D0-D1));
+			pp	=  2.0*(yg-y0)+G2*(D0-1.0+Dn*(2.0-D0-D1));
+			qq	=  (yg-y0)*(yg-y0)+G2*(y0+1.0-D0+Dn*(D0-D1-2.0*y0));
+`endif
+			temp	=  pp*pp-4.0*xi*qq;
+			if (temp < 0.0)
+				temp	=  0.0;
+			ww	=  2.0*qq/(pp+sqrt(temp));
+			dummy	= -(y0+ww);
+		end else begin
+			if (xg < xg23) begin
+				A	=  (a_fact*x1/xg1-1.0)/xg1;
+				xbar	=  xg/a_fact*(1.0+A*xg);
+`ifdef KIRAN
+				Em1	=  limexp(xbar)-1.0;
+				E1m1	=  limexp(-xbar)-1.0;
+				omega	=  -E1m1-Dn*(Em1-E1m1-2.0*xbar);
+`else
+				E	=  limexp(xbar);
+				E1	=  1.0/E;
+				omega	=  1.0-E1-Dn*(E-E1-2.0*xbar);
+`endif
+				x0	=  xg+G2/2.0-G*sqrt(xg+G2/4.0-omega);
+			end else begin
+				xsub	=  xg+G2/2.0-G*sqrt(xg-1.0+G2/4.0);
+				eta	=  (0.5*(xsub+(xn+3.0)-sqrt((xsub-(xn+3.0))*(xsub-(xn+3.0))+10.0)));
+				aa	=  (xg-eta)*(xg-eta)-G2*eta+G2;
+				cc	=  2.0*(xg-eta)+G2;
+				taus	=  xn-eta+ln(aa/G2);
+				nu	=  (aa)+(cc);
+				mu	=  nu*nu/(taus)+0.5*(cc)*(cc)-(aa);
+				x0	=  ((eta)+(aa)*nu/(mu+nu/mu*(cc)*((cc)*(cc)/3-(aa))));
+			end
+`ifdef KIRAN
+			D1	=  limexp(x0);
+			D1m1	=  D1-1.0;
+			D0	=  limexp(-x0);
+			D0m1	=  D0-1.0;
+			xi	=  1.0-G2/2.0*(Dn*D1-D0*Dnm1);
+			pp	=  2.0*(xg-x0)+G2*(Dn*D1-1.0+Dnm1*(D0m1-1.0));
+			qq	=  (xg-x0)*(xg-x0)-G2*(x0-1.0-D0*Dnm1+Dn*(D1-2.0*x0));
+`else
+			D1	=  limexp(x0);
+			D0	=  1.0/D1;
+			D1	=  Dn*D1;
+			xi	=  1.0-G2/2.0*(D1+D0*(1.0-Dn));
+			pp	=  2.0*(xg-x0)+G2*(1.0+D1-D0*(1.0-Dn)-2.0*Dn);
+			qq	=  (xg-x0)*(xg-x0)-G2*(x0-1.0+D0*(1.0-Dn)+D1-2.0*x0*Dn);
+`endif
+			temp	=  pp*pp-4.0*xi*qq;
+			if (temp < 0.0)
+				temp	=  0.0;
+			uu	=  2.0*qq/(pp+sqrt(temp));
+			dummy	=  x0+uu;
+		end
+		PcStat	=   dummy*Vtv;	// static surface potential
+
+//
+//	calculate static charges, there is a numerical problem
+//	near Vfb for the latter so a linear interpolation is used
+//	for a small region around PcStat=0
+//
+
+		qgStat	=  (Vgx-PcStat);
+		if (abs(PcStat) <= `SMALL) begin
+			Fneg	=  gamma*sqrt(-`SMALL+Vtv*(limexp(`SMALL/Vtv)-1.0));
+			Fpos	= -gamma*sqrt(`SMALL+Vtv*(limexp(-`SMALL/Vtv)-1.0));
+			qbStat	=  Fneg+(PcStat+`SMALL)*(Fpos-Fneg)/(2*`SMALL);
+		end else begin
+			if (PcStat < 0.0)
+				sgnPc	= -1.0;
+			else
+				sgnPc	=  1.0;
+			qbStat	=  (-sgnPc*gamma*sqrt(PcStat+Vtv*(limexp(-PcStat/Vtv)-1.0)));
+		end
+		qiStat	=  (-qgStat-qbStat);
+		IqiStat	= -qiStat;
+
+//
+//	node n (branch b_cn) has the time dependent inversion charge on it,
+//	this is derived from the static inversion charge passed through
+//	an RC type delay (it is not explicitly set up as an RC circuit,
+//	but as the equation ddt(qi)=(qiStat-qi)/tau, which is set up
+//	in the contribs below as tau*ddt(qi)+qi-qiStat=0
+//
+//	Gidldenblat solution for actual surface potential,
+//	qi is from time-dependent calculation rather than
+//	applied biases
+//
+
+		xg	=  (Vgx+V(b_cn))/Vtv;
+		if (abs(xg) <= margin)
+`ifdef KIRAN
+			dummy2	=  xg/(a_fact)*(1.0-xg*(2.0*Dnm1+1.0)*G/a_fact/a_fact/3.0/sqrt(2));
+`else
+			dummy2	=  xg/(a_fact);
+`endif
+		else if (xg < -margin) begin
+			yg	= -xg;
+			zz	=  1.25*yg/a_fact;
+			eta	=  (zz+10.0-sqrt((zz-6.0)*(zz-6.0)+64.0))/2.0;
+			aa	=  (yg-eta)*(yg-eta)+G2*(eta+1.0);
+			cc	=  2.0*(yg-eta)-G2;
+			taus	=  ln(aa/G2)-eta;
+			nu	=  (aa)+(cc);
+			mu	=  nu*nu/(taus)+0.5*(cc)*(cc)-(aa);
+			y0	=  ((eta)+(aa)*nu/(mu+nu/mu*(cc)*((cc)*(cc)/3-(aa))));
+`ifdef KIRAN
+			D0	=  limexp(y0);
+			D0m1	=  D0-1.0;
+			xi	=  1.0-G2*(D0/2.0);
+			pp	=  2.0*(yg-y0)+G2*D0m1;
+			qq	=  (yg-y0)*(yg-y0)+G2*(y0-D0m1);
+`else
+			D0	=  limexp(y0);
+			xi	=  1.0-G2*(D0/2.0);
+			pp	=  2.0*(yg-y0)+G2*(D0-1.0);
+			qq	=  (yg-y0)*(yg-y0)+G2*(y0+1.0-D0);
+`endif
+			temp	=  pp*pp-4.0*xi*qq;
+			if (temp < 0.0)
+				temp	=  0.0;
+			ww	=  2.0*qq/(pp+sqrt(temp));
+			dummy2	= -(y0+ww);
+		end else begin
+			A	=  (a_fact*x1/xg1-1.0)/xg1;
+			xbar	=  xg/a_fact*(1.0+A*xg);
+			if (xbar < `SE)
+				temp	=  limexp(-xbar);
+			else begin
+				uu	=  xbar-`SE;
+				P3	=  (1.0+(uu)*(1.0+0.5*(uu)*(1.0+(uu)/3.0)));
+				temp	= `KE/P3;
+			end
+			omega	=  1.0-temp;
+			x0	=  xg+G2/2.0-G*sqrt(xg+G2/4.0-omega);
+			if (x0 < `SE)
+				D0	=  limexp(-x0);
+			else begin
+				uu	=  x0-`SE;
+				P3	=  (1.0+(uu)*(1.0+0.5*(uu)*(1.0+(uu)/3.0)));
+				D0	= `KE/P3;
+			end
+			xi	=  1.0-G2/2.0*D0;
+`ifdef KIRAN
+			D0m1	=  D0-1.0;
+			pp	=  2.0*(xg-x0)-G2*D0m1;
+			qq	=  (xg-x0)*(xg-x0)-G2*(x0+D0m1);
+`else
+			pp	=  2.0*(xg-x0)+G2*(1-D0);
+			qq	=  (xg-x0)*(xg-x0)-G2*(x0-1.0+D0);
+`endif
+			temp	=  pp*pp-4.0*xi*qq;
+			if (temp < 0.0)
+				temp	=  0.0;
+			uu	=  2.0*qq/(pp+sqrt(temp));
+			dummy2	=  x0+uu;
+		end
+		Pc	=  dummy2*Vtv;
+
+//
+//	Calculate resistance under capacitor accounting for
+//	bias dependence of charge, and set up currents and
+//	charges for contribs. Note that meff is accounted for
+//	in the calculation of the conductances and cfr, it is
+//	more efficient to do this as part of the parameter
+//	pre-processing rather than at every iteration.
+//
+
+		if (abs(seriesr-1.0) > 1.0e-6)
+			gac	=  0.0;
+		else begin
+			if (PcStat > 10.0*Vtv)
+				factrac	=  (Vtv*limexp(-10.0));
+			else
+				factrac	=  (Vtv*limexp(-PcStat/Vtv));
+			sqrtfac	=  sqrt(factrac);
+			qac	=  ff*sqrtfac;
+			maxs	=  0.5*(-Vgx+sqrt(pow(-Vgx,2)+0.04));
+			uacv	=  uac_t/(1+uacred*maxs);
+			gac	=  meff*qac*uacv*w_cm/(l_cm/8);
+		end
+		Qg	=  meff*typeFac*cox*(Vgx-Pc)*w_cm*l_cm;
+		Iqi	=  V(b_cn);
+		Qqi	=  tau*V(b_cn);
+		Qfr	=  cfr*V(b_cf);
+		Irsub1	=  V(b_b1)*(gsub1+gac);
+
+//
+//	contribs for branch elements
+//
+
+		I(b_ci)	<+ ddt(Qg);			// intrinsic moscap
+//		I(b_nc)	<+ IqiStat;			// part of time-dependent network
+		I(b_cn)	<+ (Iqi+IqiStat);		// part of time-dependent network
+		I(b_cn)	<+ ddt(Qqi);			// part of time-dependent network
+		I(b_cf)	<+ ddt(Qfr);			// fringe capacitance
+		I(b_b1)	<+ Irsub1;			// resistance under capacitor
+
+	end	// LOAD
+
+	end
+endmodule

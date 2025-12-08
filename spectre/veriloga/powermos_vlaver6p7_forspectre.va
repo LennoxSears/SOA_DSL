@@ -1,0 +1,241 @@
+`include "constants.h"
+`include "discipline.h"
+
+
+`define	KB 1.380662e-23    // Boltzmann constant (J/K)
+`define	QQ 1.602189e-19    // mag. of electronic charge (C)
+`define	TABS 2.731500e+02  // 0C in K
+`define MAX(x,y)            ((x)>(y) ? (x) : (y))
+
+module accumcap (dnode, gnode, snode);
+    inout gnode, dnode, snode;
+    electrical gnode, dnode, snode;
+
+ 
+    branch (gnode,dnode)    gd;
+    // branch (gnode,snode)  gs;
+    branch (dnode,snode)    ds;
+
+
+
+    parameter real aream  = 1e-20;
+    parameter real num    = 1;
+    parameter real xmag   = 1;
+    parameter real tox    = 2e-8;
+    parameter real vfb    = -0.5;
+    parameter real nb     = 6e15;
+    parameter real em     = 2;
+    parameter real f3     = 15;
+    parameter real phidel = 0;
+    parameter real kind   = 1;
+    parameter real tdelta = 0;
+
+          
+    // real  epsox, epsi, eps, cox_area, gamma ;
+    real  epsox, epsi, cox_area, gamma ; 
+    real  Nc, Nv, Eg, phiT, ni, phiF, phidep, phistinv, phisnum, phisnum1, phisnum2, phiS;
+    real  QB,x, f1, QD, QD1 ,QD2,phidiff,f2; 
+    real  dummy_zero;
+
+    analog begin
+	    dummy_zero = V(dnode,snode)- V(dnode,snode);	// workaround to remove AHDLLINT waring
+            epsox = dummy_zero+3.45e-11;
+            epsi  = dummy_zero+1.045e-10;
+            // eps=8.85e-12;
+            Nc = dummy_zero+2.8e19;
+            Nv = dummy_zero+1.04e19;
+            Eg = dummy_zero+1.12;
+
+            cox_area = (epsox/tox);
+            // cox = (aream*cox_area);
+            gamma = (sqrt(2*`QQ*epsi*nb*1e6)/cox_area);
+            phiT  = dummy_zero+(`KB*($temperature+tdelta)/`QQ);
+            ni    = sqrt(Nc*Nv)*limexp(-Eg/(2*phiT));
+            phiF  = -(phiT*ln(nb/ni));
+
+
+        phistinv = (2*phiF-6*phiT-phidel-kind*V(ds));
+	   
+	   
+        //if (kind*V(gd) < vfb) begin
+        if (kind*V(gd) - vfb < 1e-10) begin
+            phidep   = -1*pow((-0.5*gamma+sqrt((gamma*gamma*0.25)-(kind*V(gd)-vfb))),em);
+            phisnum1 = (1/(-1*f3*phistinv));
+            phidiff  = f3*(phistinv-phidep);
+            // ////////////////////////////////
+            if(phidiff < 20) begin
+                phisnum2 = ln(1+ limexp(phidiff));
+            end else begin
+                phisnum2 = phidiff;
+            end
+            phisnum = (1+(phisnum1*phisnum2));
+            // ////////////////////////////////////
+            phiS = -1*abs(phidep/phisnum);
+            QB   = (-1*kind*cox_area*(kind*V(gd)-vfb-phiS+gamma*sqrt(-1*phiS)));
+            x    = sqrt(2*phiT);
+            f1   = -2*((gamma+x)/(gamma*gamma*x));
+            QD1  = kind*cox_area*(x/(gamma+x))*(ln(1+f1*(kind*V(gd)-vfb))/abs(f1));
+            QD   = (kind*(cox_area*gamma*( pow((-1*phiS),0.5)))-QD1);
+		  
+        end else begin
+            x   = sqrt(2*phiT);
+            f2  = ((2*gamma)/(3*x*pow((gamma+x),2)));
+            QD2 = kind*cox_area*(x/(gamma+x))*(ln(1+f2*(kind*V(gd)-vfb))/abs(f2));
+            QD  = (kind*(-1*cox_area*(kind*V(gd)-vfb))+QD2);
+            QB  = 0;
+        end
+
+
+        I(gnode) <+ ddt(num*xmag*aream*(-QD-QB));
+        I(dnode) <+ ddt(num*xmag*aream*(+QD));
+        I(snode) <+ ddt(num*xmag*aream*(+QB));
+
+    end 
+ 
+endmodule
+
+ 
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////
+module drifty (vintd2, vintd1, vg);
+    inout vintd2, vintd1;
+    electrical vintd2, vintd1, vg ;
+    branch (vintd2, vintd1) ds;
+
+
+
+
+    parameter  real kind       = 1;
+    parameter  real at         = 0;
+    parameter  real lm         = 1e-6;
+    parameter  real wm         = 2e-6;
+    parameter  real xj         = 0.8e-6;
+    parameter  real xmag       = 1;
+    parameter  real num        = 1;
+    parameter  real u_init     = 0.1200;
+    parameter  real alphafneff = 0.1;
+    parameter  real alphexp    = 1;
+    parameter  real betavds    = 0;
+    parameter  real betaexp    = 1;
+    parameter  real fneff      = 0.95;
+    parameter  real nd         = 9e21;
+    parameter  real vsat       = 5e4;
+    parameter  real TNOM       = 27;
+    parameter  real udriftexpa = 1e-3;
+    parameter  real udriftexpb = 1e-6;
+    parameter  real vfb0       = -2.0;
+    parameter  real vfbtexp    = 2.2e-3;
+    parameter  real tdelta     = 0.0;
+  
+
+    real Efield, ueff, Neff, IAS, reff,rgt,uT,vfbT,vsatT,Ecrit,DT;
+    real  dummy_zero;
+
+
+
+    analog begin
+	    dummy_zero = V(vintd2,vintd1)- V(vintd2,vintd1);	// workaround to remove ADHLLINT waring
+            vsatT = dummy_zero+vsat-(at*((($temperature+tdelta)/(`TABS + TNOM))-1));
+            vfbT  = dummy_zero+(vfb0+vfbtexp*($temperature +tdelta  - (`TABS +TNOM)));
+            DT    = dummy_zero+($temperature + tdelta -(`TABS+TNOM));
+	    // uT = (u_init*pow((($temperature)/(`TABS+TNOM)),udriftexp));
+	    uT    = dummy_zero+(u_init*(1+(udriftexpa*DT)+(udriftexpb*DT*DT)));
+            Ecrit = dummy_zero+vsatT/uT;
+            IAS   = dummy_zero+(wm*xj*num*xmag)*`QQ*nd*vsat;
+ 
+        rgt = 0.5*(kind*V(vg,vintd1)-vfbT + sqrt( ((kind*V(vg,vintd1)-vfbT)*(kind*V(vg,vintd1)-vfbT)) + 0.02));
+        // reff = (fneff*(1+alphafneff*rgt));
+        reff   = (fneff*(1+alphafneff*(pow(`MAX(rgt,1e-16),alphexp))+betavds*pow(abs(V(ds)+1e-30),betaexp)));
+        Efield = V(ds)/lm;
+        ueff   = (uT/sqrt(1+((Efield/Ecrit)*(Efield/Ecrit))));
+
+        if(I(ds) > IAS*(1+reff)) begin
+             Neff = I(ds)/(wm*xj*xmag*num*`QQ*vsat);
+        end else begin
+            Neff = nd+reff*nd*limexp(((I(ds)/IAS)-1-reff)/reff);
+        end
+
+        I(ds) <+ wm*xj*xmag*num*`QQ*Efield*ueff*Neff;
+
+  
+           
+    end
+    
+endmodule
+
+
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////
+module drifty4t (vintd2, vintd1, vg,vb,vs);
+    inout vintd2, vintd1;
+    electrical vintd2, vintd1, vg , vb,vs;
+    branch (vintd2, vintd1) ds;
+
+
+
+
+    parameter  real kind       = 1;
+    parameter  real at         = 0;
+    parameter  real lm         = 1e-6;
+    parameter  real wm         = 2e-6;
+    parameter  real xj         = 0.8e-6;
+    parameter  real xmag       = 1;
+    parameter  real num        = 1;
+    parameter  real u_init     = 0.1200;
+    parameter  real alphafneff = 0.1;
+    parameter  real alphexp    = 1;
+    parameter  real betavds    = 0;
+    parameter  real betaexp    = 1;
+    parameter  real fneff      = 0.95;
+    parameter  real nd         = 9e21;
+    parameter  real vsat       = 5e4;
+    parameter  real TNOM       = 27;
+    parameter  real udriftexpa = 1e-3;
+    parameter  real udriftexpb = 1e-6;
+    parameter  real vfb0       = -2.0;
+    parameter  real vfbtexp    = 2.2e-3;
+    parameter  real tdelta     = 0.0;
+    parameter  real resbodye   = 0;
+    parameter  real resbodyesq = 0;
+    parameter  real vfbb       = 0;
+    parameter  real uinitb     = 0;
+    parameter  real uinitbsq   = 0;
+    parameter  real vsatb      = 0;
+    // parameter  real alpharbody = 0;
+  
+
+    //real Efield, ueff, Neff, IAS, reff,rgt,uT,vfbT,vsatT,Ecrit,DT,rebff,rbt;
+    real Efield, ueff, Neff, IAS, reff,rgt,uT,vfbT,vsatT,Ecrit,DT;
+
+
+    analog begin
+        vsatT = (vsat*(1+vsatb*V(vb,vs)))-(at*((($temperature+tdelta)/(`TABS + TNOM))-1));
+        vfbT  = (vfb0+vfbb*(V(vb,vs))+vfbtexp*($temperature +tdelta  - (`TABS +TNOM)));
+        rgt   = 0.5*(kind*V(vg,vintd1)-vfbT+(resbodye+resbodyesq*V(vb,vs))*V(vb,vs) + sqrt(((kind*V(vg,vintd1)-vfbT+(resbodye+resbodyesq*V(vb,vs))*V(vb,vs))*(kind*V(vg,vintd1)-vfbT+(resbodye+resbodyesq*V(vb,vs))*V(vb,vs))) + 0.02));
+
+        reff   = (fneff*(1+alphafneff*(pow(`MAX(rgt,1e-16),alphexp))+betavds*pow(abs(V(ds)+1e-30),betaexp)));
+        Efield = V(ds)/lm;
+
+        DT    = ($temperature + tdelta -(`TABS+TNOM));
+	uT    = (u_init*(1+(uinitbsq*V(vb,vs)+uinitb)*V(vb,vs))*(1+(udriftexpa*DT)+(udriftexpb*DT*DT)));
+        Ecrit = vsatT/uT;
+        ueff  = (uT/sqrt(1+((Efield/Ecrit)*(Efield/Ecrit))));
+	  
+        IAS = (wm*xj*num*xmag)*`QQ*nd*vsat;
+
+        if(I(ds) > IAS*(1+reff)) begin
+            Neff = I(ds)/(wm*xj*xmag*num*`QQ*vsat);      
+        end else begin
+            Neff = nd+reff*nd*limexp(((I(ds)/IAS)-1-reff)/reff);
+        end	  
+
+        I(ds) <+ wm*xj*xmag*num*`QQ*Efield*ueff*Neff;
+ 
+    	  
+           
+    end
+ 
+endmodule
+
+
+

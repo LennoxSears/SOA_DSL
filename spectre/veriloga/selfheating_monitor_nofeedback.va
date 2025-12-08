@@ -1,0 +1,66 @@
+//***********************************************************************************
+//*  NXP SOA-check monitor                                                          *
+//***********************************************************************************
+//
+// Filename:           selfheating_monitor_nofeedback.va
+// Version:            1.0.1
+// Date:               2022-11-01
+// Author(s):          Gert-Jan Smit
+// Source:
+//   - git repository: soacheck_va
+//   - git commit:     db0fef64e3fad8def2f3907ab68ad83456aeefcd
+//
+// Description:
+// This is an auxiliary model to estimate the T-increase due to self heating in a
+// resistor. It takes into account the thermal capacitance of the device, which is
+// calculated based on the thermal time-constant provided by the user.
+// In dc-simulations and fast periodic signals, it should flag exactly at the same
+// level as a straightforward Irms-monitor.
+// But in slow or low-duty-cylce waveforms, this model helps to get more physical
+// monitoring of self heating.
+// Note that this model does not do any monitoring. For that purpose, a
+// (SiMKit-)ovcheck monitor must be connected to the dt node.
+//
+// Example of how to use: see ./test/test_Irms.scs
+//
+//***********************************************************************************
+
+
+
+`include "disciplines.h"
+
+module shmonitor_nofeedback(n1, n2, dt);
+    input n1, n2;
+    electrical n1, n2;
+    inout       dt;
+    thermal     dt;
+    branch     (dt) b_rth;   // local thermal branch
+    branch     (dt) b_ith;   // 2nd definition to fool floating node detection in some compilers
+
+//==================
+// Model Parameters
+//==================
+    parameter real   irms_max   = 1e3;        // Maximum allowed rms-current (in A; based on DRM)
+    parameter real   r          = 1.0;        // Resistance value (in Ohm)
+    parameter real   theat      = 1e-6;       // Time constant associated with heating (in s)
+    parameter real   dtmax      = 10;         // T-rise at maximum Irms (in C); only used to estimate Rth
+
+    // variables
+    real Pmax, Rth, Cth, dv, dT, Pdiss;
+
+    analog begin
+        @(initial_step) begin
+            Pmax = irms_max * irms_max * r;
+            Rth  = dtmax / Pmax;             // estimated Rth
+            Cth  = theat / Rth;              // estimated Cth, based on time constant for heating
+        end
+
+        dv = V(n1, n2);
+        dT = Temp(b_rth);
+        Pdiss = dv * dv / r;             // actual instantaneous power dissipation
+
+        Pwr(b_ith) <+ -Pdiss;
+        Pwr(b_rth) <+ dT / Rth;
+        Pwr(b_rth) <+ ddt(Cth * dT);
+    end
+endmodule // shmonitor_nofeedback

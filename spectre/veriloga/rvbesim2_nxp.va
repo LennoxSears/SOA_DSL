@@ -1,0 +1,582 @@
+/* ======================================================================== *
+
+                    F I L E   I N F O R M A T I O N
+
+ * ==================================================================== *//**
+
+   @file        rvbesim2_nxp.va
+                Verilog-A model file
+
+   This file contains the reverse VBE reliability model for bipolars.
+
+   @author      Andries Scholten, Bart De Vries
+
+   @version     2.3.0
+
+ * ==================================================================== *//**
+
+   @history
+
+   BDV = Bart De Vries (MCSL-Eindhoven)
+
+   @date 14-02-2014 (BDV):
+   - initial version (version number set to 1.0.0)
+   - only NPN is implemented for the time being
+
+   @date 01-10-2014 (BDV):
+   - version number set to 1.1.0
+   - model now outputs rvbeibfdegr instead of ibfdegr to avoid clash with mixed
+     mode degradation model
+   - changed module name to mrvbesim to be consistent
+   - minor (bug)fixes
+
+   @date 22-04-2015 (BDV):
+   - version number set to 1.1.1
+   - Print correct (=ambient) temperature in flagging warning.
+
+   @date 26-10-2020 (BDV):
+   - Set version number to 2.0.0
+   - Upgrade model to prestoplus
+   - Add method to allow full aging simulation based on DC analysis
+
+   @date 2021-04-15 (BDV):
+   - Set version number to 2.1.0
+   - Adapt flagging output to correspond to the new "aging lite" format.
+   - Implement DC stress capability.
+
+   @date 2021-04-26 (BDV)
+   - Set version to 2.1.1.
+   - Solve potential issue with multi-step/mission profile simulations not
+     giving correct results when one of the steps has eq_stress_time = 0.0.
+
+   @date 2021-11-23 (BDV)
+   - Set version to 2.2.0.
+   - Adapt model to be used for other models than Mextram (with the loss of OP
+     dhfe/hfe calculation).  This adds parameters swmextram and dicrit.
+
+   @date 2022-11-18 (BDV)
+   - Set version to 2.3.0.
+   - Add new parameter "swagecheck" to switch off aging_lite messages (default 1).
+
+ *//* ===================================================================== */
+
+`include "disciplines.vams"
+`include "constants.vams"
+
+// Uncomment the following line to have the model produce additional debug
+// information during the simulation run.
+//`define DEBUG 1
+
+// Uncomment the following line to correctly close the output files at the
+// end of the simulation run. Now they are left open and the simulator
+// process itself takes care of closing the files. The default is needed
+// for Spectre 5.x.
+//`define DO_CLOSE_FILES 1
+
+// Uncomment the following line to open the XML and INFO output files using
+// the append mode. This is only supported in Verilog-AMS 2.3 compliant
+// compilers.
+//`define OPEN_FOR_APPEND 1
+
+`ifdef OPEN_FOR_APPEND
+`define FOPEN_MODE "a"
+`else
+`define FOPEN_MODE "w"
+`endif // OPEN_FOR_APPEND
+
+// Uncomment the following line to have the localparam statements replaced by
+// parameter statements in case the localparam statement is not supported. This
+// is needed for Spectre versions 6.1.x and earlier.
+//`define NO_LOCALPARAM 1
+`ifdef NO_LOCALPARAM
+`define localparam parameter
+`else
+`define localparam localparam
+`endif
+
+// Names for the output files to be created by the model instances.
+`define EFFECT_NAME  "rvbe"
+`define XML_FILE_NAME	"rvbe.xml"
+
+`define UPDATE_XML_ELEMENT(FILE,PARAM,VALUE,DELTA,CLIPPED) \
+if (DELTA) begin \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <parameter name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"", `EFFECT_NAME, PARAM, VALUE, DELTA); \
+if (CLIPPED) begin \
+$fwrite(FILE, " clipped=\"yes\""); \
+end \
+$fwrite(FILE, "/>\n </instance>\n"); \
+end
+
+`define UPDATE_DAMAGE_XML_ELEMENT(FILE,PARAM,VALUE,DELTA) \
+if (DELTA) \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <damage name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"/>\n </instance>\n", `EFFECT_NAME, PARAM, VALUE, DELTA);
+
+`define UPDATE_OP_XML_ELEMENT(FILE,PARAM,VALUE,DELTA,CLIPPED) \
+if (DELTA) begin \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <oppoint name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"", `EFFECT_NAME, PARAM, VALUE, DELTA); \
+if (CLIPPED) begin \
+$fwrite(FILE, " clipped=\"yes\""); \
+end \
+$fwrite(FILE, "/>\n </instance>\n"); \
+end
+
+`define SOACHECK_WARNING_DELTAHFE(AGE, TEMP, VBEREAD, DELTAHFE) \
+$write("\n[AGECHECK_INFO] instance: %M, rule: aging_%s, age: %gY, temperature: %gC, VBEread: %gV, deltaHFE: %gPct\n", `EFFECT_NAME, (AGE), (TEMP), (VBEREAD), (100*(DELTAHFE)));
+
+`define SOACHECK_WARNING_DELTAIBF(AGE, TEMP,  DELTAIBF) \
+$write("\n[AGECHECK_INFO] instance: %M, rule: aging_%s, age: %gY, temperature: %gC, deltaIB: %g\n", `EFFECT_NAME, (AGE), (TEMP), (DELTAIBF));
+
+
+`ifdef M_INF
+`else
+`ifdef __TIBURONDA__
+`define M_INF	1.797693134862e+308	// 64-bit IEEE 752 (double)
+`else
+`define M_INF	3.40282e+38		// 32-bit IEEE 752 (double)
+`endif // __TIBURONDA__
+`endif // M_INF
+
+`define NPN 1
+`define PNP -1
+`define TYPE(npndef,pnpdef) ((type==`NPN) ? npndef : pnpdef)
+
+
+// ----------------------------------------------------------------------------
+//
+// Smoothing and convergence-aiding macros
+//
+// ----------------------------------------------------------------------------
+
+`define linlog(result, x, vlim)\
+      if (x < vlim)\
+          result = x;\
+      else\
+          result = vlim + ln(1.0 + (x - vlim));\
+      result=result
+
+
+//values needed for safe exponential function
+`define kervbe         1.0e-100
+`define servbe         2.3025850929940458e+02
+`define oneThirdrvbe   3.3333333333333333e-01
+
+//  P3       3rd order polynomial expansion of exp()
+`define P3rvbe(u) (1.0 + (u) * (1.0 + 0.5 * ((u) * (1.0 + (u) * `oneThirdrvbe))))
+
+`define expl_low_rvbe(x, res) \
+res = ( ((x) > - `servbe) ? exp(x) : `kervbe / `P3rvbe(-`servbe - (x)) )
+
+
+/**
+ * @brief bipolar transistor wrapper with reverse VBE stress measurement.
+ *
+ * The wrapper instances gets the parameters for each instance from the
+ * subcircuit wrapper that also provide the parameters for the MOS model
+ * itself.
+ *
+ *
+ * @param dta       Delta-Temperature to Ambient [K]; Default is 0 K.
+ *
+ * @param active    Flag to activate/deactivate RVBE measurement; Default
+ *                  is 1 (on).
+ * @param mode      Unused parameter; left for backwards compatibility.
+ *
+ * @param tage      Time to which the stress is extrapolated for the
+ *                  parameter update calculations [s].
+ * @param tstart    Time when stress measurement begins [s]; Default is 0 s.
+ * @param tstop     Time when stress measurement ends [s]; Default is inf s.
+ *
+ * @param fstat     Prefactor taking into account the effect of statistical
+ *                  spread [-].
+ * @param k         Overall prefactor of reverse-VBE degradation model
+ *                  [Am^2s^(-n)].
+ * @param n         Exponent of power law describing the time dependence of the
+ *                  degradation [-].
+ * @param dl        Difference between effective and drawn dimensions [m].
+ * @param alpha     Parameter describing voltage dependence of the degradation
+ *                  [V].
+ * @param tr        Reference temperature of reverse-VBE degradation model [C].
+ * @param c         Thermally activated fraction of Delta_Ib at reference
+ *                  temperature tr [-].
+ * @param ea        Activation voltage [V].
+ * @param vberead   Parameter describing the VBE readout voltage to be used
+ *                  for flagging [V].
+ * @param swsh      Switch to toggle selfheating on and off [-].  If set to
+ *                  0 the signal on node dt is not used; Default is 0.
+ * @param mult      Multiplication factor for extra base current source [-].
+ *
+ * @param damage    Parameter holding the value of the total accumulated damage
+ *                  at the end of the previous step of multi-step aging; Default
+ *                  is 0.  This parameter is only to be set by the aging tool.
+ *
+ * @param swagecheck Switch to control whether "aging lite"/agecheck messages
+ *                  are printed to the log file to be picked up by the SOA
+ *                  browsers; Default is 1 (on).
+ * @param dhfecrit  Threshold of relative hfe change above which a warning will
+ *                  be given [-]; default is 0.05.
+ * @param dicrit    Threshold of the absolute base current change above which a
+ *                  warning will be given [A]; default is 1 nA.
+ *
+ */
+ 
+(* instrument_module *) 
+module mrvbesim2 (col, b, e, s, dt);
+
+  // parameters related to the wrapped Mextram device
+  parameter integer swmextram = 1      from [0:1];
+  parameter integer type   = `NPN      from [`PNP : `NPN] exclude 0;
+  parameter real l         = 0.75e-6   from (0.0:inf);
+  parameter real w         = 40e-6     from (0.0:inf);
+  parameter real mult      = 1.0       from (0.0:inf);
+  parameter real dta       = 0.0;
+  parameter real tref      = 25.0      from [-`P_CELSIUS0:inf);
+  parameter real is        = 22.0e-18  from [0.0:inf);
+  parameter real bf        = 215.0     from [1.0e-4:inf);
+  parameter real ibf       = 2.7e-15   from [0.0:inf);
+  parameter real ae        = 0.0;
+  parameter real ab        = 1.0;
+  parameter real aqbo      = 0.3;
+  parameter real dais      = 0.0;
+  parameter real vgb       = 1.17      from [0.1:inf);
+  parameter real dvgbf     = 0.05;
+  parameter real vgj       = 1.15      from [0.1:inf);
+  parameter real mlf       = 2.0       from [0.1:inf);
+
+  // parameters related to simulation
+  parameter real tage      = 0.0       from [0:inf);
+  parameter real tstart    = 0.0       from [0:inf);
+  parameter real tstop     = `M_INF    from [0:inf);
+
+  parameter real damage    = 0.0       from [0:inf);
+
+  // parameters relating to permanent damage
+  parameter real fstat     = 1.0;
+  parameter real k         = 1.0e-4;
+  parameter real n         = 0.5;
+  parameter real dl        = 0.0;
+  parameter real alpha     = 38.0;
+  parameter real tr        = 25.0      from [-273:inf);
+  parameter real c         = 1.0;
+  parameter real ea        = -0.25;
+  parameter real vberead   = 0.7;
+  parameter integer swsh   = 0         from [0:1];
+
+  // parameters relating to flagging
+  parameter integer swagecheck = 1     from [0:1];
+  parameter real dhfecrit  = 0.05;
+  parameter real dicrit    = 1.0e-9;
+
+  // parameters for activation, debugging and output
+  parameter integer active = 1         from [0:1];
+  parameter integer mode   = 0         from [0:2];  // only for backwards compat.
+
+  `localparam integer year_in_secs = 365 * 24 * 60 * 60;
+  `localparam real ref_stress_time = 1.0e-06 from (0:inf);
+
+  // --------------------------------------------------------------------------
+  //
+  // Ports
+  //
+  // --------------------------------------------------------------------------
+
+  inout col, b, e, s, dt;
+  electrical col, b, e, s;
+  electrical dt;
+
+  // --------------------------------------------------------------------------
+  //
+  // Variables
+  //
+  // --------------------------------------------------------------------------
+
+  integer stressed;
+  integer update_file;
+
+  real inv_tlife, eq_stress_time, eq_inv_tlife, contrib_inv_tlife, damage_delta;
+  real Veb, dT;
+  real we, le, pe, prefactor;
+  real Tka, Trk, Trefk, Vta, Vtr, Vtref, Vdtainv, taN;
+  real isT, bfT, ibfT, ib1ref, ib2ref, ibref;
+  real ibftpow, ibftexp, ib2exp, readfactor;
+  real Tki, Tk, Vt, Vdtinv;
+  real Tscaling, vebfactor;
+  real dib, dibf, dhfe;
+
+
+  // --------------------------------------------------------------------------
+  //
+  // Analog block
+  //
+  // --------------------------------------------------------------------------
+
+  analog begin
+
+`ifdef DEBUG
+    @(initial_step) begin
+      $write("\nPRESTOPLUS PARAMETERS (%M)");
+      $write("\nactive(%M)              = %d", active);
+      $write("\ntage(%M)                = %g", tage);
+      $write("\nk(%M)                   = %g", k);
+    end
+`endif // DEBUG
+
+    if (active && (tage > 0.0) && (k > 0.0)) begin
+
+      // ----------------------------------------------------------------------
+      //
+      // Initialization
+      //
+      // ----------------------------------------------------------------------
+
+      @(initial_step) begin
+
+        eq_inv_tlife      = 0.0;
+        contrib_inv_tlife = 0.0;
+
+        if (analysis("dc", "tran")) begin
+
+          // opening files for later write
+          update_file  = $fopen(`XML_FILE_NAME, `FOPEN_MODE);
+
+        end // if (analysis("dc", "tran"))
+
+        // calculate model contributions which do not vary during simulation
+        we  = w + dl;
+        le  = l + dl;
+        pe  = 2.0 * (we + le);
+        prefactor = k * pe * fstat;
+
+        Tka      = $temperature + dta;
+        Trk      = tr + `P_CELSIUS0;     // reference temperature for rvbesim parameters
+        Vta      = $vt(Tka);
+        Vtr      = $vt(Trk);    // reference temperature for rvbesim parameters
+
+        if (swmextram == 1) begin
+          Trefk    = tref + `P_CELSIUS0;   // reference temperature for Mextram parameters
+          Vtref    = $vt(Trefk);  // reference temperature for Metram parameters
+          Vdtainv  = 1.0/Vta - 1.0/Vtref;
+          taN      = Tka/Trefk;
+
+          // calculation of the read factor
+          // this read factor is calculated with respect to the ambient temperature
+          ibftpow    = pow(taN, 6.0-2.0*mlf);
+          ibftexp    = exp(- vgj*Vdtainv/mlf);
+          ib2exp     = exp(vberead/(Vta*mlf)) - 1.0;
+          readfactor = ibftpow * ibftexp * ib2exp;
+
+          // calculation of the reference base current, i.e. before degradation
+          // needed for flagging
+          isT      = is * pow(taN, 4.0-ab-aqbo+dais) * exp(-vgb*Vdtainv);
+          bfT      = bf * pow(taN, ae-ab-aqbo) * exp(-dvgbf*Vdtainv);
+          ibfT     = ibf * ibftpow * ibftexp;
+          ib1ref   = (isT / bfT) * (exp(vberead/Vta) - 1.0);
+          ib2ref   = ibfT * ib2exp;
+          ibref    = ib1ref + ib2ref;
+        end
+
+        // if no selfheating is needed, the temperature variables can
+        // already be calculated here
+        Tk       = Tka;
+        Vt       = Vta;
+        dT       = 0.0;
+        Vdtinv   = 1.0/Vt - 1.0/Vtr;
+
+`ifdef DEBUG
+        $write("\ndhfecrit(%M)            = %g", dhfecrit);
+        $write("\n\nAMBIENT TEMPERATURE AND DEVICE DEPENDENT PARAMETERS (%M)");
+        $write("\nwe(%M)                  = %g", we);
+        $write("\nle(%M)                  = %g", le);
+        $write("\npe(%M)                  = %g", pe);
+        $write("\nprefactor(%M)           = %g", prefactor);
+        $write("\nTka(%M)                 = %g", Tka);
+        $write("\nTrk(%M)                 = %g", Trk);
+        if (swmextram == 1) begin
+          $write("\nTrefk(%M)               = %g", Trefk);
+          $write("\nVdtainv(%M)             = %g", Vdtainv);
+          $write("\ntaN(%M)                 = %g", taN);
+          $write("\nibftpow(%M)             = %g", ibftpow);
+          $write("\nibftexp(%M)             = %g", ibftexp);
+          $write("\nib2exp(%M)              = %g", ib2exp);
+          $write("\nreadfactor(%M)          = %g", readfactor);
+          $write("\nbf(%M)                  = %g", bf);
+          $write("\nbfT(%M)                 = %g", bfT);
+          $write("\nibfT(%M)                = %g", ibfT);
+          $write("\nib1ref(%M)              = %g", ib1ref);
+          $write("\nib2ref(%M)              = %g", ib2ref);
+          $write("\nibref(%M)               = %g", ibref);
+        end
+`endif // DEBUG
+
+      end // initial_step
+
+
+      // ----------------------------------------------------------------------
+      //
+      // Model calculations
+      //
+      // ----------------------------------------------------------------------
+
+      if (analysis("dc", "tran")) begin
+
+        Veb  = type * V(e, b);
+
+        // calculate self-heating and intermediate quantities
+        if (swsh == 1) begin
+          Tki  = V(dt);
+
+          if (Tki < 0.0) begin
+            Tki = - ln(1.0 - Tki);
+          end
+          `linlog(dT, Tki, 200.0);
+
+          Tk       = $temperature + dta + dT;
+          Vt       = $vt(Tk);
+          Vdtinv   = 1.0/Vt - 1.0/Vtr;
+        end
+
+        // calculate tlife
+        if (Veb > 0.0) begin
+          Tscaling = pow( (1.0 - c) + c * exp( -ea * Vdtinv ), 1.0/n );
+          `expl_low_rvbe( (-alpha/(n*Veb)), vebfactor );
+          inv_tlife = Tscaling * vebfactor;
+        end else begin
+          Tscaling  = 0.0;
+          vebfactor = 0.0;
+          inv_tlife = 0.0;
+        end
+
+        contrib_inv_tlife = (inv_tlife > 0.0) ? inv_tlife : 0.0;
+
+
+        if (analysis("tran")) begin
+          // activation flag to sync with user specified tstart and tstop
+          stressed = ($abstime > tstart) ? (($abstime > tstop) ? 0 : 1) : 0;
+          eq_inv_tlife = idt(stressed ? contrib_inv_tlife : 0.0, 0.0);
+        end else begin  // i.e. analysis("dc")
+          stressed = 1;
+          eq_inv_tlife = contrib_inv_tlife * ref_stress_time;
+        end // if analysis("tran")
+
+`ifdef DEBUG
+        $write("\n\nVOLTAGES AND TEMPERATURES (%M)");
+        $write("\nVeb(%M)                 = %g", Veb);
+        $write("\ndT(%M)                  = %g", dT);
+        $write("\nTk(%M)                  = %g", Tk);
+        $write("\nVdtinv(%M)              = %g", Vdtinv);
+        $write("\n\nLIFETIME CALCULATION (%M)");
+        $write("\nTscaling(%M)            = %g", Tscaling);
+        $write("\nvebfactor(%M)           = %g", vebfactor);
+        $write("\ninv_tlife(%M)           = %g", inv_tlife);
+        $write("\ncontrib_inv_tlife(%M)   = %g", contrib_inv_tlife);
+        $write("\n\nAGING (%M)");
+        $write("\neq_inv_tlife(%M)        = %g", eq_inv_tlife);
+        $write("\ntotal stress time(%M)   = %g", $abstime);
+`endif // DEBUG
+
+      end // if (analysis("dc", "tran"))
+
+
+      // ----------------------------------------------------------------------
+      //
+      // Output stress data
+      //
+      // ----------------------------------------------------------------------
+
+      @(final_step) begin
+
+        if (analysis("dc", "tran")) begin
+
+          if (analysis("tran")) begin
+            // Get the total simulation time for stress measurement.
+            eq_stress_time = ($param_given(tstop) && (tstop < $abstime)
+              ? tstop : $abstime) - tstart;
+          end else begin  // i.e. analysis("dc")
+            eq_stress_time = ref_stress_time;
+          end
+
+          // Permanent damage calculation with simple linear extrapolation.
+          damage_delta = ( eq_stress_time > 0.0 )
+                           ? eq_inv_tlife * tage/eq_stress_time
+                           : 0.0;
+          dibf         = ( (damage_delta + damage) > 0.0 )
+                           ? prefactor * pow(damage_delta + damage, n)
+                           : 0.0;
+
+          dib  = readfactor * dibf;
+          dhfe = dib / ( ibref + dib );
+
+          if (swmextram == 1) begin // in case of mextram, calculate dhfe
+            if ((abs(dhfe) > dhfecrit) && (swagecheck > 0)) begin
+              `SOACHECK_WARNING_DELTAHFE((tage / year_in_secs), (Tka - `P_CELSIUS0), (vberead), (dhfe))
+            end
+            `UPDATE_OP_XML_ELEMENT(update_file, "dhfe/hfe", 0.0, dhfe, 0)
+          end else begin // in case it's not mextram, just use dibf
+            if ((abs(dibf) > dicrit) && (swagecheck > 0)) begin
+              `SOACHECK_WARNING_DELTAIBF((tage / year_in_secs), (Tka - `P_CELSIUS0), (dibf))
+            end
+            `UPDATE_OP_XML_ELEMENT(update_file, "rvbedeltaib", 0.0, dibf, 0)
+          end
+
+          `UPDATE_XML_ELEMENT(update_file, "rvbeibfdegr", 0.0, dibf, 0)
+          `UPDATE_DAMAGE_XML_ELEMENT(update_file, "rvbedamage", damage, damage_delta)
+
+`ifdef DO_CLOSE_FILES
+          $fclose(update_file);
+`endif
+
+`ifdef DEBUG
+          $write("\ndamage(%M)              = %g", damage);
+          $write("\n\nPARAMETER CHANGES (%M)");
+          $write("\ndibf(%M)                = %g", dibf);
+          if (swmextram == 1) begin
+            $write("\nibref(%M)               = %g", ibref);
+            $write("\ndib(%M)                 = %g", dib);
+            $write("\ndhfe(%M)                = %g\n", dhfe);
+          end
+`endif // DEBUG
+
+        end // (analysis("dc", "tran"))
+
+      end // final_step
+
+    end // if (active && ...)
+
+    // ------------------------------------------------------------------------
+
+  end // analog
+
+endmodule // mrvbesim2
+
+`undef UPDATE_XML_ELEMENT
+`undef UPDATE_DAMAGE_XML_ELEMENT
+`undef UPDATE_OP_XML_ELEMENT
+`undef SOACHECK_WARNING_DELTAHFE
+
+`undef XML_FILE_NAME
+`undef EFFECT_NAME
+
+`ifdef DO_CLOSE_FILES
+`undef DO_CLOSE_FILES
+`endif // DO_CLOSE_FILES
+
+`undef FOPEN_MODE
+`ifdef OPEN_FOR_APPEND
+`undef OPEN_FOR_APPEND
+`endif // OPEN_FOR_APPEND
+
+`undef localparam
+`ifdef NO_LOCALPARAM
+`undef NO_LOCALPARAM
+`endif //NO_LOCALPARAM
+
+`undef M_INF
+`undef NPN
+`undef PNP
+`undef TYPE
+
+`undef linlog
+`undef kervbe
+`undef servbe
+`undef oneThirdrvbe
+`undef P3rvbe
+`undef expl_low_rvbe

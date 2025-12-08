@@ -1,0 +1,85 @@
+# fault models for smos10hv_ams
+#
+#   =======================================================
+#   ====   Device Analog Fault check for:               ===
+#   ====    - silicon oxide latent defects              ===
+#   ====    - silicon cone defects                      ===
+#   =======================================================
+#
+# - change Analog Fault sim options
+#      Device Fault Options:
+#             default res for shorts 1K
+#             default res for opens  1M
+#      Wire Short Options:
+#             res value for wire short 1K
+#      Wire Open Options:
+#             wire open method         OnDevices
+#             res value for wire open  1M
+#             
+# - even 1M open in DC may not break the circuit, e.g. open gate of current mirror won't be detected
+#   DC analysis is thus not a good idea, need TRAN with some activity to ensure there is a chance to malfunction
+#
+# NMOS AND PMOS NOT INLUDED
+#
+{ faultmodels
+  { { library smos10hv_ams }
+    { cell { nmos_10hv pmos_10hv nmos_ana_10hv pmos_ana_10hv nmos_ll_10hv pmos_ll_10hv nmos3_zvt_10hv } }
+    { faults
+      { { type {short g b }} { label {LGO GB short}} }
+      { { type {short g s }} { label {LGO GS short}} }
+      { { type {short g d }} { label {LGO GD short}} }
+    }
+  }
+  
+  { { library smos10hv_ams }
+    { cell { nmos5_10hv pmos5_10hv nmos10_10hv pmos10_10hv nmos45b_10hv pmos45b_10hv pmoshs45b_10hv nmos90b_10hv
+    pmos90b_10hv } }
+    { faults
+      { { type {short g b }} { label {DGO GB short}} }
+      { { type {short g s }} { label {DGO GS short}} }
+      { { type {short g d }} { label {DGO GD short}} }
+    }
+  }
+  
+  { { library smos10hv_ams }
+    { cell { nld5_10hv nld5_lvt_10hv pld5_10hv nld10_10hv pld10b_10hv nld30b_10hv pld30b_10hv
+     nld45b_10hv nld45b_he_10hv nld45b_tlp_10hv pld45b_10hv nld65b_10hv nld90b_10hv pld90b_10hv} }
+    { faults
+      { { type {short g s }} { label {LDMOS GS short}} }
+      { { type {short g d }} { label {LDMOS GD short}} }
+    }
+  }
+  
+  { { library smos10hv_ams }
+    { cell { cglv_10hv } }
+    { faults
+      { { type {short t nw }} { label {CGLV short}} }
+
+    }
+  }
+  
+  { { library smos10hv_ams }
+    { cell { cdp_10hv cdpf_10hv cdpf_m1m2m3_10hv } }
+    { faults
+      { { type {short t b }} { label {CDP short}} }
+
+    }
+  }
+  
+  { { library smos10hv_ams }
+    { cell { cghv_10hv cghvf_10hv cghvf_m1m2m3_10hv } }
+    { faults
+      { { type {short t nw }} { label {CGHV short}} }
+
+    }
+  }
+
+  { { library smos10hv_ams }
+    { cell { antifuse_10hv } }
+    { faults
+      { { type {short wr s }} { label {antifuse short}} }
+
+    }
+  }
+
+}

@@ -1,0 +1,57 @@
+# fault models for smos10hv_ams
+#
+#   =======================================================
+#   ====   Device Analog Fault check for:               ===
+#   ====    - leakage outlier defects                   ===
+#   =======================================================
+#
+# - v12 11262020
+#	change Analog Fault sim options
+#		Device Fault Options:
+#			alter fault_***_leakage_outlier=1 to open leakage outlier model locally.
+#
+
+{ faultmodels
+  { { library smos10hv_ams }
+    { cell dz5_10hv }
+    { faults
+      { { type {alter fault_dz5_leakage_outlier=1}} {label {dz5 leakage}} }
+    }
+  }
+  { { library smos10hv_ams }
+    { cell dz5b_10hv }
+    { faults
+      { { type {alter fault_dz5b_leakage_outlier=1}} {label {dz5b leakage}} }
+    }
+  }
+  { { library smos10hv_ams }
+    { cell nmos_10hv }
+    { faults
+      { { type {alter fault_injection_nmos_leakage_outlier=1}} {label {nmos leakage}} }
+    }
+  }
+  { { library smos10hv_ams }
+    { cell nmos_ana_10hv }
+    { faults
+      { { type {alter fault_injection_nmos_ana_leakage_outlier=1}} {label {nmos_ana leakage}} }
+    }
+  }
+  { { library smos10hv_ams }
+    { cell pmos_10hv }
+    { faults
+      { { type {alter fault_injection_pmos_leakage_outlier=1}} {label {pmos leakage}} }
+    }
+  }
+  { { library smos10hv_ams }
+    { cell pld5_10hv }
+    { faults
+      { { type {alter fault_injection_pld5_leakage_outlier=1}} {label {pld5 leakage}} }
+    }
+  }
+  { { library smos10hv_ams }
+    { cell npn_b_10hv }
+    { faults
+      { { type {alter fault_npn_b_beta_outlier=1}} {label {npn_b beta}} }
+    }
+  }
+}

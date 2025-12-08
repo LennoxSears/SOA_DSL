@@ -1,0 +1,48 @@
+[{
+  "date": "2021-11-30 21:19:10",
+  "version": "13.1"
+},
+{ "agingModels": [
+    "nbti",
+    "pbti",
+    "hci",
+    "offstate",
+    "hvgs",
+    "rvbe"
+  ],
+  "agingControl": [
+    [
+      "smos10hv_ade.scs",
+      "smos10hv_enable_aging"
+    ],
+    [ "smos10hv_ade.scs",
+      "smos10hv_disable_aging"
+    ]
+  ],
+  "engine": "Presto",
+  "missionProfile": true,
+  "modelDir": "${SMOS10HV_SPICE_ROOT}/amsmodels/spectre"
+}, 
+{
+  "agefile": "${SMOS10HV_SPICE_ROOT}/amsmodels/spectre/smos10hv.agefile",
+  "agingControl": [
+    [
+      "smos10hv_ade.scs",
+      "smos10hv_enable_relimo"
+    ],
+    [
+      "smos10hv_ade.scs",
+      "smos10hv_disable_relimo"
+    ]
+  ],
+  "agingModels": [
+    "hci",
+    "nbti",
+    "pbti",
+    "reversebaseemitter"
+  ],
+  "engine": "Relimo",
+  "missionProfile": false,
+  "modelDir": "${SMOS10HV_SPICE_ROOT}/amsmodels/spectre"
+}
+]

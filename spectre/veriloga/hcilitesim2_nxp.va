@@ -1,0 +1,690 @@
+/* ======================================================================== *
+
+                          F I L E   I N F O R M A T I O N
+
+ * ==================================================================== *//**
+
+   @file        hcilitesim2_nxp.va
+                Verilog-A model file
+
+   This file contains the voltage-based HCI reliability model from NXP.
+
+   @author      Bart De Vries
+
+   @version     2.3.0
+
+ * ==================================================================== *//**
+
+   @history
+
+   MK = Marq Kole (NXP CR&D/DP/DM/TFS)
+   BDV = Bart De Vries (NXP CR&D/ITP/MCSL-Eindhoven)
+   RVL = Ronald van Langevelde (NXP T&O/TI/FEI/MCSL-Nijmegen)
+
+   @date 13-02-2018 (BDV):
+   - Set initial version to 1.0.0.
+
+   @date 26-07-2018 (BDV):
+   - Set version to 2.0.0.
+   - Module name changed to hcilitesim2.
+   - Reformulated model according to input from Guido Sasse.  This breaks
+     backward compatibility with version 1.0.0.
+
+   @date 09-10-2018 (BDV):
+   - Set version to 2.0.1.
+   - Bugfix for length dependence parameter check on lexpmve and lexphe.
+
+   @date 31-01-2020 (BDV):
+   - Set version to 2.0.2.
+   - Introduce (soft) clipping on several internal variables to avoid numerical
+     problems (division by zero etc.).
+
+   @date 2021-04-09 (BDV):
+   - Set version to 2.1.
+   - Adapt flagging output to correspond to the new "aging lite" format.
+     This also fixes a mistake in the definition of the printed (delta) mobility
+     value as printed to the log-file.
+   - Implement DC stress capability.
+
+   @date 2021-04-26 (BDV)
+   - Set version to 2.1.1.
+   - Solve potential issue with multi-step/mission profile simulations not
+     giving correct results when one of the steps has eq_stress_time = 0.0.
+
+   @date 2021-05-21 (BDV)
+   - Set version to 2.2.0.
+   - Add support for (Vg/Vd)-based powerlaw, including support for bimodal
+     powers (different exponents above and below a given threshold).
+
+   @date 2022-03-04 (BDV)
+   - Set version to 2.2.1.
+   - Solve division-by-zero issues for bimodal Vg/Vds-factors.
+
+   @date 2022-03-10 (BDV)
+   - Set version to 2.2.2.
+   - Solve additional problems with safeguards for Vd and Vg-factors.
+
+   @date 2022-11-18 (BDV)
+   - Set version to 2.3.0.
+   - Add new parameter "swagecheck" to switch off aging_lite messages (default 1).
+
+ *//* ===================================================================== */
+
+`include "disciplines.vams"
+`include "constants.vams"
+
+// Uncomment the following line to have the model produce additional debug
+// information during the simulation run.
+//`define DEBUG 1
+
+// Uncomment the following line to correctly close the output files at the
+// end of the simulation run. Now they are left open and the simulator
+// process itself takes care of closing the files. The default is needed
+// for Spectre 5.x.
+//`define DO_CLOSE_FILES 1
+
+// Uncomment the following line to open the XML and INFO output files using
+// the append mode. This is only supported in Verilog-AMS 2.3 compliant
+// compilers.
+//`define OPEN_FOR_APPEND 1
+
+`ifdef OPEN_FOR_APPEND
+`define FOPEN_MODE "a"
+`else
+`define FOPEN_MODE "w"
+`endif // OPEN_FOR_APPEND
+
+// Uncomment the following line to have the localparam statements replaced by
+// parameter statements in case the localparam statement is not supported. This
+// is needed for Spectre versions 6.1.x and earlier.
+//`define NO_LOCALPARAM 1
+`ifdef NO_LOCALPARAM
+`define localparam parameter
+`else
+`define localparam localparam
+`endif
+
+// Names for the output files to be created by the model instances.
+`define EFFECT_NAME     "hci"
+`define XML_FILE_NAME   "hci.xml"
+
+`define UPDATE_XML_ELEMENT(FILE,PARAM,VALUE,DELTA,CLIPPED) \
+if (DELTA) begin \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <parameter name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"", `EFFECT_NAME, PARAM, VALUE, DELTA); \
+if (CLIPPED) begin \
+$fwrite(FILE, " clipped=\"yes\""); \
+end \
+$fwrite(FILE, "/>\n </instance>\n"); \
+end
+
+`define UPDATE_DAMAGE_XML_ELEMENT(FILE,PARAM,VALUE,DELTA) \
+if (DELTA) \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <damage name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"/>\n </instance>\n", `EFFECT_NAME, PARAM, VALUE, DELTA);
+
+`define UPDATE_OP_XML_ELEMENT(FILE,PARAM,VALUE,DELTA,CLIPPED) \
+if (DELTA) begin \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <oppoint name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"", `EFFECT_NAME, PARAM, VALUE, DELTA); \
+if (CLIPPED) begin \
+$fwrite(FILE, " clipped=\"yes\""); \
+end \
+$fwrite(FILE, "/>\n </instance>\n"); \
+end
+
+`define SOACHECK_WARNING_DELTAVT(AGE, TEMP, DELTAVT, CLIPPED) \
+$write("\n[AGECHECK_INFO] instance: %M, rule: aging_%s, age: %gY, temperature: %gC, deltaVT: %gV", `EFFECT_NAME, (AGE), (TEMP), (DELTAVT)); \
+if (CLIPPED) begin \
+$write(", message: \"WARNING: VT shift has been clipped to its maximum value of %gV\"\n", (DELTAVT)); \
+end else begin \
+$write("\n"); \
+end
+
+`define SOACHECK_WARNING_BETDEGRFAC(AGE, TEMP, BETDEGRFAC, CLIPPED) \
+$write("\n[AGECHECK_INFO] instance: %M, rule: aging_%s, age: %gY, temperature: %gC, deltaMOBILITY: %gPct", `EFFECT_NAME, (AGE), (TEMP), ((-BETDEGRFAC)*100)); \
+if (CLIPPED) begin \
+$write(", message: \"WARNING: mobility shift has been clipped to its maximum value of %gPct\"\n", ((-BETDEGRFAC)*100)); \
+end else begin \
+$write("\n"); \
+end
+
+
+`ifdef M_INF
+`else
+`ifdef __TIBURONDA__
+`define M_INF   1.797693134862e+308     // 64-bit IEEE 752 (double)
+`else
+`define M_INF   3.40282e+38             // 32-bit IEEE 752 (double)
+`endif // __TIBURONDA__
+`endif // M_INF
+
+`define NMOS 1
+`define PMOS -1
+
+// needed for clipping
+`ifdef EPS1
+`else
+`define EPS1    1.0e-2
+`endif
+
+`ifdef MEXP
+`else
+`define MEXP   4.0
+`endif
+
+/**
+ * @brief 4-terminal MOS transistor wrapper with HCI stress measurement.
+ *
+ * The wrapper instances gets the parameters for each instance from the
+ * subcircuit wrapper that also provide the parameters for the MOS model
+ * itself.
+ *
+ * @param dta       Delta-Temperature to Ambient [K]; Default is 0 K.
+ *
+ * @param active    Flag to activate/deactivate HCI measurement; Default
+ *                  is 1 (on).
+ * @param mode      Unused parameter; left for backwards compatibility.
+ *
+ * @param tage      Time to which the stress is extrapolated for the
+ *                  parameter update calculations [s].
+ * @param tstart    Time when stress measurement begins [s]; Default is 0 s.
+ * @param tstop     Time when stress measurement ends [s]; Default is inf s.
+ *
+ * @param type      Type of the wrapped MOS instance. Valid values are
+ *                  `NMOS and `PMOS.  Default is `NMOS (i.e. 1).
+ * @param k         MOS body factor for low bias correction [-].  Will only
+ *                  affect NMOS degradation.
+ *
+ * @param a         HCI scale factor [-]. Setting a to 0 will effectively
+ *                  disable any calculations for the model.
+ * @param fstat     Prefactor taking into account the effect of statistical
+ *                  spread [-].
+ * @param n_vth     HCI time dependency exponent for the threshold voltage
+ *                  degradation [-].
+ * @param n_i       HCI time dependency exponent for carrier mobility
+ *                  degradation [-].
+ * @param gamma_i   HCI Prefactor describing the correlation of the mobility
+ *                  degradation with respect to the threshold voltage
+ *                  degradation. [-]
+ * @param vdpow     HCI drain-voltage dependence exponent [-].
+ * @param vgpow     HCI gate-voltage dependence exponent [-].
+ * @param vdexp     Alternative exponential HCI drain-voltage dependence
+ *                  parameter [1/V].
+ * @param ea        HCI activation energy [eV].
+ * @param lpow      HCI length dependence exponent [-].
+ * @param wpow      HCI width dependence exponent [-].
+ * @param lexp      Alternative exponential HCI length dependence parameter (for
+ *                  relimo legacy models) [m].
+ * @param vbsexp    HCI exponential backbias dependence parameter [1/V].
+ * @param vgvdpowh  HCI Vg/Vd dependence exponent if (Vg/Vd) >= vgvdthres
+ * @param vgvdpowl  HCI Vg/Vd dependence exponent if (Vg/Vd) < vgvdthres
+ * @param vgvdthres HCI Vg/Vd threshold value at which the exponent of the
+ *                  Vg/Vd dependence changes from vgvdpowl to vgvdpowh [V].
+ *                  If set to 0, vgvdpowl will be disabled.  Default is 0.
+ *
+ * @param damage    Parameter holding the value of the total accumulated damage
+ *                  at the end of the previous step of multi-step aging; Default
+ *                  is 0.  This parameter is only to be set by the aging tool.
+ *
+ * @param swagecheck Switch to control whether "aging lite"/agecheck messages
+ *                  are printed to the log file to be picked up by the SOA
+ *                  browsers; Default is 1 (on).
+ * @param dicrit    Threshold of relative mobility degradation above which a
+ *                  warning will be given [-]; default is 10%.
+ * @param dvtcrit   Threshold of Vth change above which a warning will be
+ *                  given [V]; default is 0.05 V.
+ */
+
+(* instrument_module *)
+module mhcilite2 (d, g, s, b);
+
+  inout d, g, s, b;
+  electrical d, g, s, b;
+
+  // parameters related to the wrapped device
+  parameter integer type      = `NMOS   from [`PMOS : `NMOS] exclude 0;
+  parameter real l            = 1e-6    from (0:inf);
+  parameter real w            = 1e-6    from (0:inf);
+  parameter real dta          = 0.0;
+
+  // parameters related to simulation
+  parameter real tage         = 0.0     from [0:inf);
+  parameter real tstart       = 0.0     from [0:inf);
+  parameter real tstop        = `M_INF  from [0:inf);
+
+  // parameters relating to HCI
+  parameter real avth         = 0.0;
+  parameter real bvth         = 0.0;
+  parameter real nvth         = 1.0     from [0:inf);
+  parameter real ai           = 0.0;
+  parameter real bi           = 0.0;
+  parameter real ni           = nvth    from [0:inf);
+  parameter real gammai       = 1.0     from (0:inf);
+
+  parameter real alphamve     = 0.0     from [0:inf);
+  parameter real fstatmve     = 1.0     from (0:inf);
+  parameter real vdpowmve     = 0.0;
+  parameter real vgpowmve     = 0.0;
+  parameter real vdexpmve     = 0.0;
+  parameter real eamve        = 0.0;
+  parameter real lpowmve      = 0.0;
+  parameter real wpowmve      = 0.0;
+  parameter real lexpmve      = 0.0;
+  parameter real vbsexpmve    = 0.0;
+  parameter real vc1mve       = 0.0;
+  parameter real vc2mve       = 0.0;
+  parameter real vgvdpowhmve  = 0.0     from [0:inf);
+  parameter real vgvdpowlmve  = 0.0     from [0:inf);
+  parameter real vgvdthresmve = 0.0     from [0:inf);
+
+  parameter real alphahe      = 0.0     from [0:inf);
+  parameter real fstathe      = 1.0     from (0:inf);
+  parameter real vdpowhe      = 0.0;
+  parameter real vgpowhe      = 0.0;
+  parameter real vdexphe      = 0.0;
+  parameter real eahe         = 0.0;
+  parameter real lpowhe       = 0.0;
+  parameter real wpowhe       = 0.0;
+  parameter real lexphe       = 0.0;
+  parameter real vbsexphe     = 0.0;
+  parameter real vc1he        = 0.0;
+  parameter real vc2he        = 0.0;
+  parameter real vgvdpowhhe   = 0.0     from [0:inf);
+  parameter real vgvdpowlhe   = 0.0     from [0:inf);
+  parameter real vgvdthreshe  = 0.0     from [0:inf);
+
+  parameter real damage       = 0.0     from [0:inf);
+
+  // parameters relating to flagging
+  parameter integer swagecheck = 1   from [0:1];
+  parameter real dicrit       = 0.1;
+  parameter real dvtcrit      = 0.05;
+
+  // parameters for activation, debugging and output
+  parameter integer active    = 1       from [0:1];
+  parameter integer mode      = 0       from [0:2];
+
+  `localparam integer year_in_secs = 365 * 24 * 60 * 60;
+  `localparam real ref_stress_time = 1.0e-06 from (0:inf);
+  `localparam real wref       = 1e-6;
+  `localparam real lref       = 1e-6;
+
+  // --------------------------------------------------------------------------
+  //
+  // Variables
+  //
+  // --------------------------------------------------------------------------
+
+  integer stressed, beta_clipped;
+  integer update_file;
+
+  real eq_stress_time;
+  real temp, exp_temp_mve, exp_temp_he;
+  real Vgs, Vds, Vsb, vdsx, vbx, vgs_ov_vdsx;
+
+  real prefactor_mve, pow_l_mve, pow_w_mve, exp_l_mve, exp_vbx_mve;
+  real vgx_mve, pow_vd_mve, pow_vg_mve, exp_vd_mve, pow_vgvd_mve, inv_tau_mve;
+
+  real prefactor_he, pow_l_he, pow_w_he, exp_l_he, exp_vbx_he;
+  real vgx_he, pow_vd_he, pow_vg_he, exp_vd_he, pow_vgvd_he, inv_tau_he;
+
+  real inv_tau, contrib_inv_tlife;
+  real pow_age_vth, pow_age_i;
+  real eq_inv_tlife, damage_delta, age, vthdegr, betdegrfac;
+
+  // --------------------------------------------------------------------------
+  //
+  // Analog Functions
+  //
+  // --------------------------------------------------------------------------
+
+  // smoothing function
+  analog function real sigmoid;
+    input x, x0, delta, mexp;
+    real  x, x0, delta, mexp, xdiff, d;
+    begin
+      xdiff = x - x0;
+      d = xdiff / pow(pow(xdiff, 2.0*mexp) + pow(delta, 2.0*mexp), 1.0/(2.0*mexp));
+      sigmoid = 0.5*(1.0 + d);
+    end
+  endfunction // sigmoid
+
+
+  // --------------------------------------------------------------------------
+  //
+  // Analog block
+  //
+  // --------------------------------------------------------------------------
+
+  analog begin
+
+`ifdef DEBUG
+    @(initial_step) begin
+      $write("\n\nPRESTOPLUS PARAMETERS (%M)");
+      $write("\nactive(%M)              = %d", active);
+      $write("\ntage(%M)                = %g", tage);
+    end
+`endif // DEBUG
+
+    if (active && (tage > 0.0)) begin
+
+      // ----------------------------------------------------------------------
+      //
+      // Initialization
+      //
+      // ----------------------------------------------------------------------
+
+      @(initial_step) begin
+
+        contrib_inv_tlife = 0.0;
+        eq_inv_tlife      = 0.0;
+        temp              = $temperature + dta;
+
+        if (analysis("dc", "tran")) begin
+
+          // opening files for later write
+          update_file = $fopen(`XML_FILE_NAME, `FOPEN_MODE);
+
+        end // if (analysis("dc", "tran"))
+
+        // calculate model contributions which do not vary during simulation
+        if ((l > 0.0) && (lref > 0.0)) begin
+          pow_l_mve = pow((l / lref), lpowmve);
+          pow_l_he  = pow((l / lref), lpowhe );
+        end else begin
+          pow_l_mve = 1.0;
+          pow_l_he  = 1.0;
+        end
+
+        if ((w > 0.0) && (wref > 0.0)) begin
+          pow_w_mve = pow((w / wref), wpowmve);
+          pow_w_he  = pow((w / wref), wpowhe );
+        end else begin
+          pow_w_mve = 1.0;
+          pow_w_he  = 1.0;
+        end
+
+        if (l > 0.0) begin
+          exp_l_mve = exp(-lexpmve / l);
+          exp_l_he  = exp(-lexphe  / l);
+        end else begin
+          exp_l_mve = 1.0;
+          exp_l_he  = 1.0;
+        end
+
+        exp_temp_mve = exp(-eamve * `P_Q / (`P_K * temp));
+        exp_temp_he  = exp(-eahe  * `P_Q / (`P_K * temp));
+
+        prefactor_mve = (fstatmve > 0.0)
+                          ? alphamve * pow_l_mve * pow_w_mve
+                            * exp_l_mve * exp_temp_mve / fstatmve
+                          : 0.0;
+
+        prefactor_he  = (fstathe  > 0.0)
+                          ? alphahe  * pow_l_he  * pow_w_he 
+                            * exp_l_he  * exp_temp_he  / fstathe
+                          : 0.0;
+
+`ifdef DEBUG
+        $write("\ndicrit(%M)              = %g", dicrit);
+        $write("\ndvtcrit(%M)             = %g", dvtcrit);
+        $write("\n\nTEMPERATURE DEPENDENT PARAMETERS (%M)");
+        $write("\ntemp(%M)                = %g", temp);
+        $write("\nexp_temp_mve(%M)        = %g", exp_temp_mve);
+        $write("\n\nBIAS-INDEPENDENT PARAMETERS (%M)");
+        $write("\npow_l_mve(%M)           = %g", pow_l_mve);
+        $write("\npow_w_mve(%M)           = %g", pow_w_mve);
+        $write("\nexp_l_mve(%M)           = %g", exp_l_mve);
+        $write("\nfstatmve(%M)            = %g", fstatmve);
+        $write("\nprefactor_mve(%M)       = %g", prefactor_mve);
+        $write("\npow_l_he(%M)            = %g", pow_l_he);
+        $write("\npow_w_he(%M)            = %g", pow_w_he);
+        $write("\nexp_l_he(%M)            = %g", exp_l_he);
+        $write("\nfstathe(%M)             = %g", fstathe);
+        $write("\nprefactor_he(%M)        = %g", prefactor_he);
+`endif // DEBUG
+
+      end // initial_step
+
+      // ----------------------------------------------------------------------
+      //
+      // HCI model calculations (dc and tran)
+      //
+      // ----------------------------------------------------------------------
+
+      if (analysis("dc", "tran")) begin
+
+        // convert PMOS to NMOS-like biases
+        Vgs = type * V(g, s);
+        Vds = type * V(d, s);
+        Vsb = type * V(s, b);
+
+        // source-drain interchange
+        if (Vds < 0.0) begin
+          Vgs =  Vgs - Vds;
+          Vsb =  Vsb + Vds;
+          Vds = -Vds;
+        end
+
+        vdsx        = max(Vds, `EPS1);
+        vbx         = min(-Vsb, 0.0);
+        vgs_ov_vdsx = max(Vgs, 0.0) / vdsx;
+
+        vgx_mve     = max(Vgs - vc2mve, 0.0);
+
+        if (((vdpowmve < 0.0) && (Vds < `EPS1)) || (vdpowmve == 0.0)) begin
+            pow_vd_mve = 1.0;
+        end else begin
+            pow_vd_mve = pow(Vds, vdpowmve);
+        end
+
+        if (((vgpowmve < 0.0) && (vgx_mve < `EPS1)) || (vgpowmve == 0.0)) begin
+            pow_vg_mve = 1.0;
+        end else begin
+            pow_vg_mve = pow(vgx_mve, vgpowmve);
+        end
+
+        exp_vd_mve  = exp(-vdexpmve / vdsx);
+        exp_vbx_mve = exp(-vbsexpmve * vbx);
+
+        if (vgs_ov_vdsx >= vgvdthresmve) begin
+            pow_vgvd_mve = (vgvdpowhmve > 0.0)
+                             ? pow(vgs_ov_vdsx, vgvdpowhmve)
+                             : 1.0;
+        end else begin
+            if (vgvdthresmve > 0.0) begin
+                pow_vgvd_mve = (vgvdpowlmve > 0.0)
+                                 ? pow(vgs_ov_vdsx, vgvdpowlmve)
+                                   * pow(vgvdthresmve, vgvdpowhmve - vgvdpowlmve)
+                                 : 1.0;
+            end else begin
+                pow_vgvd_mve = 1.0;
+            end
+        end
+
+        inv_tau_mve = sigmoid(Vgs, vc1mve, `EPS1, `MEXP) * prefactor_mve
+                      * pow_vd_mve * pow_vg_mve * exp_vd_mve * exp_vbx_mve
+                      * pow_vgvd_mve;
+
+
+        vgx_he      = max(Vgs - vc2he , 0.0);
+
+        if (((vdpowhe < 0.0) && (Vds < `EPS1)) || (vdpowhe == 0.0)) begin
+            pow_vd_he = 1.0;
+        end else begin
+            pow_vd_he = pow(Vds, vdpowhe);
+        end
+
+        if (((vgpowhe < 0.0) && (vgx_he < `EPS1)) || (vgpowhe == 0.0)) begin
+            pow_vg_he = 1.0;
+        end else begin
+            pow_vg_he = pow(vgx_he, vgpowhe);
+        end
+
+        exp_vd_he   = exp(-vdexphe  / vdsx);
+        exp_vbx_he  = exp(-vbsexphe  * vbx);
+
+        if (vgs_ov_vdsx >= vgvdthreshe) begin
+            pow_vgvd_he = (vgvdpowhhe > 0.0)
+                            ? pow(vgs_ov_vdsx, vgvdpowhhe)
+                            : 1.0;
+        end else begin
+            if (vgvdthreshe > 0.0) begin
+                pow_vgvd_he = (vgvdpowlhe > 0.0)
+                                ? pow(vgs_ov_vdsx, vgvdpowlhe)
+                                  * pow(vgvdthreshe, vgvdpowhhe - vgvdpowlhe)
+                                : 1.0;
+            end else begin
+                pow_vgvd_he = 1.0;
+            end
+        end
+
+        inv_tau_he  = sigmoid(Vgs, vc1he , `EPS1, `MEXP) * prefactor_he
+                      * pow_vd_he  * pow_vg_he  * exp_vd_he  * exp_vbx_he
+                      * pow_vgvd_he;
+
+        inv_tau     = inv_tau_mve + inv_tau_he;
+
+        contrib_inv_tlife = (inv_tau > 0.0) ? inv_tau : 0.0;
+
+
+        if (analysis("tran")) begin
+          // activation flag to sync with user specified tstart and tstop
+          stressed = ($abstime > tstart) ? (($abstime > tstop) ? 0 : 1) : 0;
+          eq_inv_tlife = idt(stressed ? contrib_inv_tlife : 0.0, 0.0);
+        end else begin  // i.e. analysis("dc")
+          stressed = 1;
+          eq_inv_tlife = contrib_inv_tlife * ref_stress_time;
+        end
+
+`ifdef DEBUG
+        $write("\n\nLIFETIME CALCULATION AND AGING (%M)");
+        $write("\npow_vd_mve(%M)          = %g", pow_vd_mve);
+        $write("\npow_vg_mve(%M)          = %g", pow_vg_mve);
+        $write("\nexp_vd_mve(%M)          = %g", exp_vd_mve);
+        $write("\nexp_vbx_mve(%M)         = %g", exp_vbx_mve);
+        $write("\npow_vgvd_mve(%M)        = %g", pow_vgvd_mve);
+        $write("\ninv_tau_mve(%M)         = %g", inv_tau_mve);
+        $write("\npow_vd_he(%M)           = %g", pow_vd_he);
+        $write("\npow_vg_he(%M)           = %g", pow_vg_he);
+        $write("\nexp_vd_he(%M)           = %g", exp_vd_he);
+        $write("\nexp_vbx_he(%M)          = %g", exp_vbx_he);
+        $write("\npow_vgvd_he(%M)         = %g", pow_vgvd_he);
+        $write("\ninv_tau_he(%M)          = %g", inv_tau_he);
+        $write("\ninv_tau(%M)             = %g", inv_tau);
+        $write("\ncontrib_inv_tlife(%M)   = %g", contrib_inv_tlife);
+        $write("\neq_inv_tlife(%M)        = %g", eq_inv_tlife);
+        $write("\ntotal stress time(%M)   = %g", $abstime);
+`endif // DEBUG
+
+      end // if (analysis("dc", "tran"))
+
+      // ----------------------------------------------------------------------
+      //
+      // Output stress data
+      //
+      // ----------------------------------------------------------------------
+
+      @(final_step) begin
+
+        if (analysis("dc", "tran")) begin
+          if (analysis("tran")) begin
+            // Get the total simulation time for HCI stress measurement.
+            eq_stress_time = ((tstop < $abstime) ? tstop : $abstime) - tstart;
+          end else begin
+            eq_stress_time = ref_stress_time;
+          end
+
+          // Permanent damage calculation with simple linear extrapolation.
+          damage_delta = ( eq_stress_time > 0.0 )
+                           ? abs(eq_inv_tlife) * tage/eq_stress_time
+                           : 0.0;
+          age          = ( (damage_delta + damage) > 0.0 )
+                           ? damage_delta + damage
+                           : 0.0;
+
+          // Computation of parameter changes.
+          if (age > 0.0) begin
+            pow_age_vth = pow(age, nvth);
+            vthdegr = avth / (1.0 + 1.0 / pow_age_vth) + bvth * pow_age_vth;
+            if (gammai > 0.0) begin
+              pow_age_i = pow(age / gammai, ni);
+              betdegrfac = ai / (1.0 + 1.0 / pow_age_i) + bi * pow_age_i;
+            end else begin
+              betdegrfac = 0.0;
+            end
+          end else begin // if (age > 0.0)
+            vthdegr    = 0.0;
+            betdegrfac = 0.0;
+          end
+
+          // make sure that current reduction factor doesn't exceed 100%
+          if (betdegrfac > 0.99) begin
+            betdegrfac = 0.99;
+            beta_clipped = 1;
+          end else begin
+            beta_clipped = 0;
+          end
+
+          if ((abs(vthdegr) > dvtcrit) && (swagecheck > 0)) begin
+            `SOACHECK_WARNING_DELTAVT(tage/year_in_secs, temp-`P_CELSIUS0, vthdegr, 0)
+          end
+          if ((abs(betdegrfac) > dicrit) && (swagecheck > 0)) begin
+            `SOACHECK_WARNING_BETDEGRFAC(tage/year_in_secs, temp-`P_CELSIUS0, betdegrfac, beta_clipped)
+          end
+
+          `UPDATE_XML_ELEMENT(update_file, "hcivthdegr", 0.0, vthdegr, 0)
+          `UPDATE_XML_ELEMENT(update_file, "hcibetdegrfac", 0.0, betdegrfac, beta_clipped)
+          `UPDATE_OP_XML_ELEMENT(update_file, "hcideltavth", 0.0, vthdegr, 0)
+          `UPDATE_OP_XML_ELEMENT(update_file, "hcideltamobility", 0.0, betdegrfac, beta_clipped)
+          `UPDATE_DAMAGE_XML_ELEMENT(update_file, "hcidamage", damage, damage_delta)
+
+`ifdef DO_CLOSE_FILES
+          $fclose(update_file);
+`endif
+
+`ifdef DEBUG
+          $write("\ndamage(%M)              = %g", damage);
+          $write("\nage(%M)                 = %g", age);
+          $write("\n\nPARAMETER CHANGES (%M)");
+          $write("\nvthdegr(%M)             = %g", vthdegr);
+          $write("\nbetdegrfac(%M)          = %g", betdegrfac);
+`endif // DEBUG
+
+        end // if (analysis("dc", "tran"))
+
+      end // final_step
+
+    end // if (active & ...)
+
+    // ------------------------------------------------------------------------
+
+  end // analog
+
+endmodule // mhcilite2
+
+`undef UPDATE_XML_ELEMENT
+`undef UPDATE_DAMAGE_XML_ELEMENT
+`undef UPDATE_OP_XML_ELEMENT
+`undef SOACHECK_WARNING_DELTAVT
+`undef SOACHECK_WARNING_BETDEGRFAC
+
+`undef XML_FILE_NAME
+`undef EFFECT_NAME
+
+`ifdef DO_CLOSE_FILES
+`undef DO_CLOSE_FILES
+`endif // DO_CLOSE_FILES
+
+`undef FOPEN_MODE
+`ifdef OPEN_FOR_APPEND
+`undef OPEN_FOR_APPEND
+`endif // OPEN_FOR_APPEND
+
+`undef localparam
+`ifdef NO_LOCALPARAM
+`undef NO_LOCALPARAM
+`endif //NO_LOCALPARAM
+
+`undef NMOS
+`undef PMOS
+`undef EPS1
+`undef MEXP

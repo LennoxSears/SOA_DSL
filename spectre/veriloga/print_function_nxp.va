@@ -1,0 +1,16 @@
+module print_function;
+
+    parameter string device = "device";
+    parameter string modelfunction = "model function";
+    parameter real enableflag = 0;
+
+    analog begin
+        @(initial_step)
+        begin
+            if (enableflag==1.0) begin
+                $write("\n[MODEL INFO] Device: %s, Function: %s is enabled, Instance: %M\n", device, modelfunction);
+            end
+	end
+    end
+
+endmodule

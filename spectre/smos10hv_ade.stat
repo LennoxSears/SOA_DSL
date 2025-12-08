@@ -1,0 +1,3875 @@
+# smos10hv
+# Created Tue Aug  5 10:41:17 KST 2025
+
+#.lib powermos
+nld65_10hv { mosfet
+	global {
+		nsig_dela_nld65_10hv_dwres
+		nsig_dela_nld65_10hv_vfb
+		nsig_dela_nld65_10hv_vtw
+		nsig_delr_acj0_junc_nld65_d_body
+		nsig_delr_ajs_junc_nld65_d_body
+		nsig_delr_chcj0_junc_nld65_d_body
+		nsig_delr_chjs_junc_nld65_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld65_10hv_res
+		nsig_delr_nld65_10hv_uch
+		nsig_delr_pcj0_junc_nld65_d_body
+		nsig_delr_pjs_junc_nld65_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld65_10hv_dwox
+		nsmm_dela_nld65_10hv_vfb
+		nsmm_dela_nld65_10hv_vtl
+		nsmm_dela_nld65_10hv_vtw
+		nsmm_delr_nld65_10hv_gox
+		nsmm_delr_nld65_10hv_nsub
+		nsmm_delr_nld65_10hv_rsh
+		nsmm_delr_nld65_10hv_ubref
+	}
+}
+
+nld90_10hv { mosfet
+	global {
+		nsig_dela_nld90_10hv_dwmos
+		nsig_dela_nld90_10hv_dwres
+		nsig_dela_nld90_10hv_vfb
+		nsig_dela_nld90_10hv_vtw
+		nsig_delr_acj0_junc_nld90_d_body
+		nsig_delr_ajs_junc_nld90_d_body
+		nsig_delr_chcj0_junc_nld90_d_body
+		nsig_delr_chjs_junc_nld90_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld90_10hv_res
+		nsig_delr_nld90_10hv_uch
+		nsig_delr_pcj0_junc_nld90_d_body
+		nsig_delr_pjs_junc_nld90_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld90_10hv_vfb
+		nsmm_dela_nld90_10hv_vtl
+		nsmm_dela_nld90_10hv_vtw
+		nsmm_delr_nld90_10hv_gox
+		nsmm_delr_nld90_10hv_nsub
+		nsmm_delr_nld90_10hv_rsh
+		nsmm_delr_nld90_10hv_ubref
+	}
+}
+
+pld90_10hv { mosfet
+	global {
+		nsig_dela_pld90_10hv_vfb
+		nsig_dela_pld90_10hv_vtm
+		nsig_delr_acj0_junc_pld90_d_body
+		nsig_delr_ajs_junc_pld90_d_body
+		nsig_delr_chcj0_junc_pld90_d_body
+		nsig_delr_chjs_junc_pld90_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_pcj0_junc_pld90_d_body
+		nsig_delr_pjs_junc_pld90_d_body
+		nsig_delr_pld90_10hv_res
+		nsig_delr_pld90_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld90_10hv_vfb
+		nsmm_dela_pld90_10hv_vtl
+		nsmm_dela_pld90_10hv_vtw
+		nsmm_delr_pld90_10hv_gox
+		nsmm_delr_pld90_10hv_nsub
+		nsmm_delr_pld90_10hv_rsh
+		nsmm_delr_pld90_10hv_ubref
+	}
+}
+
+nld45_tlp_10hv { mosfet
+	global {
+		nsig_dela_nld45_tlp_10hv_a0
+		nsig_dela_nld45_tlp_10hv_b0
+		nsig_dela_nld45_tlp_10hv_dr
+		nsig_dela_nld45_tlp_10hv_dw
+		nsig_dela_nld45_tlp_10hv_vfb
+		nsig_dela_nld45_tlp_10hv_vtm
+		nsig_delr_acj0_junc_nld45_tlp_d_body
+		nsig_delr_chcj0_junc_nld45_tlp_d_body
+		nsig_delr_chjs_junc_nld45_tlp_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld45_tlp_10hv_res
+		nsig_delr_nld45_tlp_10hv_uch
+		nsig_delr_pcj0_junc_nld45_tlp_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld45_tlp_10hv_vfb
+		nsmm_dela_nld45_tlp_10hv_vtl
+		nsmm_dela_nld45_tlp_10hv_vtw
+		nsmm_delr_nld45_tlp_10hv_gox
+		nsmm_delr_nld45_tlp_10hv_nsub
+		nsmm_delr_nld45_tlp_10hv_rsh
+		nsmm_delr_nld45_tlp_10hv_ubref
+	}
+}
+
+nld30_10hv { mosfet
+	global {
+		nsig_dela_nld30_10hv_dr
+		nsig_dela_nld30_10hv_dw
+		nsig_dela_nld30_10hv_vfb
+		nsig_dela_nld30_10hv_vtm
+		nsig_delr_acj0_junc_nld30_d_body
+		nsig_delr_ajs_junc_nld30_d_body
+		nsig_delr_chcj0_junc_nld30_d_body
+		nsig_delr_chjs_junc_nld30_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld30_10hv_res
+		nsig_delr_nld30_10hv_uch
+		nsig_delr_pcj0_junc_nld30_d_body
+		nsig_delr_pjs_junc_nld30_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld30_10hv_dwox
+		nsmm_dela_nld30_10hv_vfb
+		nsmm_dela_nld30_10hv_vtl
+		nsmm_dela_nld30_10hv_vtw
+		nsmm_delr_nld30_10hv_gox
+		nsmm_delr_nld30_10hv_nsub
+		nsmm_delr_nld30_10hv_rsh
+		nsmm_delr_nld30_10hv_ubref
+	}
+}
+
+nld45_10hv { mosfet
+	global {
+		nsig_dela_nld45_10hv_dr
+		nsig_dela_nld45_10hv_dw
+		nsig_dela_nld45_10hv_vfb
+		nsig_dela_nld45_10hv_vtm
+		nsig_delr_acj0_junc_nld45_d_body
+		nsig_delr_chcj0_junc_nld45_d_body
+		nsig_delr_chjs_junc_nld45_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld45_10hv_res
+		nsig_delr_nld45_10hv_uch
+		nsig_delr_pcj0_junc_nld45_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld45_10hv_cit
+		nsmm_dela_nld45_10hv_dwox
+		nsmm_dela_nld45_10hv_vfb
+		nsmm_dela_nld45_10hv_vtl
+		nsmm_dela_nld45_10hv_vtw
+		nsmm_delr_nld45_10hv_gox
+		nsmm_delr_nld45_10hv_nsub
+		nsmm_delr_nld45_10hv_rsh
+		nsmm_delr_nld45_10hv_ubref
+		nsmm_delr_nld45_10hv_vsat
+	}
+}
+
+nld45_he_10hv { mosfet
+	global {
+		nsig_dela_nld45_he_10hv_a0
+		nsig_dela_nld45_he_10hv_b0
+		nsig_dela_nld45_he_10hv_dr
+		nsig_dela_nld45_he_10hv_dw
+		nsig_dela_nld45_he_10hv_vfb
+		nsig_dela_nld45_he_10hv_vtm
+		nsig_delr_acj0_junc_nld45_he_d_body
+		nsig_delr_ajs_junc_nld45_he_d_body
+		nsig_delr_chcj0_junc_nld45_he_d_body
+		nsig_delr_chjs_junc_nld45_he_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld45_he_10hv_res
+		nsig_delr_nld45_he_10hv_uch
+		nsig_delr_pcj0_junc_nld45_he_d_body
+		nsig_delr_pjs_junc_nld45_he_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld45_he_10hv_dwox
+		nsmm_dela_nld45_he_10hv_vfb
+		nsmm_dela_nld45_he_10hv_vtl
+		nsmm_dela_nld45_he_10hv_vtw
+		nsmm_delr_nld45_he_10hv_gox
+		nsmm_delr_nld45_he_10hv_nsub
+		nsmm_delr_nld45_he_10hv_rsh
+		nsmm_delr_nld45_he_10hv_ubref
+	}
+}
+
+pld5_10hv { mosfet
+	global {
+		nsig_dela_pld5_10hv_dw
+		nsig_dela_pld5_10hv_vfb
+		nsig_dela_pld5_10hv_vtm
+		nsig_delr_acj0_junc_pld5_d_body
+		nsig_delr_ajs_junc_pld5_d_body
+		nsig_delr_cfr_pld5_d_ply_m1ct
+		nsig_delr_cfr_pld5_d_ply_met
+		nsig_delr_cfr_pld5_s_ply_m1ct
+		nsig_delr_cfr_pld5_s_ply_met
+		nsig_delr_cpp_ply_fld
+		nsig_delr_pcj0_junc_pld5_d_body
+		nsig_delr_pjs_junc_pld5_d_body
+		nsig_delr_pld5_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld5_10hv_dwox
+		nsmm_dela_pld5_10hv_vfb
+		nsmm_dela_pld5_10hv_vtl
+		nsmm_dela_pld5_10hv_vtw
+		nsmm_delr_pld5_10hv_gox
+		nsmm_delr_pld5_10hv_nsub
+		nsmm_delr_pld5_10hv_rsh
+		nsmm_delr_pld5_10hv_ubref
+	}
+}
+
+nld5_10hv { mosfet
+	global {
+		nsig_dela_nld5_10hv_dwmos
+		nsig_dela_nld5_10hv_vfb
+		nsig_dela_nld5_10hv_vtw
+		nsig_delr_acj0_junc_nld5_d_body
+		nsig_delr_ajs_junc_nld5_d_body
+		nsig_delr_chcj0_junc_nld5_d_body
+		nsig_delr_chjs_junc_nld5_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld5_10hv_res
+		nsig_delr_nld5_10hv_uch
+		nsig_delr_nld5_10hv_vsat
+		nsig_delr_pcj0_junc_nld5_d_body
+		nsig_delr_pjs_junc_nld5_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld5_10hv_dwox
+		nsmm_dela_nld5_10hv_vfb
+		nsmm_dela_nld5_10hv_vtl
+		nsmm_dela_nld5_10hv_vtw
+		nsmm_delr_nld5_10hv_gox
+		nsmm_delr_nld5_10hv_nsub
+		nsmm_delr_nld5_10hv_rsh
+		nsmm_delr_nld5_10hv_ubref
+	}
+}
+
+pld10_10hv { mosfet
+	global {
+		nsig_dela_pld10_10hv_dwmos
+		nsig_dela_pld10_10hv_dwres
+		nsig_dela_pld10_10hv_vfb
+		nsig_dela_pld10_10hv_vtw
+		nsig_delr_acj0_junc_pld10_d_body
+		nsig_delr_ajs_junc_pld10_d_body
+		nsig_delr_chcj0_junc_pld10_d_body
+		nsig_delr_chjs_junc_pld10_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_pcj0_junc_pld10_d_body
+		nsig_delr_pjs_junc_pld10_d_body
+		nsig_delr_pld10_10hv_res
+		nsig_delr_pld10_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld10_10hv_dwox
+		nsmm_dela_pld10_10hv_vfb
+		nsmm_dela_pld10_10hv_vtl
+		nsmm_dela_pld10_10hv_vtw
+		nsmm_delr_pld10_10hv_gox
+		nsmm_delr_pld10_10hv_nsub
+		nsmm_delr_pld10_10hv_rsh
+		nsmm_delr_pld10_10hv_ubref
+	}
+}
+
+pld10b_10hv { mosfet
+	global {
+		nsig_dela_dw_pld10b_sphv_10hv
+		nsig_dela_vfb_pld10b_sphv_10hv
+		nsig_dela_vtwl_pld10b_sphv_10hv
+		nsig_delr_cj0_junc_pld10b_d_body
+		nsig_delr_js_junc_pld10b_d_body
+		nsig_delr_mobref_pld10b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_pld10b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_pld10b_sphv_10hv 
+		nsmm_dela_vfb_pld10b_sphv_10hv 
+		nsmm_delr_gox_pld10b_sphv_10hv 
+		nsmm_delr_mobref_pld10b_sphv_10hv 
+		nsmm_delr_nsub_pld10b_sphv_10hv 
+		nsmm_delr_rshl_pld10b_sphv_10hv 
+	}
+}
+
+pld30_10hv { mosfet
+	global {
+		nsig_dela_pld30_10hv_dwmos
+		nsig_dela_pld30_10hv_dwres
+		nsig_dela_pld30_10hv_vfb
+		nsig_dela_pld30_10hv_vtw
+		nsig_delr_acj0_junc_pld30_d_body
+		nsig_delr_ajs_junc_pld30_d_body
+		nsig_delr_cfr_ply_fld
+		nsig_delr_chcj0_junc_pld30_d_body
+		nsig_delr_chjs_junc_pld30_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_pcj0_junc_pld30_d_body
+		nsig_delr_pjs_junc_pld30_d_body
+		nsig_delr_pld30_10hv_res
+		nsig_delr_pld30_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld30_10hv_dwox
+		nsmm_dela_pld30_10hv_vfb
+		nsmm_dela_pld30_10hv_vtl
+		nsmm_dela_pld30_10hv_vtw
+		nsmm_delr_pld30_10hv_gox
+		nsmm_delr_pld30_10hv_nsub
+		nsmm_delr_pld30_10hv_rsh
+		nsmm_delr_pld30_10hv_ubref
+	}
+}
+
+pld45_10hv { mosfet
+	global {
+		nsig_dela_pld45_10hv_dwmos
+		nsig_dela_pld45_10hv_dwres
+		nsig_dela_pld45_10hv_vfb
+		nsig_dela_pld45_10hv_vtw
+		nsig_delr_acj0_junc_pld45_d_body
+		nsig_delr_chcj0_junc_pld45_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_pcj0_junc_pld45_d_body
+		nsig_delr_pld45_10hv_res
+		nsig_delr_pld45_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld45_10hv_dwox
+		nsmm_dela_pld45_10hv_vfb
+		nsmm_delr_pld45_10hv_gox
+		nsmm_delr_pld45_10hv_nsub
+		nsmm_delr_pld45_10hv_rsh
+		nsmm_delr_pld45_10hv_ubref
+	}
+}
+
+nld5_lvt_10hv { mosfet
+	global {
+		nsig_dela_nld5_lvt_10hv_dwmos
+		nsig_dela_nld5_lvt_10hv_vfb
+		nsig_dela_nld5_lvt_10hv_vtw
+		nsig_delr_acj0_junc_nld5_lvt_d_body
+		nsig_delr_chcj0_junc_nld5_lvt_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld5_lvt_10hv_res
+		nsig_delr_nld5_lvt_10hv_ub
+		nsig_delr_nld5_lvt_10hv_uch
+		nsig_delr_nld5_lvt_10hv_vsat
+		nsig_delr_pcj0_junc_nld5_lvt_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld5_lvt_10hv_dwox
+		nsmm_dela_nld5_lvt_10hv_vfb
+		nsmm_dela_nld5_lvt_10hv_vtl
+		nsmm_dela_nld5_lvt_10hv_vtw
+		nsmm_delr_nld5_lvt_10hv_gox
+		nsmm_delr_nld5_lvt_10hv_nsub
+		nsmm_delr_nld5_lvt_10hv_rsh
+		nsmm_delr_nld5_lvt_10hv_ubref
+	}
+}
+
+
+nld30b_10hv { mosfet
+	global {
+		nsig_dela_dw_nld30b_sphv_10hv
+		nsig_dela_vfb_nld30b_sphv_10hv
+		nsig_dela_vtwl_nld30b_sphv_10hv
+		nsig_dela_xw_nld30b_sphv_10hv
+		nsig_delr_cj_nld30b_sphv_10hv
+		nsig_delr_ir_nld30b_sphv_10hv
+		nsig_delr_is2_nld30b_sphv_10hv
+		nsig_delr_is_nld30b_sphv_10hv
+		nsig_delr_mobref_nld30b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_nld30b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_nld30b_sphv_10hv   
+		nsmm_dela_vfb_nld30b_sphv_10hv  
+		nsmm_delr_gox_nld30b_sphv_10hv  
+		nsmm_delr_mobref_nld30b_sphv_10hv 
+		nsmm_delr_nsub_nld30b_sphv_10hv 
+		nsmm_delr_rshl_nld30b_sphv_10hv 
+	}
+}
+
+nld45b_10hv { mosfet
+	global {
+		nsig_dela_vfb_nld45b_sphv_10hv
+		nsig_dela_vtw_nld45b_sphv_10hv
+		nsig_dela_xw_nld45b_sphv_10hv
+		nsig_delr_cj_nld45b_sphv_10hv
+		nsig_delr_ir_nld45b_sphv_10hv
+		nsig_delr_is2_nld45b_sphv_10hv
+		nsig_delr_is_nld45b_sphv_10hv
+		nsig_delr_mobref_nld45b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rsh_nld45b_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_vdscale_nld45b_sphv_10hv
+	}
+	local {
+		nsmm_dela_vfb_nld45b_sphv_10hv  
+		nsmm_dela_vtw_nld45b_sphv_10hv  
+		nsmm_dela_xw_nld45b_sphv_10hv   
+		nsmm_delr_gox_nld45b_sphv_10hv  
+		nsmm_delr_mobref_nld45b_sphv_10hv 
+		nsmm_delr_nsub_nld45b_sphv_10hv 
+		nsmm_delr_rsh_nld45b_sphv_10hv 
+		nsmm_delr_vdscale_nld45b_sphv_10hv 
+	}
+}
+
+nld65b_10hv { mosfet
+	global {
+		nsig_dela_thesatw_nld65b_sphv_10hv
+		nsig_dela_vfb_nld65b_sphv_10hv
+		nsig_dela_vtw_nld65b_sphv_10hv
+		nsig_dela_xw_nld65b_sphv_10hv
+		nsig_delr_cj_nld65b_sphv_10hv
+		nsig_delr_ir_nld65b_sphv_10hv
+		nsig_delr_is2_nld65b_sphv_10hv
+		nsig_delr_is_nld65b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_nld65b_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_nld65b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dxw_nld65b_sphv_10hv 
+		nsmm_dela_vfb_nld65b_sphv_10hv  
+		nsmm_dela_vtw_nld65b_sphv_10hv  
+		nsmm_delr_gox_nld65b_sphv_10hv 
+		nsmm_delr_nsub_nld65b_sphv_10hv 
+		nsmm_delr_res_nld65b_sphv_10hv  
+		nsmm_delr_uch_nld65b_sphv_10hv  
+	}
+}
+
+pld45b_10hv { mosfet
+	global {
+		nsig_dela_dw_pld45b_sphv_10hv
+		nsig_dela_nwxw_pld45b_sphv_10hv
+		nsig_dela_vfb_pld45b_sphv_10hv
+		nsig_dela_vtwl_pld45b_sphv_10hv
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cj_pld45b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_pld45b_sphv_10hv
+		nsig_delr_is2_pld45b_sphv_10hv
+		nsig_delr_is_pld45b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_pld45b_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_pld45b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dw_pld45b_sphv_10hv   
+		nsmm_dela_vfb_pld45b_sphv_10hv  
+		nsmm_delr_gox_pld45b_sphv_10hv  
+		nsmm_delr_nsub_pld45b_sphv_10hv 
+		nsmm_delr_rshl_pld45b_sphv_10hv 
+		nsmm_delr_uch_pld45b_sphv_10hv  
+	}
+}
+
+pld30b_10hv { mosfet
+	global {
+		nsig_dela_nwxw_pld30b_sphv_10hv
+		nsig_dela_vdscale_pld30b_sphv_10hv
+		nsig_dela_vdscalew_pld30b_sphv_10hv
+		nsig_dela_vfbo_pld30b_sphv_10hv
+		nsig_dela_vfbw_pld30b_sphv_10hv
+		nsig_delr_cj_pld30b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_pld30b_sphv_10hv
+		nsig_delr_is2_pld30b_sphv_10hv
+		nsig_delr_is_pld30b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshldd_pld30b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_vfbo_pld30b_sphv_10hv   
+		nsmm_delr_rshldd_pld30b_sphv_10hv 
+		nsmm_delr_uo_pld30b_sphv_10hv     
+	}
+}
+
+nld10_10hv { mosfet
+	global {
+		nsig_dela_dw_nld10_sphv_10hv
+		nsig_dela_vfb_nld10_sphv_10hv
+		nsig_dela_vtwl_nld10_sphv_10hv
+		nsig_dela_xw_nld10_sphv_10hv
+		nsig_delr_cj_nld10_sphv_10hv
+		nsig_delr_ir_nld10_sphv_10hv
+		nsig_delr_is2_nld10_sphv_10hv
+		nsig_delr_is_nld10_sphv_10hv
+		nsig_delr_mobref_nld10_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_nld10_sphv_10hv
+		nsig_delr_thesato_nld10_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_nld10_sphv_10hv   
+		nsmm_dela_vfb_nld10_sphv_10hv  
+		nsmm_delr_gox_nld10_sphv_10hv  
+		nsmm_delr_mobref_nld10_sphv_10hv 
+		nsmm_delr_nsub_nld10_sphv_10hv 
+		nsmm_delr_rshl_nld10_sphv_10hv 
+	}
+}
+
+nld45b_he_10hv { mosfet
+	global {
+		nsig_dela_vfb_nld45b_he_sphv_10hv
+		nsig_dela_vtw_nld45b_he_sphv_10hv
+		nsig_dela_xw_nld45b_he_sphv_10hv
+		nsig_delr_cj_nld45b_he_sphv_10hv
+		nsig_delr_ir_nld45b_he_sphv_10hv
+		nsig_delr_is2_nld45b_he_sphv_10hv
+		nsig_delr_is_nld45b_he_sphv_10hv
+		nsig_delr_mobref_nld45b_he_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rsh_nld45b_he_sphv_10hv
+		nsig_delr_thesato_nld45b_he_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_vfb_nld45b_he_sphv_10hv  
+		nsmm_dela_vtw_nld45b_he_sphv_10hv  
+		nsmm_dela_xw_nld45b_he_sphv_10hv   
+		nsmm_delr_gox_nld45b_he_sphv_10hv  
+		nsmm_delr_mobref_nld45b_he_sphv_10hv 
+		nsmm_delr_nsub_nld45b_he_sphv_10hv 
+		nsmm_delr_rsh_nld45b_he_sphv_10hv 
+		nsmm_delr_thesato_nld45b_he_sphv_10hv 
+	}
+}
+
+nld45b_tlp_10hv { mosfet
+	global {
+		nsig_dela_vfb_nld45b_tlp_mosb_10hv
+		nsig_dela_vfb_nld45b_tlp_sphv_10hv
+		nsig_dela_vtw_nld45b_tlp_sphv_10hv
+		nsig_dela_xw_nld45b_tlp_sphv_10hv
+		nsig_delr_cj_nld45b_tlp_sphv_10hv
+		nsig_delr_ir_nld45b_tlp_sphv_10hv
+		nsig_delr_is2_nld45b_tlp_sphv_10hv
+		nsig_delr_is_nld45b_tlp_sphv_10hv
+		nsig_delr_mobref_nld45b_tlp_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rsh_nld45b_tlp_sphv_10hv
+		nsig_delr_thesato_nld45b_tlp_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_vdscale_nld45b_tlp_sphv_10hv
+	}
+	local {
+		nsmm_dela_vfb_nld45b_tlp_sphv_10hv  
+		nsmm_dela_vtw_nld45b_tlp_sphv_10hv  
+		nsmm_dela_xw_nld45b_tlp_sphv_10hv   
+		nsmm_delr_gox_nld45b_tlp_sphv_10hv  
+		nsmm_delr_mobref_nld45b_tlp_sphv_10hv 
+		nsmm_delr_nsub_nld45b_tlp_sphv_10hv 
+		nsmm_delr_rsh_nld45b_tlp_sphv_10hv 
+		nsmm_delr_thesato_nld45b_tlp_sphv_10hv 
+		nsmm_delr_vdscale_nld45b_tlp_sphv_10hv 
+	}
+}
+
+nld100_10hv { mosfet
+	global {
+		nsig_dela_thesatgo_nld100_sphv_10hv
+		nsig_dela_vdscale_nld100_sphv_10hv
+		nsig_dela_vdscalew_nld100_sphv_10hv
+		nsig_dela_vfb_nld100_sphv_10hv
+		nsig_dela_vfbw_nld100_sphv_10hv
+		nsig_dela_xw_nld100_sphv_10hv
+		nsig_delr_cfr_d_ply_m1ct_nld100_sphv_10hv
+		nsig_delr_cfr_d_ply_met_nld100_sphv_10hv
+		nsig_delr_cfr_s_ply_m1ct_nld100_sphv_10hv
+		nsig_delr_cfr_s_ply_met_nld100_sphv_10hv
+		nsig_delr_cj_nld100_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_ir_nld100_sphv_10hv
+		nsig_delr_is2_nld100_sphv_10hv
+		nsig_delr_is_nld100_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_nld100_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_nld100_sphv_10hv   
+		nsmm_dela_vfb_nld100_sphv_10hv  
+		nsmm_delr_mobref_nld100_sphv_10hv 
+		nsmm_delr_nsub_nld100_sphv_10hv 
+		nsmm_delr_rshl_nld100_sphv_10hv 
+		nsmm_delr_tox_nld100_sphv_10hv  
+	}
+}
+
+pld100_10hv { mosfet
+	global {
+		nsig_dela_dw_pld100_sphv_10hv
+		nsig_dela_dwox_pld100_sphv_10hv
+		nsig_dela_vfb_pld100_sphv_10hv
+		nsig_dela_vtw_pld100_sphv_10hv
+		nsig_delr_cj_pld100_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_pld100_sphv_10hv
+		nsig_delr_is2_pld100_sphv_10hv
+		nsig_delr_is_pld100_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_pld100_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_theacc2_pld100_sphv_10hv
+		nsig_delr_thesat_pld100_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_pld100_sphv_10hv
+		nsig_delr_vdscale_pld100_sphv_10hv
+		nsig_delr_vdscalew_pld100_sphv_10hv
+	}
+	local {
+		nsmm_dela_dwox_pld100_sphv_10hv   
+		nsmm_dela_vfb_pld100_sphv_10hv    
+		nsmm_dela_vtw_pld100_sphv_10hv    
+		nsmm_delr_nsub_pld100_sphv_10hv   
+		nsmm_delr_res_pld100_sphv_10hv    
+		nsmm_delr_tox_pld100_sphv_10hv    
+		nsmm_delr_uch_pld100_sphv_10hv    
+	}
+}
+
+nld90b_10hv { mosfet
+	global {
+		nsig_dela_dw_nld90b_sphv_10hv
+		nsig_dela_vfb_nld90b_sphv_10hv
+		nsig_dela_vtwl_nld90b_sphv_10hv
+		nsig_dela_xw_nld90b_sphv_10hv
+		nsig_delr_cfr_d_ply_m1ct_nld90b_sphv_10hv
+		nsig_delr_cfr_d_ply_met_nld90b_sphv_10hv
+		nsig_delr_cfr_s_ply_m1ct_nld90b_sphv_10hv
+		nsig_delr_cfr_s_ply_met_nld90b_sphv_10hv
+		nsig_delr_cj_nld90b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_ids_nld90b_sphv_10hv
+		nsig_delr_ir_nld90b_sphv_10hv
+		nsig_delr_is2_nld90b_sphv_10hv
+		nsig_delr_is_nld90b_sphv_10hv
+		nsig_delr_mobref_nld90b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_nld90b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_nld90b_sphv_10hv   
+		nsmm_dela_vfb_nld90b_sphv_10hv  
+		nsmm_delr_mobref_nld90b_sphv_10hv 
+		nsmm_delr_nsub_nld90b_sphv_10hv 
+		nsmm_delr_rshl_nld90b_sphv_10hv 
+		nsmm_delr_tox_nld90b_sphv_10hv  
+	}
+}
+
+pld65_10hv { mosfet
+	global {
+		nsig_dela_dwox_pld65_sphv_10hv
+		nsig_dela_vfb_pld65_sphv_10hv
+		nsig_dela_vtw_pld65_sphv_10hv
+		nsig_delr_cj_pld65_sphv_10hv
+		nsig_delr_ir_pld65_sphv_10hv
+		nsig_delr_is2_pld65_sphv_10hv
+		nsig_delr_is_pld65_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_pld65_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_pld65_sphv_10hv
+	}
+	local {
+		nsmm_dela_dwox_pld65_sphv_10hv   
+		nsmm_dela_vfb_pld65_sphv_10hv    
+		nsmm_dela_vtw_pld65_sphv_10hv    
+		nsmm_delr_nsub_pld65_sphv_10hv   
+		nsmm_delr_res_pld65_sphv_10hv    
+		nsmm_delr_tox_pld65_sphv_10hv    
+		nsmm_delr_uch_pld65_sphv_10hv    
+	}
+}
+
+pld120_10hv { mosfet
+	global {
+		nsig_dela_dw_pld120_sphv_10hv
+		nsig_dela_dwox_pld120_sphv_10hv
+		nsig_dela_mueo_pld120_sphv_10hv
+		nsig_dela_vdscale_pld120_sphv_10hv
+		nsig_dela_vdscalel_pld120_sphv_10hv
+		nsig_dela_vdscalelw_pld120_sphv_10hv
+		nsig_dela_vdscalew_pld120_sphv_10hv
+		nsig_dela_vfb_pld120_sphv_10hv
+		nsig_dela_vtl_pld120_sphv_10hv
+		nsig_dela_vtw_pld120_sphv_10hv
+		nsig_delr_cj_pld120_sphv_10hv
+		nsig_delr_ir_pld120_sphv_10hv
+		nsig_delr_is2_pld120_sphv_10hv
+		nsig_delr_is_pld120_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_pld120_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_pld120_sphv_10hv
+	}
+	local {
+		nsmm_dela_dw_pld120_sphv_10hv 
+		nsmm_dela_dwox_pld120_sphv_10hv 
+		nsmm_dela_vfb_pld120_sphv_10hv  
+		nsmm_dela_vtw_pld120_sphv_10hv  
+		nsmm_delr_nsub_pld120_sphv_10hv 
+		nsmm_delr_res_pld120_sphv_10hv  
+		nsmm_delr_tox_pld120_sphv_10hv  
+		nsmm_delr_uch_pld120_sphv_10hv  
+	}
+}
+
+pld90b_10hv { mosfet
+	global {
+		nsig_dela_dwox_pld90b_sphv_10hv
+		nsig_dela_vfb_pld90b_sphv_10hv
+		nsig_dela_vtw_pld90b_sphv_10hv
+		nsig_delr_cj_pld90b_sphv_10hv
+		nsig_delr_ir_pld90b_sphv_10hv
+		nsig_delr_is2_pld90b_sphv_10hv
+		nsig_delr_is_pld90b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_pld90b_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_pld90b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dwox_pld90b_sphv_10hv   
+		nsmm_dela_vfb_pld90b_sphv_10hv    
+		nsmm_dela_vtw_pld90b_sphv_10hv    
+		nsmm_delr_nsub_pld90b_sphv_10hv   
+		nsmm_delr_res_pld90b_sphv_10hv    
+		nsmm_delr_tox_pld90b_sphv_10hv    
+		nsmm_delr_uch_pld90b_sphv_10hv    
+	}
+}
+
+
+#.lib powermos_simple
+nld30_10hv { mosfet
+	global {
+		nsig_dela_nld30_10hv_dr
+		nsig_dela_nld30_10hv_dw
+		nsig_dela_nld30_10hv_vfb
+		nsig_dela_nld30_10hv_vtm
+		nsig_delr_acj0_junc_nld30_d_body
+		nsig_delr_ajs_junc_nld30_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld30_10hv_res
+		nsig_delr_nld30_10hv_uch
+		nsig_delr_pcj0_junc_nld30_d_body
+		nsig_delr_pjs_junc_nld30_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld30_10hv_dwox
+		nsmm_dela_nld30_10hv_vfb
+		nsmm_dela_nld30_10hv_vtl
+		nsmm_dela_nld30_10hv_vtw
+		nsmm_delr_nld30_10hv_gox
+		nsmm_delr_nld30_10hv_nsub
+		nsmm_delr_nld30_10hv_rsh
+		nsmm_delr_nld30_10hv_ubref
+	}
+}
+
+nld45_10hv { mosfet
+	global {
+		nsig_dela_nld45_10hv_dr
+		nsig_dela_nld45_10hv_dw
+		nsig_dela_nld45_10hv_vfb
+		nsig_dela_nld45_10hv_vtm
+		nsig_delr_acj0_junc_nld45_d_body
+		nsig_delr_ajs_junc_nld45_d_body
+		nsig_delr_chcj0_junc_nld45_d_body
+		nsig_delr_chjs_junc_nld45_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld45_10hv_res
+		nsig_delr_nld45_10hv_uch
+		nsig_delr_pcj0_junc_nld45_d_body
+		nsig_delr_pjs_junc_nld45_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld45_10hv_cit
+		nsmm_dela_nld45_10hv_dwox
+		nsmm_dela_nld45_10hv_vfb
+		nsmm_dela_nld45_10hv_vtl
+		nsmm_dela_nld45_10hv_vtw
+		nsmm_delr_nld45_10hv_gox
+		nsmm_delr_nld45_10hv_nsub
+		nsmm_delr_nld45_10hv_rsh
+		nsmm_delr_nld45_10hv_ubref
+		nsmm_delr_nld45_10hv_vsat
+	}
+}
+
+nld45_he_10hv { mosfet
+	global {
+		nsig_dela_nld45_he_10hv_a0
+		nsig_dela_nld45_he_10hv_b0
+		nsig_dela_nld45_he_10hv_dr
+		nsig_dela_nld45_he_10hv_dw
+		nsig_dela_nld45_he_10hv_vfb
+		nsig_dela_nld45_he_10hv_vtm
+		nsig_delr_acj0_junc_nld45_he_d_body
+		nsig_delr_ajs_junc_nld45_he_d_body
+		nsig_delr_chcj0_junc_nld45_he_d_body
+		nsig_delr_chjs_junc_nld45_he_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld45_he_10hv_res
+		nsig_delr_nld45_he_10hv_uch
+		nsig_delr_pcj0_junc_nld45_he_d_body
+		nsig_delr_pjs_junc_nld45_he_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld45_he_10hv_dwox
+		nsmm_dela_nld45_he_10hv_vfb
+		nsmm_dela_nld45_he_10hv_vtl
+		nsmm_dela_nld45_he_10hv_vtw
+		nsmm_delr_nld45_he_10hv_gox
+		nsmm_delr_nld45_he_10hv_nsub
+		nsmm_delr_nld45_he_10hv_rsh
+		nsmm_delr_nld45_he_10hv_ubref
+	}
+}
+
+nld45_tlp_10hv { mosfet
+	global {
+		nsig_dela_nld45_tlp_10hv_a0
+		nsig_dela_nld45_tlp_10hv_b0
+		nsig_dela_nld45_tlp_10hv_dr
+		nsig_dela_nld45_tlp_10hv_dw
+		nsig_dela_nld45_tlp_10hv_vfb
+		nsig_dela_nld45_tlp_10hv_vtm
+		nsig_delr_acj0_junc_nld45_tlp_d_body
+		nsig_delr_ajs_junc_nld45_tlp_d_body
+		nsig_delr_chcj0_junc_nld45_tlp_d_body
+		nsig_delr_chjs_junc_nld45_tlp_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld45_tlp_10hv_res
+		nsig_delr_nld45_tlp_10hv_uch
+		nsig_delr_pcj0_junc_nld45_tlp_d_body
+		nsig_delr_pjs_junc_nld45_tlp_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld45_tlp_10hv_vfb
+		nsmm_dela_nld45_tlp_10hv_vtl
+		nsmm_dela_nld45_tlp_10hv_vtw
+		nsmm_delr_nld45_tlp_10hv_gox
+		nsmm_delr_nld45_tlp_10hv_nsub
+		nsmm_delr_nld45_tlp_10hv_rsh
+		nsmm_delr_nld45_tlp_10hv_ubref
+	}
+}
+
+pld5_10hv { mosfet
+	global {
+		nsig_dela_pld5_10hv_dw
+		nsig_dela_pld5_10hv_vfb
+		nsig_dela_pld5_10hv_vtm
+		nsig_delr_acj0_junc_pld5_d_body
+		nsig_delr_ajs_junc_pld5_d_body
+		nsig_delr_cfr_pld5_d_ply_m1ct
+		nsig_delr_cfr_pld5_d_ply_met
+		nsig_delr_cfr_pld5_s_ply_m1ct
+		nsig_delr_cfr_pld5_s_ply_met
+		nsig_delr_cpp_ply_fld
+		nsig_delr_pcj0_junc_pld5_d_body
+		nsig_delr_pjs_junc_pld5_d_body
+		nsig_delr_pld5_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld5_10hv_dwox
+		nsmm_dela_pld5_10hv_vfb
+		nsmm_dela_pld5_10hv_vtl
+		nsmm_dela_pld5_10hv_vtw
+		nsmm_delr_pld5_10hv_gox
+		nsmm_delr_pld5_10hv_nsub
+		nsmm_delr_pld5_10hv_rsh
+		nsmm_delr_pld5_10hv_ubref
+	}
+}
+
+nld65_10hv { mosfet
+	global {
+		nsig_dela_nld65_10hv_dwres
+		nsig_dela_nld65_10hv_vfb
+		nsig_dela_nld65_10hv_vtw
+		nsig_delr_acj0_junc_nld65_d_body
+		nsig_delr_ajs_junc_nld65_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld65_10hv_res
+		nsig_delr_nld65_10hv_uch
+		nsig_delr_pcj0_junc_nld65_d_body
+		nsig_delr_pjs_junc_nld65_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld65_10hv_dwox
+		nsmm_dela_nld65_10hv_vfb
+		nsmm_dela_nld65_10hv_vtl
+		nsmm_dela_nld65_10hv_vtw
+		nsmm_delr_nld65_10hv_gox
+		nsmm_delr_nld65_10hv_nsub
+		nsmm_delr_nld65_10hv_rsh
+		nsmm_delr_nld65_10hv_ubref
+	}
+}
+
+nld90_10hv { mosfet
+	global {
+		nsig_dela_nld90_10hv_dwmos
+		nsig_dela_nld90_10hv_dwres
+		nsig_dela_nld90_10hv_vfb
+		nsig_dela_nld90_10hv_vtw
+		nsig_delr_acj0_junc_nld90_d_body
+		nsig_delr_ajs_junc_nld90_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld90_10hv_res
+		nsig_delr_nld90_10hv_uch
+		nsig_delr_pcj0_junc_nld90_d_body
+		nsig_delr_pjs_junc_nld90_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld90_10hv_vfb
+		nsmm_dela_nld90_10hv_vtl
+		nsmm_dela_nld90_10hv_vtw
+		nsmm_delr_nld90_10hv_gox
+		nsmm_delr_nld90_10hv_nsub
+		nsmm_delr_nld90_10hv_rsh
+		nsmm_delr_nld90_10hv_ubref
+	}
+}
+
+pld90_10hv { mosfet
+	global {
+		nsig_dela_pld90_10hv_vfb
+		nsig_dela_pld90_10hv_vtm
+		nsig_delr_acj0_junc_pld90_d_body
+		nsig_delr_ajs_junc_pld90_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_pcj0_junc_pld90_d_body
+		nsig_delr_pjs_junc_pld90_d_body
+		nsig_delr_pld90_10hv_res
+		nsig_delr_pld90_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld90_10hv_vfb
+		nsmm_dela_pld90_10hv_vtl
+		nsmm_dela_pld90_10hv_vtw
+		nsmm_delr_pld90_10hv_gox
+		nsmm_delr_pld90_10hv_nsub
+		nsmm_delr_pld90_10hv_rsh
+		nsmm_delr_pld90_10hv_ubref
+	}
+}
+
+nld5_10hv { mosfet
+	global {
+		nsig_dela_nld5_10hv_dwmos
+		nsig_dela_nld5_10hv_vfb
+		nsig_dela_nld5_10hv_vtw
+		nsig_delr_acj0_junc_nld5_d_body
+		nsig_delr_ajs_junc_nld5_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld5_10hv_res
+		nsig_delr_nld5_10hv_uch
+		nsig_delr_nld5_10hv_vsat
+		nsig_delr_pcj0_junc_nld5_d_body
+		nsig_delr_pjs_junc_nld5_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld5_10hv_dwox
+		nsmm_dela_nld5_10hv_vfb
+		nsmm_dela_nld5_10hv_vtl
+		nsmm_dela_nld5_10hv_vtw
+		nsmm_delr_nld5_10hv_gox
+		nsmm_delr_nld5_10hv_nsub
+		nsmm_delr_nld5_10hv_rsh
+		nsmm_delr_nld5_10hv_ubref
+	}
+}
+
+pld10_10hv { mosfet
+	global {
+		nsig_dela_pld10_10hv_dwmos
+		nsig_dela_pld10_10hv_dwres
+		nsig_dela_pld10_10hv_vfb
+		nsig_dela_pld10_10hv_vtw
+		nsig_delr_acj0_junc_pld10_d_body
+		nsig_delr_ajs_junc_pld10_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_pcj0_junc_pld10_d_body
+		nsig_delr_pjs_junc_pld10_d_body
+		nsig_delr_pld10_10hv_res
+		nsig_delr_pld10_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld10_10hv_dwox
+		nsmm_dela_pld10_10hv_vfb
+		nsmm_dela_pld10_10hv_vtl
+		nsmm_dela_pld10_10hv_vtw
+		nsmm_delr_pld10_10hv_gox
+		nsmm_delr_pld10_10hv_nsub
+		nsmm_delr_pld10_10hv_rsh
+		nsmm_delr_pld10_10hv_ubref
+	}
+}
+
+pld10b_10hv { mosfet
+	global {
+		nsig_dela_dw_pld10b_sphv_10hv
+		nsig_dela_vfb_pld10b_sphv_10hv
+		nsig_dela_vtwl_pld10b_sphv_10hv
+		nsig_delr_cj0_junc_pld10b_d_body
+		nsig_delr_js_junc_pld10b_d_body
+		nsig_delr_mobref_pld10b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_pld10b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_pld10b_sphv_10hv 
+		nsmm_dela_vfb_pld10b_sphv_10hv 
+		nsmm_delr_gox_pld10b_sphv_10hv 
+		nsmm_delr_mobref_pld10b_sphv_10hv 
+		nsmm_delr_nsub_pld10b_sphv_10hv 
+		nsmm_delr_rshl_pld10b_sphv_10hv 
+	}
+}
+
+pld30_10hv { mosfet
+	global {
+		nsig_dela_pld30_10hv_dwmos
+		nsig_dela_pld30_10hv_dwres
+		nsig_dela_pld30_10hv_vfb
+		nsig_dela_pld30_10hv_vtw
+		nsig_delr_acj0_junc_pld30_d_body
+		nsig_delr_ajs_junc_pld30_d_body
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_pcj0_junc_pld30_d_body
+		nsig_delr_pjs_junc_pld30_d_body
+		nsig_delr_pld30_10hv_res
+		nsig_delr_pld30_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld30_10hv_dwox
+		nsmm_dela_pld30_10hv_vfb
+		nsmm_dela_pld30_10hv_vtl
+		nsmm_dela_pld30_10hv_vtw
+		nsmm_delr_pld30_10hv_gox
+		nsmm_delr_pld30_10hv_nsub
+		nsmm_delr_pld30_10hv_rsh
+		nsmm_delr_pld30_10hv_ubref
+	}
+}
+
+pld45_10hv { mosfet
+	global {
+		nsig_dela_pld45_10hv_dwmos
+		nsig_dela_pld45_10hv_dwres
+		nsig_dela_pld45_10hv_vfb
+		nsig_dela_pld45_10hv_vtw
+		nsig_delr_acj0_junc_pld45_d_body
+		nsig_delr_ajs_junc_pld45_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_pcj0_junc_pld45_d_body
+		nsig_delr_pjs_junc_pld45_d_body
+		nsig_delr_pld45_10hv_res
+		nsig_delr_pld45_10hv_uch
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_pld45_10hv_dwox
+		nsmm_dela_pld45_10hv_vfb
+		nsmm_delr_pld45_10hv_gox
+		nsmm_delr_pld45_10hv_nsub
+		nsmm_delr_pld45_10hv_rsh
+		nsmm_delr_pld45_10hv_ubref
+	}
+}
+
+nld5_lvt_10hv { mosfet
+	global {
+		nsig_dela_nld5_lvt_10hv_dwmos
+		nsig_dela_nld5_lvt_10hv_vfb
+		nsig_dela_nld5_lvt_10hv_vtw
+		nsig_delr_acj0_junc_nld5_lvt_d_body
+		nsig_delr_ajs_junc_nld5_lvt_d_body
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_nld5_lvt_10hv_res
+		nsig_delr_nld5_lvt_10hv_ub
+		nsig_delr_nld5_lvt_10hv_uch
+		nsig_delr_nld5_lvt_10hv_vsat
+		nsig_delr_pcj0_junc_nld5_lvt_d_body
+		nsig_delr_pjs_junc_nld5_lvt_d_body
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_nld5_lvt_10hv_dwox
+		nsmm_dela_nld5_lvt_10hv_vfb
+		nsmm_dela_nld5_lvt_10hv_vtl
+		nsmm_dela_nld5_lvt_10hv_vtw
+		nsmm_delr_nld5_lvt_10hv_gox
+		nsmm_delr_nld5_lvt_10hv_nsub
+		nsmm_delr_nld5_lvt_10hv_rsh
+		nsmm_delr_nld5_lvt_10hv_ubref
+	}
+}
+
+
+nld30b_10hv { mosfet
+	global {
+		nsig_dela_dw_nld30b_sphv_10hv
+		nsig_dela_vfb_nld30b_sphv_10hv
+		nsig_dela_vtwl_nld30b_sphv_10hv
+		nsig_dela_xw_nld30b_sphv_10hv
+		nsig_delr_cj_nld30b_sphv_10hv
+		nsig_delr_ir_nld30b_sphv_10hv
+		nsig_delr_is2_nld30b_sphv_10hv
+		nsig_delr_is_nld30b_sphv_10hv
+		nsig_delr_mobref_nld30b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_nld30b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_nld30b_sphv_10hv   
+		nsmm_dela_vfb_nld30b_sphv_10hv  
+		nsmm_delr_gox_nld30b_sphv_10hv  
+		nsmm_delr_mobref_nld30b_sphv_10hv 
+		nsmm_delr_nsub_nld30b_sphv_10hv 
+		nsmm_delr_rshl_nld30b_sphv_10hv 
+	}
+}
+
+nld45b_10hv { mosfet
+	global {
+		nsig_dela_vfb_nld45b_sphv_10hv
+		nsig_dela_vtw_nld45b_sphv_10hv
+		nsig_dela_xw_nld45b_sphv_10hv
+		nsig_delr_cj_nld45b_sphv_10hv
+		nsig_delr_ir_nld45b_sphv_10hv
+		nsig_delr_is2_nld45b_sphv_10hv
+		nsig_delr_is_nld45b_sphv_10hv
+		nsig_delr_mobref_nld45b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rsh_nld45b_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_vdscale_nld45b_sphv_10hv
+	}
+	local {
+		nsmm_dela_vfb_nld45b_sphv_10hv  
+		nsmm_dela_vtw_nld45b_sphv_10hv  
+		nsmm_dela_xw_nld45b_sphv_10hv   
+		nsmm_delr_gox_nld45b_sphv_10hv  
+		nsmm_delr_mobref_nld45b_sphv_10hv 
+		nsmm_delr_nsub_nld45b_sphv_10hv 
+		nsmm_delr_rsh_nld45b_sphv_10hv 
+		nsmm_delr_vdscale_nld45b_sphv_10hv 
+	}
+}
+
+nld65b_10hv { mosfet
+	global {
+		nsig_dela_thesatw_nld65b_sphv_10hv
+		nsig_dela_vfb_nld65b_sphv_10hv
+		nsig_dela_vtw_nld65b_sphv_10hv
+		nsig_dela_xw_nld65b_sphv_10hv
+		nsig_delr_cj_nld65b_sphv_10hv
+		nsig_delr_ir_nld65b_sphv_10hv
+		nsig_delr_is2_nld65b_sphv_10hv
+		nsig_delr_is_nld65b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_nld65b_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_nld65b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dxw_nld65b_sphv_10hv 
+		nsmm_dela_vfb_nld65b_sphv_10hv  
+		nsmm_dela_vtw_nld65b_sphv_10hv  
+		nsmm_delr_gox_nld65b_sphv_10hv 
+		nsmm_delr_nsub_nld65b_sphv_10hv 
+		nsmm_delr_res_nld65b_sphv_10hv  
+		nsmm_delr_uch_nld65b_sphv_10hv  
+	}
+}
+
+pld45b_10hv { mosfet
+	global {
+		nsig_dela_dw_pld45b_sphv_10hv
+		nsig_dela_nwxw_pld45b_sphv_10hv
+		nsig_dela_vfb_pld45b_sphv_10hv
+		nsig_dela_vtwl_pld45b_sphv_10hv
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cj_pld45b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_pld45b_sphv_10hv
+		nsig_delr_is2_pld45b_sphv_10hv
+		nsig_delr_is_pld45b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_pld45b_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_pld45b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dw_pld45b_sphv_10hv   
+		nsmm_dela_vfb_pld45b_sphv_10hv  
+		nsmm_delr_gox_pld45b_sphv_10hv  
+		nsmm_delr_nsub_pld45b_sphv_10hv 
+		nsmm_delr_rshl_pld45b_sphv_10hv 
+		nsmm_delr_uch_pld45b_sphv_10hv  
+	}
+}
+
+pld30b_10hv { mosfet
+	global {
+		nsig_dela_nwxw_pld30b_sphv_10hv
+		nsig_dela_vdscale_pld30b_sphv_10hv
+		nsig_dela_vdscalew_pld30b_sphv_10hv
+		nsig_dela_vfbo_pld30b_sphv_10hv
+		nsig_dela_vfbw_pld30b_sphv_10hv
+		nsig_delr_cj_pld30b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_pld30b_sphv_10hv
+		nsig_delr_is2_pld30b_sphv_10hv
+		nsig_delr_is_pld30b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshldd_pld30b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_vfbo_pld30b_sphv_10hv   
+		nsmm_delr_rshldd_pld30b_sphv_10hv 
+		nsmm_delr_uo_pld30b_sphv_10hv     
+	}
+}
+
+nld10_10hv { mosfet
+	global {
+		nsig_dela_dw_nld10_sphv_10hv
+		nsig_dela_vfb_nld10_sphv_10hv
+		nsig_dela_vtwl_nld10_sphv_10hv
+		nsig_dela_xw_nld10_sphv_10hv
+		nsig_delr_cj_nld10_sphv_10hv
+		nsig_delr_ir_nld10_sphv_10hv
+		nsig_delr_is2_nld10_sphv_10hv
+		nsig_delr_is_nld10_sphv_10hv
+		nsig_delr_mobref_nld10_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_nld10_sphv_10hv
+		nsig_delr_thesato_nld10_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_nld10_sphv_10hv   
+		nsmm_dela_vfb_nld10_sphv_10hv  
+		nsmm_delr_gox_nld10_sphv_10hv  
+		nsmm_delr_mobref_nld10_sphv_10hv 
+		nsmm_delr_nsub_nld10_sphv_10hv 
+		nsmm_delr_rshl_nld10_sphv_10hv 
+	}
+}
+
+nld45b_he_10hv { mosfet
+	global {
+		nsig_dela_vfb_nld45b_he_sphv_10hv
+		nsig_dela_vtw_nld45b_he_sphv_10hv
+		nsig_dela_xw_nld45b_he_sphv_10hv
+		nsig_delr_cj_nld45b_he_sphv_10hv
+		nsig_delr_ir_nld45b_he_sphv_10hv
+		nsig_delr_is2_nld45b_he_sphv_10hv
+		nsig_delr_is_nld45b_he_sphv_10hv
+		nsig_delr_mobref_nld45b_he_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rsh_nld45b_he_sphv_10hv
+		nsig_delr_thesato_nld45b_he_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_vfb_nld45b_he_sphv_10hv  
+		nsmm_dela_vtw_nld45b_he_sphv_10hv  
+		nsmm_dela_xw_nld45b_he_sphv_10hv   
+		nsmm_delr_gox_nld45b_he_sphv_10hv  
+		nsmm_delr_mobref_nld45b_he_sphv_10hv 
+		nsmm_delr_nsub_nld45b_he_sphv_10hv 
+		nsmm_delr_rsh_nld45b_he_sphv_10hv 
+		nsmm_delr_thesato_nld45b_he_sphv_10hv 
+	}
+}
+
+nld45b_tlp_10hv { mosfet
+	global {
+		nsig_dela_vfb_nld45b_tlp_mosb_10hv
+		nsig_dela_vfb_nld45b_tlp_sphv_10hv
+		nsig_dela_vtw_nld45b_tlp_sphv_10hv
+		nsig_dela_xw_nld45b_tlp_sphv_10hv
+		nsig_delr_cj_nld45b_tlp_sphv_10hv
+		nsig_delr_ir_nld45b_tlp_sphv_10hv
+		nsig_delr_is2_nld45b_tlp_sphv_10hv
+		nsig_delr_is_nld45b_tlp_sphv_10hv
+		nsig_delr_mobref_nld45b_tlp_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rsh_nld45b_tlp_sphv_10hv
+		nsig_delr_thesato_nld45b_tlp_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_vdscale_nld45b_tlp_sphv_10hv
+	}
+	local {
+		nsmm_dela_vfb_nld45b_tlp_sphv_10hv  
+		nsmm_dela_vtw_nld45b_tlp_sphv_10hv  
+		nsmm_dela_xw_nld45b_tlp_sphv_10hv   
+		nsmm_delr_gox_nld45b_tlp_sphv_10hv  
+		nsmm_delr_mobref_nld45b_tlp_sphv_10hv 
+		nsmm_delr_nsub_nld45b_tlp_sphv_10hv 
+		nsmm_delr_rsh_nld45b_tlp_sphv_10hv 
+		nsmm_delr_thesato_nld45b_tlp_sphv_10hv 
+		nsmm_delr_vdscale_nld45b_tlp_sphv_10hv 
+	}
+}
+
+nld100_10hv { mosfet
+	global {
+		nsig_dela_thesatgo_nld100_sphv_10hv
+		nsig_dela_vdscale_nld100_sphv_10hv
+		nsig_dela_vdscalew_nld100_sphv_10hv
+		nsig_dela_vfb_nld100_sphv_10hv
+		nsig_dela_vfbw_nld100_sphv_10hv
+		nsig_dela_xw_nld100_sphv_10hv
+		nsig_delr_cfr_d_ply_m1ct_nld100_sphv_10hv
+		nsig_delr_cfr_d_ply_met_nld100_sphv_10hv
+		nsig_delr_cfr_s_ply_m1ct_nld100_sphv_10hv
+		nsig_delr_cfr_s_ply_met_nld100_sphv_10hv
+		nsig_delr_cj_nld100_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_ir_nld100_sphv_10hv
+		nsig_delr_is2_nld100_sphv_10hv
+		nsig_delr_is_nld100_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_nld100_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_nld100_sphv_10hv   
+		nsmm_dela_vfb_nld100_sphv_10hv  
+		nsmm_delr_mobref_nld100_sphv_10hv 
+		nsmm_delr_nsub_nld100_sphv_10hv 
+		nsmm_delr_rshl_nld100_sphv_10hv 
+		nsmm_delr_tox_nld100_sphv_10hv  
+	}
+}
+
+pld100_10hv { mosfet
+	global {
+		nsig_dela_dw_pld100_sphv_10hv
+		nsig_dela_dwox_pld100_sphv_10hv
+		nsig_dela_vfb_pld100_sphv_10hv
+		nsig_dela_vtw_pld100_sphv_10hv
+		nsig_delr_cj_pld100_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_pld100_sphv_10hv
+		nsig_delr_is2_pld100_sphv_10hv
+		nsig_delr_is_pld100_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_pld100_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_theacc2_pld100_sphv_10hv
+		nsig_delr_thesat_pld100_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_pld100_sphv_10hv
+		nsig_delr_vdscale_pld100_sphv_10hv
+		nsig_delr_vdscalew_pld100_sphv_10hv
+	}
+	local {
+		nsmm_dela_dwox_pld100_sphv_10hv   
+		nsmm_dela_vfb_pld100_sphv_10hv    
+		nsmm_dela_vtw_pld100_sphv_10hv    
+		nsmm_delr_nsub_pld100_sphv_10hv   
+		nsmm_delr_res_pld100_sphv_10hv    
+		nsmm_delr_tox_pld100_sphv_10hv    
+		nsmm_delr_uch_pld100_sphv_10hv    
+	}
+}
+
+nld90b_10hv { mosfet
+	global {
+		nsig_dela_dw_nld90b_sphv_10hv
+		nsig_dela_vfb_nld90b_sphv_10hv
+		nsig_dela_vtwl_nld90b_sphv_10hv
+		nsig_dela_xw_nld90b_sphv_10hv
+		nsig_delr_cfr_d_ply_m1ct_nld90b_sphv_10hv
+		nsig_delr_cfr_d_ply_met_nld90b_sphv_10hv
+		nsig_delr_cfr_s_ply_m1ct_nld90b_sphv_10hv
+		nsig_delr_cfr_s_ply_met_nld90b_sphv_10hv
+		nsig_delr_cj_nld90b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sdt
+		nsig_delr_ids_nld90b_sphv_10hv
+		nsig_delr_ir_nld90b_sphv_10hv
+		nsig_delr_is2_nld90b_sphv_10hv
+		nsig_delr_is_nld90b_sphv_10hv
+		nsig_delr_mobref_nld90b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_rs_poly_silicide
+		nsig_delr_rshl_nld90b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dw_nld90b_sphv_10hv   
+		nsmm_dela_vfb_nld90b_sphv_10hv  
+		nsmm_delr_mobref_nld90b_sphv_10hv 
+		nsmm_delr_nsub_nld90b_sphv_10hv 
+		nsmm_delr_rshl_nld90b_sphv_10hv 
+		nsmm_delr_tox_nld90b_sphv_10hv  
+	}
+}
+
+pld65_10hv { mosfet
+	global {
+		nsig_dela_dwox_pld65_sphv_10hv
+		nsig_dela_vfb_pld65_sphv_10hv
+		nsig_dela_vtw_pld65_sphv_10hv
+		nsig_delr_cj_pld65_sphv_10hv
+		nsig_delr_ir_pld65_sphv_10hv
+		nsig_delr_is2_pld65_sphv_10hv
+		nsig_delr_is_pld65_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_pld65_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_pld65_sphv_10hv
+	}
+	local {
+		nsmm_dela_dwox_pld65_sphv_10hv   
+		nsmm_dela_vfb_pld65_sphv_10hv    
+		nsmm_dela_vtw_pld65_sphv_10hv    
+		nsmm_delr_nsub_pld65_sphv_10hv   
+		nsmm_delr_res_pld65_sphv_10hv    
+		nsmm_delr_tox_pld65_sphv_10hv    
+		nsmm_delr_uch_pld65_sphv_10hv    
+	}
+}
+
+pld120_10hv { mosfet
+	global {
+		nsig_dela_dw_pld120_sphv_10hv
+		nsig_dela_dwox_pld120_sphv_10hv
+		nsig_dela_mueo_pld120_sphv_10hv
+		nsig_dela_vdscale_pld120_sphv_10hv
+		nsig_dela_vdscalel_pld120_sphv_10hv
+		nsig_dela_vdscalelw_pld120_sphv_10hv
+		nsig_dela_vdscalew_pld120_sphv_10hv
+		nsig_dela_vfb_pld120_sphv_10hv
+		nsig_dela_vtl_pld120_sphv_10hv
+		nsig_dela_vtw_pld120_sphv_10hv
+		nsig_delr_cj_pld120_sphv_10hv
+		nsig_delr_ir_pld120_sphv_10hv
+		nsig_delr_is2_pld120_sphv_10hv
+		nsig_delr_is_pld120_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_pld120_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_pld120_sphv_10hv
+	}
+	local {
+		nsmm_dela_dw_pld120_sphv_10hv 
+		nsmm_dela_dwox_pld120_sphv_10hv 
+		nsmm_dela_vfb_pld120_sphv_10hv  
+		nsmm_dela_vtw_pld120_sphv_10hv  
+		nsmm_delr_nsub_pld120_sphv_10hv 
+		nsmm_delr_res_pld120_sphv_10hv  
+		nsmm_delr_tox_pld120_sphv_10hv  
+		nsmm_delr_uch_pld120_sphv_10hv  
+	}
+}
+
+pld90b_10hv { mosfet
+	global {
+		nsig_dela_dwox_pld90b_sphv_10hv
+		nsig_dela_vfb_pld90b_sphv_10hv
+		nsig_dela_vtw_pld90b_sphv_10hv
+		nsig_delr_cj_pld90b_sphv_10hv
+		nsig_delr_ir_pld90b_sphv_10hv
+		nsig_delr_is2_pld90b_sphv_10hv
+		nsig_delr_is_pld90b_sphv_10hv
+		nsig_delr_powermos_tox
+		nsig_delr_res_pld90b_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_pld90b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dwox_pld90b_sphv_10hv   
+		nsmm_dela_vfb_pld90b_sphv_10hv    
+		nsmm_dela_vtw_pld90b_sphv_10hv    
+		nsmm_delr_nsub_pld90b_sphv_10hv   
+		nsmm_delr_res_pld90b_sphv_10hv    
+		nsmm_delr_tox_pld90b_sphv_10hv    
+		nsmm_delr_uch_pld90b_sphv_10hv    
+	}
+}
+
+
+#.lib substrate_cap
+clgo_box_sub_10hv { misc
+	global {
+		nsig_delr_acj0_junc_nw_pepi
+		nsig_delr_ajs_junc_nw_pepi
+		nsig_delr_pcj0_junc_nw_pepi
+		nsig_delr_pjs_junc_nw_pepi
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cpwtub_box_sub_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cpwtub_box_sub_float_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cnwtub_box_sub_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cdgoptub_box_sub_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cdgontub_box_sub_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+
+#.lib substrate_cap_simple
+clgo_box_sub_10hv { misc
+	global {
+		nsig_delr_acj0_junc_nw_pepi
+		nsig_delr_ajs_junc_nw_pepi
+		nsig_delr_pcj0_junc_nw_pepi
+		nsig_delr_pjs_junc_nw_pepi
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cpwtub_box_sub_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cpwtub_box_sub_float_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cnwtub_box_sub_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cdgoptub_box_sub_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+cdgontub_box_sub_10hv { misc
+	global {
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+
+#.lib drsf_zener
+dz5_10hv { drsf_zener
+	global {
+		nsig_dela_bv_dz5_10hv
+		nsig_delr_isr_dz5_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_bv_dz5_10hv
+		nsmm_delr_isr_dz5_10hv
+	}
+}
+
+dz5b_10hv { drsf_zener
+	global {
+		nsig_dela_bv_dz5b_10hv
+		nsig_dela_bv_tc2_dz5b_10hv
+		nsig_delr_isr_dz5b_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_bv_dz5b_10hv  
+		nsmm_delr_isr_dz5b_10hv 
+	}
+}
+
+drsf45_10hv { drsf_zener
+	global {
+		nsig_delr_isf_drsf45_10hv
+		nsig_delr_isr_drsf45_10hv
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+drsf45b_10hv { drsf_zener
+	global {
+		nsig_dela_dw_isf_drsf45b_10hv
+		nsig_delr_isf_drsf45b_10hv
+		nsig_delr_isr_drsf45b_10hv
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+drsf90_10hv { drsf_zener
+	global {
+		nsig_delr_isf_drsf90_10hv
+		nsig_delr_isr_drsf90_10hv
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+drsf90b_10hv { drsf_zener
+	global {
+		nsig_dela_dw_isf_drsf90b_10hv
+		nsig_delr_isf_drsf90b_10hv
+		nsig_delr_isr_drsf90b_10hv
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+
+#.lib diode
+dnplus_10hv { diode
+	global {
+		nsig_delr_acj0_junc_nsd_pw
+		nsig_delr_ajs_junc_nsd_pw
+		nsig_delr_pcj0_junc_nsd_pw
+		nsig_delr_pjs_junc_nsd_pw
+	}
+	local {
+		nsmm_delr_is_dnplus_10hv
+	}
+}
+
+dpplus_10hv { diode
+	global {
+		nsig_delr_acj0_junc_psd_nw
+		nsig_delr_ajs_junc_psd_nw
+		nsig_delr_pcj0_junc_psd_nw
+		nsig_delr_pjs_junc_psd_nw
+	}
+	local {
+		nsmm_delr_is_dpplus_10hv
+	}
+}
+
+dnfet_10hv { diode
+	global {
+		nsig_delr_acj0_junc_nsd_phv
+		nsig_delr_ajs_junc_nsd_phv
+		nsig_delr_pcj0_junc_nsd_phv
+		nsig_delr_pjs_junc_nsd_phv
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+dpfet_10hv { diode
+	global {
+		nsig_delr_acj0_junc_psd_nhv
+		nsig_delr_ajs_junc_psd_nhv
+		nsig_delr_pcj0_junc_psd_nhv
+		nsig_delr_pjs_junc_psd_nhv
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+
+dpldd_10hv { diode
+	global {
+		nsig_dela_bv_dpldd_junc_10hv
+		nsig_delr_cj_dpldd_junc_10hv
+		nsig_delr_ir_dpldd_junc_10hv
+		nsig_delr_is_dpldd_junc_10hv
+	}
+	local {
+		nsmm_dela_dta_dpldd_junc_10hv    
+	}
+}
+
+
+#.lib capacitor
+cdp_10hv { capacitor
+	global {
+		nsig_delr_cfr_cdp_10hv
+		nsig_delr_cfr_ply0_fld_cdp
+		nsig_delr_cpp_cdp_10hv
+		nsig_delr_cpp_ply0_fld_cdp
+		nsig_delr_rs_poly0_r3_cdp_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_cdp_10hv
+	}
+}
+
+cdpf_10hv { capacitor
+	global {
+		nsig_delr_cfr_cdpf_10hv
+		nsig_delr_cfr_ply0_fld_cdp
+		nsig_delr_cfrlv_cdpf_10hv
+		nsig_delr_cpp_cdpf_10hv
+		nsig_delr_cpp_ply0_fld_cdp
+		nsig_delr_rs_poly0_r3_cdpf_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_cdpf_10hv
+	}
+}
+
+cdpf_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr_cdpf_m1m2m3_10hv
+		nsig_delr_cfr_ply0_fld_cdp
+		nsig_delr_cfrlv_cdpf_m1m2m3_10hv
+		nsig_delr_cpp_cdpf_m1m2m3_10hv
+		nsig_delr_cpp_ply0_fld_cdp
+		nsig_delr_rs_poly0_r3_cdpf_m1m2m3_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_cdpf_m1m2m3_10hv
+	}
+}
+
+cglv_10hv { capacitor
+	global {
+		nsig_dela_cglv_10hv_vfb
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cglv_10hv_ileak
+		nsig_delr_cglv_10hv_tox
+		nsig_delr_cpp_ply_fld
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_cglv_10hv_tox
+	}
+}
+
+cghv_10hv { capacitor
+	global {
+		nsig_dela_vfb_cghv_10hv
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cpp_ply_fld
+		nsig_delr_tox_box
+		nsig_delr_tox_cghv_10hv
+	}
+	local {
+		nsmm_delr_cghv_10hv_tox
+	}
+}
+
+cghvf_10hv { capacitor
+	global {
+		nsig_dela_vfb_cghvf_10hv
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cfrlv_cghvf_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_tox_box
+		nsig_delr_tox_cghvf_10hv
+	}
+	local {
+		nsmm_delr_cghvf_10hv
+	}
+}
+
+cghvf_m1m2m3_10hv { capacitor
+	global {
+		nsig_dela_vfb_cghvf_m1m2m3_10hv
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cfrlv_cghvf_m1m2m3_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_tox_box
+		nsig_delr_tox_cghvf_m1m2m3_10hv
+	}
+	local {
+		nsmm_delr_cghvf_m1m2m3_10hv
+	}
+}
+
+cfrlv_10hv { capacitor
+	global {
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfr_m4_fld
+		nsig_delr_cfrlv_10hv
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfrlv_10hv
+	}
+}
+
+cfrlv_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfrlv_m1m2m3_10hv
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfrlv_m1m2m3_10hv
+	}
+}
+
+cfr45_10hv { capacitor
+	global {
+		nsig_delr_cfr45_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfr_m4_fld
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfr45_10hv
+	}
+}
+
+cfr45_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr45_m1m2m3_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfr45_m1m2m3_10hv
+	}
+}
+
+cfr90_10hv { capacitor
+	global {
+		nsig_delr_cfr90_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfr_m4_fld
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfr90_10hv
+	}
+}
+
+cfr90_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr90_m1m2m3_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfr90_m1m2m3_10hv
+	}
+}
+
+cfr120_10hv { capacitor
+	global {
+		nsig_delr_cfr120_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfr_m4_fld
+		nsig_delr_cpp_m1_fld
+	}
+	local {
+		nsmm_delr_cfr120_10hv
+	}
+}
+
+cfr120_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr120_m1m2m3_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cpp_m1_fld
+	}
+	local {
+		nsmm_delr_cfr120_m1m2m3_10hv
+	}
+}
+
+
+#.lib capacitor_simple
+cdp_10hv { capacitor
+	global {
+		nsig_delr_cfr_cdp_10hv
+		nsig_delr_cfr_ply0_fld_cdp
+		nsig_delr_cpp_cdp_10hv
+		nsig_delr_cpp_ply0_fld_cdp
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_cdp_10hv
+	}
+}
+
+cdpf_10hv { capacitor
+	global {
+		nsig_delr_cfr_cdpf_10hv
+		nsig_delr_cfr_ply0_fld_cdp
+		nsig_delr_cfrlv_cdpf_10hv
+		nsig_delr_cpp_cdpf_10hv
+		nsig_delr_cpp_ply0_fld_cdp
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_cdpf_10hv
+	}
+}
+
+cdpf_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr_cdpf_m1m2m3_10hv
+		nsig_delr_cfr_ply0_fld_cdp
+		nsig_delr_cfrlv_cdpf_m1m2m3_10hv
+		nsig_delr_cpp_cdpf_m1m2m3_10hv
+		nsig_delr_cpp_ply0_fld_cdp
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_cdpf_m1m2m3_10hv
+	}
+}
+
+cglv_10hv { capacitor
+	global {
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cglv_10hv_ileak
+		nsig_delr_cglv_10hv_tox
+		nsig_delr_cpp_ply_fld
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_cglv_10hv_tox
+	}
+}
+
+cghv_10hv { capacitor
+	global {
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cpp_ply_fld
+		nsig_delr_tox_box
+		nsig_delr_tox_cghv_10hv
+	}
+	local {
+		nsmm_delr_cghv_10hv_tox
+	}
+}
+
+cghvf_10hv { capacitor
+	global {
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cfrlv_cghvf_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_tox_box
+		nsig_delr_tox_cghvf_10hv
+	}
+	local {
+		nsmm_delr_cghvf_10hv
+	}
+}
+
+cghvf_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cfrlv_cghvf_m1m2m3_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_tox_box
+		nsig_delr_tox_cghvf_m1m2m3_10hv
+	}
+	local {
+		nsmm_delr_cghvf_m1m2m3_10hv
+	}
+}
+
+cfrlv_10hv { capacitor
+	global {
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfr_m4_fld
+		nsig_delr_cfrlv_10hv
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfrlv_10hv
+	}
+}
+
+cfrlv_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfrlv_m1m2m3_10hv
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfrlv_m1m2m3_10hv
+	}
+}
+
+cfr45_10hv { capacitor
+	global {
+		nsig_delr_cfr45_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfr_m4_fld
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfr45_10hv
+	}
+}
+
+cfr45_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr45_m1m2m3_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfr45_m1m2m3_10hv
+	}
+}
+
+cfr90_10hv { capacitor
+	global {
+		nsig_delr_cfr90_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfr_m4_fld
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfr90_10hv
+	}
+}
+
+cfr90_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr90_m1m2m3_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cpp_m1_fld
+		nsig_delr_cpp_m2_fld
+	}
+	local {
+		nsmm_delr_cfr90_m1m2m3_10hv
+	}
+}
+
+cfr120_10hv { capacitor
+	global {
+		nsig_delr_cfr120_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cfr_m4_fld
+		nsig_delr_cpp_m1_fld
+	}
+	local {
+		nsmm_delr_cfr120_10hv
+	}
+}
+
+cfr120_m1m2m3_10hv { capacitor
+	global {
+		nsig_delr_cfr120_m1m2m3_10hv
+		nsig_delr_cfr_m1_fld
+		nsig_delr_cfr_m2_fld
+		nsig_delr_cfr_m3_fld
+		nsig_delr_cpp_m1_fld
+	}
+	local {
+		nsmm_delr_cfr120_m1m2m3_10hv
+	}
+}
+
+
+#.lib bjt
+npn_10hv { bjt
+	global {
+		nsig_dela_dle_npn_10hv_vbic
+		nsig_delr_jbei_npn_10hv_vbic
+		nsig_delr_jben_npn_10hv_vbic
+		nsig_delr_psb_npn_10hv_vbic
+		nsig_delr_psbe_npn_10hv_vbic
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dle_npn_10hv_vbic
+		nsmm_delr_jbei_npn_10hv_vbic
+		nsmm_delr_jben_npn_10hv_vbic
+		nsmm_delr_psb_npn_10hv_vbic
+		nsmm_delr_psbe_npn_10hv_vbic
+	}
+}
+
+npn_b_10hv { bjt
+	global {
+		nsig_dela_dle_npn_b_10hv_vbic
+		nsig_delr_jbei_npn_b_10hv_vbic
+		nsig_delr_jben_npn_b_10hv_vbic
+		nsig_delr_psb_npn_b_10hv_vbic
+		nsig_delr_psbe_npn_b_10hv_vbic
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dle_npn_b_10hv_vbic
+		nsmm_delr_jbei_npn_b_10hv_vbic
+		nsmm_delr_jben_npn_b_10hv_vbic
+		nsmm_delr_psb_npn_b_10hv_vbic
+		nsmm_delr_psbe_npn_b_10hv_vbic
+	}
+}
+
+pnp_10hv { bjt
+	global {
+		nsig_dela_dle_pnp_10hv_vbic
+		nsig_delr_jbei_pnp_10hv_vbic
+		nsig_delr_jben_pnp_10hv_vbic
+		nsig_delr_n_col_pnp_10hv_vbic
+		nsig_delr_psb_pnp_10hv_vbic
+		nsig_delr_psbe_pnp_10hv_vbic
+		nsig_delr_tox_box
+		nsig_delr_x_col_pnp_10hv_vbic
+	}
+	local {
+		nsmm_dela_dle_pnp_10hv_vbic
+		nsmm_delr_jbei_pnp_10hv_vbic
+		nsmm_delr_jben_pnp_10hv_vbic
+		nsmm_delr_psb_pnp_10hv_vbic
+		nsmm_delr_psbe_pnp_10hv_vbic
+	}
+}
+
+pnp_iso_10hv { bjt
+	global {
+		nsig_dela_dle_pnp_iso_10hv_vbic
+		nsig_delr_jbei_pnp_iso_10hv_vbic
+		nsig_delr_jben_pnp_iso_10hv_vbic
+		nsig_delr_n_col_pnp_iso_10hv_vbic
+		nsig_delr_psb_pnp_iso_10hv_vbic
+		nsig_delr_psbe_pnp_iso_10hv_vbic
+		nsig_delr_tox_box
+		nsig_delr_x_col_pnp_iso_10hv_vbic
+	}
+	local {
+		nsmm_dela_dle_pnp_iso_10hv_vbic
+		nsmm_delr_jbei_pnp_iso_10hv_vbic
+		nsmm_delr_jben_pnp_iso_10hv_vbic
+		nsmm_delr_psb_pnp_iso_10hv_vbic
+		nsmm_delr_psbe_pnp_iso_10hv_vbic
+	}
+}
+
+
+#.lib diode_parasitic
+dnsd_lvpw_10hv { diode
+	global {
+		nsig_delr_acj0_junc_nsd_pw
+		nsig_delr_ajs_junc_nsd_pw
+		nsig_delr_pcj0_junc_nsd_pw
+		nsig_delr_pjs_junc_nsd_pw
+	}
+	local {
+	}
+}
+
+dpsd_lvnw_10hv { diode
+	global {
+		nsig_delr_acj0_junc_psd_nw
+		nsig_delr_ajs_junc_psd_nw
+		nsig_delr_pcj0_junc_psd_nw
+		nsig_delr_pjs_junc_psd_nw
+	}
+	local {
+	}
+}
+
+dnsd_phv_10hv { diode
+	global {
+		nsig_delr_acj0_junc_nsd_phv
+		nsig_delr_ajs_junc_nsd_phv
+		nsig_delr_pcj0_junc_nsd_phv
+		nsig_delr_pjs_junc_nsd_phv
+	}
+	local {
+	}
+}
+
+dpsd_nhv_10hv { diode
+	global {
+		nsig_delr_acj0_junc_psd_nhv
+		nsig_delr_ajs_junc_psd_nhv
+		nsig_delr_pcj0_junc_psd_nhv
+		nsig_delr_pjs_junc_psd_nhv
+	}
+	local {
+	}
+}
+
+dnw_pepi_10hv { diode
+	global {
+		nsig_delr_acj0_junc_nw_pepi
+		nsig_delr_ajs_junc_nw_pepi
+		nsig_delr_pcj0_junc_nw_pepi
+		nsig_delr_pjs_junc_nw_pepi
+	}
+	local {
+	}
+}
+
+dnw_pepi_tr_10hv { diode
+	global {
+		nsig_delr_acj0_junc_nw_pepi_tr
+		nsig_delr_ajs_junc_nw_pepi_tr
+		nsig_delr_pcj0_junc_nw_pepi_tr
+		nsig_delr_pjs_junc_nw_pepi_tr
+	}
+	local {
+	}
+}
+
+dnhv_pepi_tr_10hv { diode
+	global {
+		nsig_delr_acj0_junc_nhv_pepi_tr
+		nsig_delr_ajs_junc_nhv_pepi_tr
+		nsig_delr_pcj0_junc_nhv_pepi_tr
+		nsig_delr_pjs_junc_nhv_pepi_tr
+	}
+	local {
+	}
+}
+
+dnbl_pepi_tr_10hv { diode
+	global {
+		nsig_delr_acj0_junc_nbl_pepi_tr
+		nsig_delr_ajs_junc_nbl_pepi_tr
+		nsig_delr_pcj0_junc_nbl_pepi_tr
+		nsig_delr_pjs_junc_nbl_pepi_tr
+	}
+	local {
+	}
+}
+
+
+#.lib mosfet
+nmos_10hv { mosfet
+	global {
+		nsig_dela_cd_cmos_10hv_bsim4
+		nsig_dela_dwox_nmos_10hv_bsim4
+		nsig_dela_lvoff_nmos_10hv_bsim4
+		nsig_dela_od_nmos_10hv_bsim4
+		nsig_dela_pvoff_nmos_10hv_bsim4
+		nsig_dela_vfb_nmos_10hv_bsim4
+		nsig_dela_vtl_nmos_10hv_bsim4
+		nsig_dela_vtm_nmos_10hv_bsim4
+		nsig_dela_vtw_nmos_10hv_bsim4
+		nsig_delr_a0_nmos_10hv_bsim4
+		nsig_delr_acj0_junc_nmos_sd_body
+		nsig_delr_ajs_junc_nmos_sd_body
+		nsig_delr_cfr_nmos_d_ply_m1ct
+		nsig_delr_cfr_nmos_d_ply_met
+		nsig_delr_cfr_nmos_s_ply_m1ct
+		nsig_delr_cfr_nmos_s_ply_met
+		nsig_delr_chcj0_junc_nmos_sd_body
+		nsig_delr_chjs_junc_nmos_sd_body
+		nsig_delr_mosfet_thin_tox_bsim4
+		nsig_delr_pcj0_junc_nmos_sd_body
+		nsig_delr_pjs_junc_nmos_sd_body
+		nsig_delr_pvsat_nmos_10hv_bsim4
+		nsig_delr_tox_box
+		nsig_delr_ubref_nmos_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_nmos_10hv_bsim4
+		nsmm_dela_dwox_nmos_10hv_bsim4
+		nsmm_dela_vfb_nmos_10hv_bsim4
+		nsmm_dela_vtl_nmos_10hv_bsim4
+		nsmm_dela_vtw_nmos_10hv_bsim4
+		nsmm_delr_gox_nmos_10hv_bsim4
+		nsmm_delr_nsub_nmos_10hv_bsim4
+		nsmm_delr_rsh_nmos_10hv_bsim4
+		nsmm_delr_ubref_nmos_10hv_bsim4
+	}
+}
+
+nmos_ll_10hv { mosfet
+	global {
+		nsig_dela_a0_nmos_ll_10hv_bsim4
+		nsig_dela_cd_cmos_10hv_bsim4
+		nsig_dela_dwox_nmos_ll_10hv_bsim4
+		nsig_dela_jtss_nmos_ll_10hv_bsim4
+		nsig_dela_od_nmos_ll_10hv_bsim4
+		nsig_dela_vfb_nmos_ll_10hv_bsim4
+		nsig_dela_vtl_nmos_ll_10hv_bsim4
+		nsig_dela_vtm_nmos_ll_10hv_bsim4
+		nsig_dela_vtw_nmos_ll_10hv_bsim4
+		nsig_dela_wwl_nmos_ll_10hv_bsim4
+		nsig_delr_acj0_junc_nmos_ll_sd_body
+		nsig_delr_ajs_junc_nmos_ll_sd_body
+		nsig_delr_cfr_nmos_ll_d_ply_m1ct
+		nsig_delr_cfr_nmos_ll_d_ply_met
+		nsig_delr_cfr_nmos_ll_s_ply_m1ct
+		nsig_delr_cfr_nmos_ll_s_ply_met
+		nsig_delr_chcj0_junc_nmos_ll_sd_body
+		nsig_delr_chjs_junc_nmos_ll_sd_body
+		nsig_delr_mosfet_thin_tox_bsim4
+		nsig_delr_pcj0_junc_nmos_ll_sd_body
+		nsig_delr_pjs_junc_nmos_ll_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_nmos_ll_10hv_bsim4
+		nsig_delr_vsat_nmos_ll_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_nmos_ll_10hv_bsim4
+		nsmm_dela_dwox_nmos_ll_10hv_bsim4
+		nsmm_dela_vfb_nmos_ll_10hv_bsim4
+		nsmm_dela_vtl_nmos_ll_10hv_bsim4
+		nsmm_dela_vtw_nmos_ll_10hv_bsim4
+		nsmm_delr_gox_nmos_ll_10hv_bsim4
+		nsmm_delr_nsub_nmos_ll_10hv_bsim4
+		nsmm_delr_rsh_nmos_ll_10hv_bsim4
+		nsmm_delr_ubref_nmos_ll_10hv_bsim4
+	}
+}
+
+nmos_ull_10hv { mosfet
+	global {
+		nsig_dela_a0_nmos_ull_10hv_bsim4
+		nsig_dela_agidl_nmos_ull_10hv_bsim4
+		nsig_dela_b0_nmos_ull_10hv_bsim4
+		nsig_dela_cd_cmos_10hv_bsim4
+		nsig_dela_dwox_nmos_ull_10hv_bsim4
+		nsig_dela_jtss_nmos_ull_10hv_bsim4
+		nsig_dela_lu0_nmos_ull_10hv_bsim4
+		nsig_dela_od_nmos_ull_10hv_bsim4
+		nsig_dela_pvoff_nmos_ull_10hv_bsim4
+		nsig_dela_vfb_nmos_ull_10hv_bsim4
+		nsig_dela_vtl_nmos_ull_10hv_bsim4
+		nsig_dela_vtm_nmos_ull_10hv_bsim4
+		nsig_dela_vtw_nmos_ull_10hv_bsim4
+		nsig_dela_wagidl_nmos_ull_10hv_bsim4
+		nsig_dela_wwl_nmos_ull_10hv_bsim4
+		nsig_delr_acj0_junc_nmos_ull_sd_body
+		nsig_delr_ajs_junc_nmos_ull_sd_body
+		nsig_delr_cfr_nmos_ull_d_ply_ct
+		nsig_delr_cfr_nmos_ull_d_ply_ct_end
+		nsig_delr_cfr_nmos_ull_d_ply_met
+		nsig_delr_cfr_nmos_ull_d_ply_met_end
+		nsig_delr_cfr_nmos_ull_s_ply_ct
+		nsig_delr_cfr_nmos_ull_s_ply_ct_end
+		nsig_delr_cfr_nmos_ull_s_ply_met
+		nsig_delr_cfr_nmos_ull_s_ply_met_end
+		nsig_delr_chcj0_junc_nmos_ull_sd_body
+		nsig_delr_chjs_junc_nmos_ull_sd_body
+		nsig_delr_mosfet_thin_tox_bsim4
+		nsig_delr_pcj0_junc_nmos_ull_sd_body
+		nsig_delr_pjs_junc_nmos_ull_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_nmos_ull_10hv_bsim4
+		nsig_delr_vsat_nmos_ull_10hv_bsim4
+		nsig_delr_wvsat_nmos_ull_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_nmos_ull_10hv_bsim4
+		nsmm_dela_dwox_nmos_ull_10hv_bsim4
+		nsmm_dela_vfb_nmos_ull_10hv_bsim4
+		nsmm_dela_vtl_nmos_ull_10hv_bsim4
+		nsmm_dela_vtw_nmos_ull_10hv_bsim4
+		nsmm_delr_gox_nmos_ull_10hv_bsim4
+		nsmm_delr_nsub_nmos_ull_10hv_bsim4
+		nsmm_delr_rsh_nmos_ull_10hv_bsim4
+		nsmm_delr_ubref_nmos_ull_10hv_bsim4
+		nsmm_delr_voff_nmos_ull_10hv_bsim4
+	}
+}
+
+nmos_ana_10hv { mosfet
+	global {
+		nsig_dela_cd_cmos_ana_10hv_bsim4
+		nsig_dela_dwox_nmos_ana_10hv_bsim4
+		nsig_dela_lvoff_nmos_ana_10hv_bsim4
+		nsig_dela_od_nmos_ana_10hv_bsim4
+		nsig_dela_pvoff_nmos_ana_10hv_bsim4
+		nsig_dela_vfb_nmos_ana_10hv_bsim4
+		nsig_dela_voff_nmos_ana_10hv_bsim4
+		nsig_dela_vtl_nmos_ana_10hv_bsim4
+		nsig_dela_vtm_nmos_ana_10hv_bsim4
+		nsig_dela_vtw_nmos_ana_10hv_bsim4
+		nsig_dela_wwl_nmos_ana_10hv_bsim4
+		nsig_delr_acj0_junc_nmos_ana_sd_body
+		nsig_delr_ajs_junc_nmos_ana_sd_body
+		nsig_delr_cfr_nmos_ana_d_ply_m1ct
+		nsig_delr_cfr_nmos_ana_d_ply_met
+		nsig_delr_cfr_nmos_ana_s_ply_m1ct
+		nsig_delr_cfr_nmos_ana_s_ply_met
+		nsig_delr_chcj0_junc_nmos_ana_sd_body
+		nsig_delr_chjs_junc_nmos_ana_sd_body
+		nsig_delr_mosfet_thin_tox_bsim4
+		nsig_delr_pcj0_junc_nmos_ana_sd_body
+		nsig_delr_pjs_junc_nmos_ana_sd_body
+		nsig_delr_pvsat_nmos_ana_10hv_bsim4
+		nsig_delr_tox_box
+		nsig_delr_ubref_nmos_ana_10hv_bsim4
+		nsig_delr_vsat_nmos_ana_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_nmos_ana_10hv_bsim4
+		nsmm_dela_dwox_nmos_ana_10hv_bsim4
+		nsmm_dela_vfb_nmos_ana_10hv_bsim4
+		nsmm_dela_vtl_nmos_ana_10hv_bsim4
+		nsmm_dela_vtw_nmos_ana_10hv_bsim4
+		nsmm_delr_gox_nmos_ana_10hv_bsim4
+		nsmm_delr_nsub_nmos_ana_10hv_bsim4
+		nsmm_delr_rdsw_nmos_ana_10hv_bsim4
+		nsmm_delr_ubref_nmos_ana_10hv_bsim4
+	}
+}
+
+pmos_10hv { mosfet
+	global {
+		nsig_dela_a0_pmos_10hv_bsim4
+		nsig_dela_agidl_pmos_10hv_bsim4
+		nsig_dela_cd_cmos_10hv_bsim4
+		nsig_dela_dwox_pmos_10hv_bsim4
+		nsig_dela_od_pmos_10hv_bsim4
+		nsig_dela_pu0_pmos_10hv_bsim4
+		nsig_dela_vfb_pmos_10hv_bsim4
+		nsig_dela_vtl_pmos_10hv_bsim4
+		nsig_dela_vtm_pmos_10hv_bsim4
+		nsig_dela_vtw_pmos_10hv_bsim4
+		nsig_delr_acj0_junc_pmos_sd_body
+		nsig_delr_ajs_junc_pmos_sd_body
+		nsig_delr_cfr_pmos_d_ply_m1ct
+		nsig_delr_cfr_pmos_d_ply_met
+		nsig_delr_cfr_pmos_s_ply_m1ct
+		nsig_delr_cfr_pmos_s_ply_met
+		nsig_delr_chcj0_junc_pmos_sd_body
+		nsig_delr_chjs_junc_pmos_sd_body
+		nsig_delr_mosfet_thin_tox_bsim4
+		nsig_delr_pcj0_junc_pmos_sd_body
+		nsig_delr_pjs_junc_pmos_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_pmos_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_pmos_10hv_bsim4
+		nsmm_dela_dwox_pmos_10hv_bsim4
+		nsmm_dela_vfb_pmos_10hv_bsim4
+		nsmm_dela_vtl_pmos_10hv_bsim4
+		nsmm_dela_vtw_pmos_10hv_bsim4
+		nsmm_delr_gox_pmos_10hv_bsim4
+		nsmm_delr_nsub_pmos_10hv_bsim4
+		nsmm_delr_rsh_pmos_10hv_bsim4
+		nsmm_delr_ubref_pmos_10hv_bsim4
+	}
+}
+
+pmos_ll_10hv { mosfet
+	global {
+		nsig_dela_ags_pmos_ll_10hv_bsim4
+		nsig_dela_cd_cmos_10hv_bsim4
+		nsig_dela_dwox_pmos_ll_10hv_bsim4
+		nsig_dela_jtss_pmos_ll_10hv_bsim4
+		nsig_dela_od_pmos_ll_10hv_bsim4
+		nsig_dela_vfb_pmos_ll_10hv_bsim4
+		nsig_dela_vtl_pmos_ll_10hv_bsim4
+		nsig_dela_vtm_pmos_ll_10hv_bsim4
+		nsig_dela_vtw_pmos_ll_10hv_bsim4
+		nsig_delr_acj0_junc_pmos_ll_sd_body
+		nsig_delr_ajs_junc_pmos_ll_sd_body
+		nsig_delr_cfr_pmos_ll_d_ply_m1ct
+		nsig_delr_cfr_pmos_ll_d_ply_met
+		nsig_delr_cfr_pmos_ll_s_ply_m1ct
+		nsig_delr_cfr_pmos_ll_s_ply_met
+		nsig_delr_chcj0_junc_pmos_ll_sd_body
+		nsig_delr_chjs_junc_pmos_ll_sd_body
+		nsig_delr_mosfet_thin_tox_bsim4
+		nsig_delr_pcj0_junc_pmos_ll_sd_body
+		nsig_delr_pjs_junc_pmos_ll_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_pmos_ll_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_pmos_ll_10hv_bsim4
+		nsmm_dela_dwox_pmos_ll_10hv_bsim4
+		nsmm_dela_vfb_pmos_ll_10hv_bsim4
+		nsmm_dela_vtl_pmos_ll_10hv_bsim4
+		nsmm_dela_vtw_pmos_ll_10hv_bsim4
+		nsmm_delr_gox_pmos_ll_10hv_bsim4
+		nsmm_delr_jtss_pmos_ll_10hv_bsim4
+		nsmm_delr_k1_pmos_ll_10hv_bsim4
+		nsmm_delr_nsub_pmos_ll_10hv_bsim4
+		nsmm_delr_rsh_pmos_ll_10hv_bsim4
+		nsmm_delr_ubref_pmos_ll_10hv_bsim4
+	}
+}
+
+pmos_ull_10hv { mosfet
+	global {
+		nsig_dela_a0_pmos_ull_10hv_bsim4
+		nsig_dela_agidl_pmos_ull_10hv_bsim4
+		nsig_dela_b0_pmos_ull_10hv_bsim4
+		nsig_dela_cd_cmos_10hv_bsim4
+		nsig_dela_dwox_pmos_ull_10hv_bsim4
+		nsig_dela_jtss_pmos_ull_10hv_bsim4
+		nsig_dela_la0_pmos_ull_10hv_bsim4
+		nsig_dela_od_pmos_ull_10hv_bsim4
+		nsig_dela_pa0_pmos_ull_10hv_bsim4
+		nsig_dela_vfb_pmos_ull_10hv_bsim4
+		nsig_dela_vtl_pmos_ull_10hv_bsim4
+		nsig_dela_vtm_pmos_ull_10hv_bsim4
+		nsig_dela_vtw_pmos_ull_10hv_bsim4
+		nsig_dela_wagidl_pmos_ull_10hv_bsim4
+		nsig_dela_wwl_pmos_ull_10hv_bsim4
+		nsig_delr_acj0_junc_pmos_ull_sd_body
+		nsig_delr_ajs_junc_pmos_ull_sd_body
+		nsig_delr_cfr_pmos_ull_d_ply_ct
+		nsig_delr_cfr_pmos_ull_d_ply_ct_end
+		nsig_delr_cfr_pmos_ull_d_ply_met
+		nsig_delr_cfr_pmos_ull_d_ply_met_end
+		nsig_delr_cfr_pmos_ull_s_ply_ct
+		nsig_delr_cfr_pmos_ull_s_ply_ct_end
+		nsig_delr_cfr_pmos_ull_s_ply_met
+		nsig_delr_cfr_pmos_ull_s_ply_met_end
+		nsig_delr_chcj0_junc_pmos_ull_sd_body
+		nsig_delr_chjs_junc_pmos_ull_sd_body
+		nsig_delr_mosfet_thin_tox_bsim4
+		nsig_delr_pcj0_junc_pmos_ull_sd_body
+		nsig_delr_pjs_junc_pmos_ull_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_pmos_ull_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_pmos_ull_10hv_bsim4
+		nsmm_dela_dwox_pmos_ull_10hv_bsim4
+		nsmm_dela_vfb_pmos_ull_10hv_bsim4
+		nsmm_dela_vtl_pmos_ull_10hv_bsim4
+		nsmm_dela_vtw_pmos_ull_10hv_bsim4
+		nsmm_delr_gox_pmos_ull_10hv_bsim4
+		nsmm_delr_jtss_pmos_ull_10hv_bsim4
+		nsmm_delr_k1_pmos_ull_10hv_bsim4
+		nsmm_delr_nsub_pmos_ull_10hv_bsim4
+		nsmm_delr_rsh_pmos_ull_10hv_bsim4
+		nsmm_delr_ubref_pmos_ull_10hv_bsim4
+	}
+}
+
+pmos_ana_10hv { mosfet
+	global {
+		nsig_dela_a0_pmos_ana_10hv_bsim4
+		nsig_dela_cd_cmos_ana_10hv_bsim4
+		nsig_dela_dwox_pmos_ana_10hv_bsim4
+		nsig_dela_lwl_pmos_ana_10hv_bsim4
+		nsig_dela_od_pmos_ana_10hv_bsim4
+		nsig_dela_pvoff_pmos_ana_10hv_bsim4
+		nsig_dela_vfb_pmos_ana_10hv_bsim4
+		nsig_dela_vtl_pmos_ana_10hv_bsim4
+		nsig_dela_vtm_pmos_ana_10hv_bsim4
+		nsig_dela_vtw_pmos_ana_10hv_bsim4
+		nsig_dela_wvoff_pmos_ana_10hv_bsim4
+		nsig_delr_acj0_junc_pmos_ana_sd_body
+		nsig_delr_ajs_junc_pmos_ana_sd_body
+		nsig_delr_cfr_pmos_ana_d_ply_m1ct
+		nsig_delr_cfr_pmos_ana_d_ply_met
+		nsig_delr_cfr_pmos_ana_s_ply_m1ct
+		nsig_delr_cfr_pmos_ana_s_ply_met
+		nsig_delr_chcj0_junc_pmos_ana_sd_body
+		nsig_delr_chjs_junc_pmos_ana_sd_body
+		nsig_delr_mosfet_thin_tox_bsim4
+		nsig_delr_pcj0_junc_pmos_ana_sd_body
+		nsig_delr_pjs_junc_pmos_ana_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_pmos_ana_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_pmos_ana_10hv_bsim4
+		nsmm_dela_dwox_pmos_ana_10hv_bsim4
+		nsmm_dela_vfb_pmos_ana_10hv_bsim4
+		nsmm_dela_vtl_pmos_ana_10hv_bsim4
+		nsmm_dela_vtw_pmos_ana_10hv_bsim4
+		nsmm_delr_gox_pmos_ana_10hv_bsim4
+		nsmm_delr_nsub_pmos_ana_10hv_bsim4
+		nsmm_delr_rsh_pmos_ana_10hv_bsim4
+		nsmm_delr_ubref_pmos_ana_10hv_bsim4
+	}
+}
+
+nmos3_zvt_10hv { mosfet
+	global {
+		nsig_dela_dl_nmos3_zvt_10hv_bsim3v3
+		nsig_dela_dwox_nmos3_zvt_10hv_bsim3v3
+		nsig_dela_vfb_nmos3_zvt_10hv_bsim3v3
+		nsig_dela_vtl_nmos3_zvt_10hv_bsim3v3
+		nsig_dela_vtm_nmos3_zvt_10hv_bsim3v3
+		nsig_dela_vtw_nmos3_zvt_10hv_bsim3v3
+		nsig_dela_wwl_nmos3_zvt_10hv_bsim3v3
+		nsig_delr_acj0_junc_nmos3_zvt_d_body
+		nsig_delr_acj0_junc_nmos3_zvt_s_body
+		nsig_delr_ajs_junc_nmos3_zvt_d_body
+		nsig_delr_cfr_nmos3_zvt_d_ply_m1ct
+		nsig_delr_cfr_nmos3_zvt_d_ply_met
+		nsig_delr_cfr_nmos3_zvt_s_ply_m1ct
+		nsig_delr_cfr_nmos3_zvt_s_ply_met
+		nsig_delr_chcj0_junc_nmos3_zvt_d_body
+		nsig_delr_chjs_junc_nmos3_zvt_d_body
+		nsig_delr_mosfet_thin_tox_bsim3v3
+		nsig_delr_pcj0_junc_nmos3_zvt_d_body
+		nsig_delr_pcj0_junc_nmos3_zvt_s_body
+		nsig_delr_pjs_junc_nmos3_zvt_d_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_nmos3_zvt_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_nmos3_zvt_10hv_bsim3v3
+		nsmm_dela_dwox_nmos3_zvt_10hv_bsim3v3
+		nsmm_dela_vfb_nmos3_zvt_10hv_bsim3v3
+		nsmm_dela_vtl_nmos3_zvt_10hv_bsim3v3
+		nsmm_dela_vtw_nmos3_zvt_10hv_bsim3v3
+		nsmm_delr_nsub_nmos3_zvt_10hv_bsim3v3
+		nsmm_delr_rsh_nmos3_zvt_10hv_bsim3v3
+		nsmm_delr_tox_nmos3_zvt_10hv_bsim3v3
+		nsmm_delr_ubref_nmos3_zvt_10hv_bsim3v3
+	}
+}
+
+nsrampg_10hv { mosfet
+	global {
+		nsig_dela_dwox_nsrampg_10hv_bsim3v3
+		nsig_dela_dwwl_nsrampg_10hv_bsim3v3
+		nsig_dela_vtm_nsrampg_10hv_bsim3v3
+		nsig_dela_vtw_nsrampg_10hv_bsim3v3
+		nsig_delr_acj0_junc_nsrampg_sd_body
+		nsig_delr_ajs_junc_nsrampg_sd_body
+		nsig_delr_cfr_nsrampg_d_ply_m1ct
+		nsig_delr_cfr_nsrampg_d_ply_met
+		nsig_delr_cfr_nsrampg_s_ply_m1ct
+		nsig_delr_cfr_nsrampg_s_ply_met
+		nsig_delr_chcj0_junc_nsrampg_sd_body
+		nsig_delr_mosfet_thin_tox_bsim3v3
+		nsig_delr_pcj0_junc_nsrampg_sd_body
+		nsig_delr_pjs_junc_nsrampg_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_nsrampg_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_nsrampg_10hv_bsim3v3
+		nsmm_dela_dwox_nsrampg_10hv_bsim3v3
+		nsmm_dela_vfb_nsrampg_10hv_bsim3v3
+		nsmm_dela_vtl_nsrampg_10hv_bsim3v3
+		nsmm_dela_vtw_nsrampg_10hv_bsim3v3
+		nsmm_delr_gox_nsrampg_10hv_bsim3v3
+		nsmm_delr_nsub_nsrampg_10hv_bsim3v3
+		nsmm_delr_rsh_nsrampg_10hv_bsim3v3
+		nsmm_delr_ubref_nsrampg_10hv_bsim3v3
+	}
+}
+
+nsrampd_10hv { mosfet
+	global {
+		nsig_dela_a0_nsrampd_10hv_bsim3v3
+		nsig_dela_b0_nsrampd_10hv_bsim3v3
+		nsig_dela_dl_nsrampd_10hv_bsim3v3
+		nsig_dela_dwox_nsrampd_10hv_bsim3v3
+		nsig_dela_dwwl_nsrampd_10hv_bsim3v3
+		nsig_dela_vfb_nsrampd_10hv_bsim3v3
+		nsig_dela_vtl_nsrampd_10hv_bsim3v3
+		nsig_dela_vtm_nsrampd_10hv_bsim3v3
+		nsig_dela_vtw_nsrampd_10hv_bsim3v3
+		nsig_delr_acj0_junc_nsrampd_sd_body
+		nsig_delr_ajs_junc_nsrampd_sd_body
+		nsig_delr_cfr_nsrampd_d_ply_m1ct
+		nsig_delr_cfr_nsrampd_d_ply_met
+		nsig_delr_cfr_nsrampd_s_ply_m1ct
+		nsig_delr_cfr_nsrampd_s_ply_met
+		nsig_delr_chcj0_junc_nsrampd_sd_body
+		nsig_delr_mosfet_thin_tox_bsim3v3
+		nsig_delr_pcj0_junc_nsrampd_sd_body
+		nsig_delr_pjs_junc_nsrampd_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_nsrampd_10hv_bsim3v3
+		nsig_delr_vsat_nsrampd_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_nsrampd_10hv_bsim3v3
+		nsmm_dela_dwox_nsrampd_10hv_bsim3v3
+		nsmm_dela_vfb_nsrampd_10hv_bsim3v3
+		nsmm_dela_vtl_nsrampd_10hv_bsim3v3
+		nsmm_dela_vtw_nsrampd_10hv_bsim3v3
+		nsmm_delr_gox_nsrampd_10hv_bsim3v3
+		nsmm_delr_nsub_nsrampd_10hv_bsim3v3
+		nsmm_delr_rsh_nsrampd_10hv_bsim3v3
+		nsmm_delr_ubref_nsrampd_10hv_bsim3v3
+	}
+}
+
+psrampu_10hv { mosfet
+	global {
+		nsig_dela_a0_psrampu_10hv_bsim3v3
+		nsig_dela_dl_psrampu_10hv_bsim3v3
+		nsig_dela_dwox_psrampu_10hv_bsim3v3
+		nsig_dela_vfb_psrampu_10hv_bsim3v3
+		nsig_dela_vtl_psrampu_10hv_bsim3v3
+		nsig_dela_vtm_psrampu_10hv_bsim3v3
+		nsig_dela_vtw_psrampu_10hv_bsim3v3
+		nsig_dela_wwl_psrampu_10hv_bsim3v3
+		nsig_delr_acj0_junc_psrampu_sd_body
+		nsig_delr_ajs_junc_psrampu_sd_body
+		nsig_delr_cfr_psrampu_d_ply_m1ct
+		nsig_delr_cfr_psrampu_d_ply_met
+		nsig_delr_cfr_psrampu_s_ply_m1ct
+		nsig_delr_cfr_psrampu_s_ply_met
+		nsig_delr_chcj0_junc_psrampu_sd_body
+		nsig_delr_mosfet_thin_tox_bsim3v3
+		nsig_delr_pcj0_junc_psrampu_sd_body
+		nsig_delr_pjs_junc_psrampu_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_psrampu_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_psrampu_10hv_bsim3v3
+		nsmm_dela_dwox_psrampu_10hv_bsim3v3
+		nsmm_dela_vfb_psrampu_10hv_bsim3v3
+		nsmm_dela_vtl_psrampu_10hv_bsim3v3
+		nsmm_dela_vtw_psrampu_10hv_bsim3v3
+		nsmm_delr_gox_psrampu_10hv_bsim3v3
+		nsmm_delr_nsub_psrampu_10hv_bsim3v3
+		nsmm_delr_rsh_psrampu_10hv_bsim3v3
+		nsmm_delr_ubref_psrampu_10hv_bsim3v3
+	}
+}
+
+nmos5_10hv { mosfet
+	global {
+		nsig_dela_ags_nmos5_10hv_bsim4
+		nsig_dela_b0_nmos5_10hv_bsim4
+		nsig_dela_dl_nmos5_10hv_bsim4
+		nsig_dela_dwox_nmos5_10hv_bsim4
+		nsig_dela_jts_nmos5_10hv_bsim4
+		nsig_dela_k3_nmos5_10hv_bsim4
+		nsig_dela_pu0_nmos5_10hv_bsim4
+		nsig_dela_vfb_nmos5_10hv_bsim4
+		nsig_dela_vtl_nmos5_10hv_bsim4
+		nsig_dela_vtm_nmos5_10hv_bsim4
+		nsig_delr_acj0_junc_nmos5_d_body
+		nsig_delr_acj0_junc_nmos5_s_body
+		nsig_delr_ajs_junc_nmos5_d_body
+		nsig_delr_ajs_junc_nmos5_s_body
+		nsig_delr_cfr_nmos5_s_ply_m1ct
+		nsig_delr_cfr_nmos5_s_ply_met
+		nsig_delr_chcj0_junc_nmos5_d_body
+		nsig_delr_chcj0_junc_nmos5_s_body
+		nsig_delr_chjs_junc_nmos5_d_body
+		nsig_delr_chjs_junc_nmos5_s_body
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_pcj0_junc_nmos5_d_body
+		nsig_delr_pcj0_junc_nmos5_s_body
+		nsig_delr_pjs_junc_nmos5_d_body
+		nsig_delr_pjs_junc_nmos5_s_body
+		nsig_delr_pvsat_nmos5_10hv_bsim4
+		nsig_delr_tox_box
+		nsig_delr_ubref_nmos5_10hv_bsim4
+		nsig_delr_vsat_nmos5_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_nmos5_10hv_bsim4
+		nsmm_dela_dwox_nmos5_10hv_bsim4
+		nsmm_dela_vfb_nmos5_10hv_bsim4
+		nsmm_dela_vtl_nmos5_10hv_bsim4
+		nsmm_dela_vtw_nmos5_10hv_bsim4
+		nsmm_delr_gox_nmos5_10hv_bsim4
+		nsmm_delr_nsub_nmos5_10hv_bsim4
+		nsmm_delr_rsh_nmos5_10hv_bsim4
+		nsmm_delr_ubref_nmos5_10hv_bsim4
+	}
+}
+
+pmos5_10hv { mosfet
+	global {
+		nsig_dela_a0_pmos5_10hv_bsim4
+		nsig_dela_dl_pmos5_10hv_bsim4
+		nsig_dela_dwox_pmos5_10hv_bsim4
+		nsig_dela_vfb_pmos5_10hv_bsim4
+		nsig_dela_vsat_pmos5_10hv_bsim4
+		nsig_dela_vtl_pmos5_10hv_bsim4
+		nsig_dela_vtm_pmos5_10hv_bsim4
+		nsig_dela_vtw_pmos5_10hv_bsim4
+		nsig_dela_wags_pmos5_10hv_bsim4
+		nsig_dela_wwl_pmos5_10hv_bsim4
+		nsig_delr_acj0_junc_pmos5_sd_body
+		nsig_delr_agidl_pmos5_10hv_bsim4
+		nsig_delr_ajs_junc_pmos5_sd_body
+		nsig_delr_cfr_pmos5_s_ply_m1ct
+		nsig_delr_cfr_pmos5_s_ply_met
+		nsig_delr_chcj0_junc_pmos5_sd_body
+		nsig_delr_chjs_junc_pmos5_sd_body
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_pcj0_junc_pmos5_sd_body
+		nsig_delr_pjs_junc_pmos5_sd_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_pmos5_10hv_bsim4
+	}
+	local {
+		nsmm_dela_dl_pmos5_10hv_bsim4
+		nsmm_dela_dwox_pmos5_10hv_bsim4
+		nsmm_dela_vfb_pmos5_10hv_bsim4
+		nsmm_dela_vtl_pmos5_10hv_bsim4
+		nsmm_dela_vtw_pmos5_10hv_bsim4
+		nsmm_delr_gox_pmos5_10hv_bsim4
+		nsmm_delr_nsub_pmos5_10hv_bsim4
+		nsmm_delr_rsh_pmos5_10hv_bsim4
+		nsmm_delr_ubref_pmos5_10hv_bsim4
+	}
+}
+
+nmos45_10hv { mosfet
+	global {
+		nsig_dela_a0_nmos45_10hv_bsim3v3
+		nsig_dela_b0_nmos45_10hv_bsim3v3
+		nsig_dela_dl_nmos45_10hv_bsim3v3
+		nsig_dela_dwox_nmos45_10hv_bsim3v3
+		nsig_dela_la0_nmos45_10hv_bsim3v3
+		nsig_dela_pa0_nmos45_10hv_bsim3v3
+		nsig_dela_vfb_nmos45_10hv_bsim3v3
+		nsig_dela_vtl_nmos45_10hv_bsim3v3
+		nsig_dela_vtm_nmos45_10hv_bsim3v3
+		nsig_dela_vtw_nmos45_10hv_bsim3v3
+		nsig_delr_acj0_junc_nmos45_d_body
+		nsig_delr_acj0_junc_nmos45_s_body
+		nsig_delr_ajs_junc_nmos45_d_body
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cfr_m2_ply
+		nsig_delr_cfr_nmos45_d_ply_m1ct
+		nsig_delr_cfr_nmos45_d_ply_met
+		nsig_delr_cfr_nmos45_s_ply_m1ct
+		nsig_delr_cfr_nmos45_s_ply_met
+		nsig_delr_chcj0_junc_nmos45_d_body
+		nsig_delr_chjs_junc_nmos45_d_body
+		nsig_delr_cpp_m2_m1
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_pcj0_junc_nmos45_d_body
+		nsig_delr_pcj0_junc_nmos45_s_body
+		nsig_delr_pjs_junc_nmos45_d_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_nmos45_10hv_bsim3v3
+		nsig_delr_vsat_nmos45_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_nmos45_10hv_bsim3v3
+		nsmm_dela_dwox_nmos45_10hv_bsim3v3
+		nsmm_dela_vfb_nmos45_10hv_bsim3v3
+		nsmm_dela_vtl_nmos45_10hv_bsim3v3
+		nsmm_dela_vtw_nmos45_10hv_bsim3v3
+		nsmm_delr_gox_nmos45_10hv_bsim3v3
+		nsmm_delr_nsub_nmos45_10hv_bsim3v3
+		nsmm_delr_rsh_nmos45_10hv_bsim3v3
+		nsmm_delr_ubref_nmos45_10hv_bsim3v3
+	}
+}
+
+pmos45_10hv { mosfet
+	global {
+		nsig_dela_a0_pmos45_10hv_bsim3v3
+		nsig_dela_b0_pmos45_10hv_bsim3v3
+		nsig_dela_dl_pmos45_10hv_bsim3v3
+		nsig_dela_dwox_pmos45_10hv_bsim3v3
+		nsig_dela_vfb_pmos45_10hv_bsim3v3
+		nsig_dela_vtl_pmos45_10hv_bsim3v3
+		nsig_dela_vtm_pmos45_10hv_bsim3v3
+		nsig_dela_vtw_pmos45_10hv_bsim3v3
+		nsig_dela_wwl_pmos45_10hv_bsim3v3
+		nsig_delr_acj0_junc_pmos45_d_body
+		nsig_delr_acj0_junc_pmos45_s_body
+		nsig_delr_ajs_junc_pmos45_d_body
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cfr_m2_ply
+		nsig_delr_cfr_pmos45_d_ply_m1ct
+		nsig_delr_cfr_pmos45_d_ply_met
+		nsig_delr_cfr_pmos45_s_ply_m1ct
+		nsig_delr_cfr_pmos45_s_ply_met
+		nsig_delr_chcj0_junc_pmos45_d_body
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_pcj0_junc_pmos45_d_body
+		nsig_delr_pcj0_junc_pmos45_s_body
+		nsig_delr_pjs_junc_pmos45_d_body
+		nsig_delr_prsh_pmos45_10hv_bsim3v3
+		nsig_delr_tox_box
+		nsig_delr_ubref_pmos45_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_pmos45_10hv_bsim3v3
+		nsmm_dela_dwox_pmos45_10hv_bsim3v3
+		nsmm_dela_vfb_pmos45_10hv_bsim3v3
+		nsmm_dela_vtl_pmos45_10hv_bsim3v3
+		nsmm_dela_vtw_pmos45_10hv_bsim3v3
+		nsmm_delr_gox_pmos45_10hv_bsim3v3
+		nsmm_delr_nsub_pmos45_10hv_bsim3v3
+		nsmm_delr_rsh_pmos45_10hv_bsim3v3
+		nsmm_delr_ubref_pmos45_10hv_bsim3v3
+	}
+}
+
+pmoshs45_10hv { mosfet
+	global {
+		nsig_dela_a0_pmoshs45_10hv_bsim3v3
+		nsig_dela_dl_pmoshs45_10hv_bsim3v3
+		nsig_dela_dwox_pmoshs45_10hv_bsim3v3
+		nsig_dela_vfb_pmoshs45_10hv_bsim3v3
+		nsig_dela_vtl_pmoshs45_10hv_bsim3v3
+		nsig_dela_vtm_pmoshs45_10hv_bsim3v3
+		nsig_dela_vtw_pmoshs45_10hv_bsim3v3
+		nsig_dela_wwl_pmoshs45_10hv_bsim3v3
+		nsig_delr_acj0_junc_pmoshs45_d_body
+		nsig_delr_acj0_junc_pmoshs45_s_body
+		nsig_delr_ajs_junc_pmoshs45_d_body
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cfr_m2_ply
+		nsig_delr_cfr_pmoshs45_d_ply_m1ct
+		nsig_delr_cfr_pmoshs45_d_ply_met
+		nsig_delr_cfr_pmoshs45_s_ply_m1ct
+		nsig_delr_cfr_pmoshs45_s_ply_met
+		nsig_delr_chcj0_junc_pmoshs45_d_body
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_pcj0_junc_pmoshs45_d_body
+		nsig_delr_pcj0_junc_pmoshs45_s_body
+		nsig_delr_pjs_junc_pmoshs45_d_body
+		nsig_delr_prsh_pmoshs45_10hv_bsim3v3
+		nsig_delr_tox_box
+		nsig_delr_ubref_pmoshs45_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_pmoshs45_10hv_bsim3v3
+		nsmm_dela_dwox_pmoshs45_10hv_bsim3v3
+		nsmm_dela_vfb_pmoshs45_10hv_bsim3v3
+		nsmm_dela_vtl_pmoshs45_10hv_bsim3v3
+		nsmm_dela_vtw_pmoshs45_10hv_bsim3v3
+		nsmm_delr_gox_pmoshs45_10hv_bsim3v3
+		nsmm_delr_nsub_pmoshs45_10hv_bsim3v3
+		nsmm_delr_rsh_pmoshs45_10hv_bsim3v3
+		nsmm_delr_ubref_pmoshs45_10hv_bsim3v3
+	}
+}
+
+nmos90_10hv { mosfet
+	global {
+		nsig_dela_a0_nmos90_10hv_bsim3v3
+		nsig_dela_dl_nmos90_10hv_bsim3v3
+		nsig_dela_dwox_nmos90_10hv_bsim3v3
+		nsig_dela_vfb_nmos90_10hv_bsim3v3
+		nsig_dela_vtl_nmos90_10hv_bsim3v3
+		nsig_dela_vtm_nmos90_10hv_bsim3v3
+		nsig_dela_vtw_nmos90_10hv_bsim3v3
+		nsig_delr_acj0_junc_nmos90_d_body
+		nsig_delr_acj0_junc_nmos90_s_body
+		nsig_delr_ajs_junc_nmos90_d_body
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cfr_m2_ply
+		nsig_delr_cfr_nmos90_d_ply_m1ct
+		nsig_delr_cfr_nmos90_d_ply_met
+		nsig_delr_cfr_nmos90_s_ply_m1ct
+		nsig_delr_cfr_nmos90_s_ply_met
+		nsig_delr_chcj0_junc_nmos90_d_body
+		nsig_delr_chjs_junc_nmos90_d_body
+		nsig_delr_cpp_m2_m1
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_pcj0_junc_nmos90_d_body
+		nsig_delr_pcj0_junc_nmos90_s_body
+		nsig_delr_pjs_junc_nmos90_d_body
+		nsig_delr_rdsw_nmos90_10hv_bsim3v3
+		nsig_delr_tox_box
+		nsig_delr_ubref_nmos90_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_nmos90_10hv_bsim3v3
+		nsmm_dela_dwox_nmos90_10hv_bsim3v3
+		nsmm_dela_vfb_nmos90_10hv_bsim3v3
+		nsmm_dela_vtl_nmos90_10hv_bsim3v3
+		nsmm_dela_vtw_nmos90_10hv_bsim3v3
+		nsmm_delr_gox_nmos90_10hv_bsim3v3
+		nsmm_delr_nsub_nmos90_10hv_bsim3v3
+		nsmm_delr_rsh_nmos90_10hv_bsim3v3
+		nsmm_delr_ubref_nmos90_10hv_bsim3v3
+	}
+}
+
+pmos90_10hv { mosfet
+	global {
+		nsig_dela_a0_pmos90_10hv_bsim3v3
+		nsig_dela_b0_pmos90_10hv_bsim3v3
+		nsig_dela_dl_pmos90_10hv_bsim3v3
+		nsig_dela_dwox_pmos90_10hv_bsim3v3
+		nsig_dela_vfb_pmos90_10hv_bsim3v3
+		nsig_dela_vtl_pmos90_10hv_bsim3v3
+		nsig_dela_vtm_pmos90_10hv_bsim3v3
+		nsig_dela_vtw_pmos90_10hv_bsim3v3
+		nsig_dela_wwl_pmos90_10hv_bsim3v3
+		nsig_delr_acj0_junc_pmos90_d_body
+		nsig_delr_acj0_junc_pmos90_s_body
+		nsig_delr_ajs_junc_pmos90_d_body
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cfr_m2_ply
+		nsig_delr_cfr_pmos90_d_ply_m1ct
+		nsig_delr_cfr_pmos90_d_ply_met
+		nsig_delr_cfr_pmos90_s_ply_m1ct
+		nsig_delr_cfr_pmos90_s_ply_met
+		nsig_delr_chcj0_junc_pmos90_d_body
+		nsig_delr_chjs_junc_pmos90_d_body
+		nsig_delr_cpp_m2_m1
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_pcj0_junc_pmos90_d_body
+		nsig_delr_pcj0_junc_pmos90_s_body
+		nsig_delr_pjs_junc_pmos90_d_body
+		nsig_delr_tox_box
+		nsig_delr_ubref_pmos90_10hv_bsim3v3
+	}
+	local {
+		nsmm_dela_dl_pmos90_10hv_bsim3v3
+		nsmm_dela_dwox_pmos90_10hv_bsim3v3
+		nsmm_dela_vfb_pmos90_10hv_bsim3v3
+		nsmm_dela_vtl_pmos90_10hv_bsim3v3
+		nsmm_dela_vtw_pmos90_10hv_bsim3v3
+		nsmm_delr_gox_pmos90_10hv_bsim3v3
+		nsmm_delr_nsub_pmos90_10hv_bsim3v3
+		nsmm_delr_rsh_pmos90_10hv_bsim3v3
+		nsmm_delr_ubref_pmos90_10hv_bsim3v3
+	}
+}
+
+
+nmos45b_10hv { mosfet
+	global {
+		nsig_dela_dl_nmos45b_sphv_10hv
+		nsig_dela_dlw_nmos45b_sphv_10hv
+		nsig_dela_dw_nmos45b_sphv_10hv
+		nsig_dela_vfb_nmos45b_sphv_10hv
+		nsig_dela_vtl_nmos45b_sphv_10hv
+		nsig_dela_vtm_nmos45b_sphv_10hv
+		nsig_dela_vtw_nmos45b_sphv_10hv
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cjd_nmos45b_sphv_10hv
+		nsig_delr_cjs_nmos45b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_jdideal_nmos45b_sphv_10hv
+		nsig_delr_jdnonideal_nmos45b_sphv_10hv
+		nsig_delr_jsideal_nmos45b_sphv_10hv
+		nsig_delr_jsnonideal_nmos45b_sphv_10hv
+		nsig_delr_mobref_nmos45b_sphv_10hv
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_rshl_nmos45b_sphv_10hv
+		nsig_delr_satl_nmos45b_sphv_10hv
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_dela_dl_nmos45b_sphv_10hv  	
+		nsmm_dela_dw_nmos45b_sphv_10hv  	
+		nsmm_dela_vfb_nmos45b_sphv_10hv 	
+		nsmm_dela_vtl_nmos45b_sphv_10hv 	
+		nsmm_dela_vtw_nmos45b_sphv_10hv 	
+		nsmm_delr_mobref_nmos45b_sphv_10hv 
+		nsmm_delr_nsub_nmos45b_sphv_10hv 	
+		nsmm_delr_rshl_nmos45b_sphv_10hv 	
+		nsmm_delr_tox_nmos45b_sphv_10hv 	
+	}
+}
+
+pmos45b_10hv { mosfet
+	global {
+		nsig_dela_dl_pmos45b_sphv_10hv
+		nsig_dela_dlw_pmos45b_sphv_10hv
+		nsig_dela_dw_pmos45b_sphv_10hv
+		nsig_dela_vfb_pmos45b_sphv_10hv
+		nsig_dela_vtl_pmos45b_sphv_10hv
+		nsig_dela_vtm_pmos45b_sphv_10hv
+		nsig_dela_vtw_pmos45b_sphv_10hv
+		nsig_delr_cjd_pmos45b_sphv_10hv
+		nsig_delr_cjs_pmos45b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_jdideal_pmos45b_sphv_10hv
+		nsig_delr_jdnonideal_pmos45b_sphv_10hv
+		nsig_delr_jsdideal_pmos45b_sphv_10hv
+		nsig_delr_jsideal_pmos45b_sphv_10hv
+		nsig_delr_jsnonideal_pmos45b_sphv_10hv
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_res_pmos45b_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_pmos45b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dw_pmos45b_sphv_10hv 
+		nsmm_dela_vfb_pmos45b_sphv_10hv  
+		nsmm_dela_vtw_pmos45b_sphv_10hv  
+		nsmm_delr_nsub_pmos45b_sphv_10hv 
+		nsmm_delr_res_pmos45b_sphv_10hv  
+		nsmm_delr_tox_pmos45b_sphv_10hv  
+		nsmm_delr_uch_pmos45b_sphv_10hv  
+	}
+}
+
+pmoshs45b_10hv { mosfet
+	global {
+		nsig_dela_dl_pmoshs45b_sphv_10hv
+		nsig_dela_dlw_pmoshs45b_sphv_10hv
+		nsig_dela_dw_pmoshs45b_sphv_10hv
+		nsig_dela_vfb_pmoshs45b_sphv_10hv
+		nsig_dela_vtl_pmoshs45b_sphv_10hv
+		nsig_dela_vtm_pmoshs45b_sphv_10hv
+		nsig_dela_vtw_pmoshs45b_sphv_10hv
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cjd_pmoshs45b_sphv_10hv
+		nsig_delr_cjs_pmoshs45b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_jdideal_pmoshs45b_sphv_10hv
+		nsig_delr_jdnonideal_pmoshs45b_sphv_10hv
+		nsig_delr_jsdideal_pmoshs45b_sphv_10hv
+		nsig_delr_jsideal_pmoshs45b_sphv_10hv
+		nsig_delr_jsnonideal_pmoshs45b_sphv_10hv
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_res_pmoshs45b_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_pmoshs45b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dw_pmoshs45b_sphv_10hv 
+		nsmm_dela_vfb_pmoshs45b_sphv_10hv  
+		nsmm_dela_vtw_pmoshs45b_sphv_10hv  
+		nsmm_delr_nsub_pmoshs45b_sphv_10hv 
+		nsmm_delr_res_pmoshs45b_sphv_10hv  
+		nsmm_delr_tox_pmoshs45b_sphv_10hv  
+		nsmm_delr_uch_pmoshs45b_sphv_10hv  
+	}
+}
+
+pmos90b_10hv { mosfet
+	global {
+		nsig_dela_dw_pmos90b_sphv_10hv
+		nsig_dela_mueo_pmos90b_sphv_10hv
+		nsig_dela_vdscale_pmos90b_sphv_10hv
+		nsig_dela_vdscalel_pmos90b_sphv_10hv
+		nsig_dela_vdscalelw_pmos90b_sphv_10hv
+		nsig_dela_vdscalew_pmos90b_sphv_10hv
+		nsig_dela_vfb_pmos90b_sphv_10hv
+		nsig_dela_vtl_pmos90b_sphv_10hv
+		nsig_dela_vtw_pmos90b_sphv_10hv
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cj_pmos90b_sphv_10hv
+		nsig_delr_ir_pmos90b_sphv_10hv
+		nsig_delr_is2_pmos90b_sphv_10hv
+		nsig_delr_is_pmos90b_sphv_10hv
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_res_pmos90b_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_pmos90b_sphv_10hv
+	}
+	local {
+		nsmm_dela_dw_pmos90b_sphv_10hv 
+		nsmm_dela_vfb_pmos90b_sphv_10hv  
+		nsmm_dela_vtw_pmos90b_sphv_10hv  
+		nsmm_delr_nsub_pmos90b_sphv_10hv 
+		nsmm_delr_res_pmos90b_sphv_10hv  
+		nsmm_delr_tox_pmos90b_sphv_10hv  
+		nsmm_delr_uch_pmos90b_sphv_10hv  
+	}
+}
+
+nmos10_10hv { mosfet
+	global {
+		nsig_dela_lvaro_nmos10_sphv_10hv
+		nsig_dela_vdscale_nmos10_sphv_10hv
+		nsig_dela_vfb_nmos10_sphv_10hv
+		nsig_dela_vtl_nmos10_sphv_10hv
+		nsig_dela_vtw_nmos10_sphv_10hv
+		nsig_delr_cj_nmos10_sphv_10hv
+		nsig_delr_ir_nmos10_sphv_10hv
+		nsig_delr_is2_nmos10_sphv_10hv
+		nsig_delr_is_nmos10_sphv_10hv
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_thesatl_nmos10_sphv_10hv
+		nsig_delr_thesatlw_nmos10_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_nmos10_sphv_10hv
+	}
+	local {
+		nsmm_dela_dw_nmos10_sphv_10hv   
+		nsmm_dela_vfb_nmos10_sphv_10hv  
+		nsmm_dela_vtw_nmos10_sphv_10hv  
+		nsmm_delr_nsub_nmos10_sphv_10hv 
+		nsmm_delr_res_nmos10_sphv_10hv  
+		nsmm_delr_tox_nmos10_sphv_10hv  
+		nsmm_delr_uch_nmos10_sphv_10hv  
+	}
+}
+
+nmos90b_10hv { mosfet
+	global {
+		nsig_dela_dw_nmos90b_sphv_10hv
+		nsig_dela_lvaro_nmos90b_sphv_10hv
+		nsig_dela_thesato_nmos90b_sphv_10hv
+		nsig_dela_vdscalel_nmos90b_sphv_10hv
+		nsig_dela_vfb_nmos90b_sphv_10hv
+		nsig_dela_vtl_nmos90b_sphv_10hv
+		nsig_dela_vtw_nmos90b_sphv_10hv
+		nsig_delr_cfr_m2_m1
+		nsig_delr_cj_nmos90b_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_nmos90b_sphv_10hv
+		nsig_delr_is2_nmos90b_sphv_10hv
+		nsig_delr_is_nmos90b_sphv_10hv
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_res_nmos90b_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_nmos90b_sphv_10hv
+	}
+	local {
+		nsmm_dela_vfb_nmos90b_sphv_10hv  
+		nsmm_dela_vtw_nmos90b_sphv_10hv  
+		nsmm_delr_nsub_nmos90b_sphv_10hv 
+		nsmm_delr_res_nmos90b_sphv_10hv  
+		nsmm_delr_tox_nmos90b_sphv_10hv  
+		nsmm_delr_uch_nmos90b_sphv_10hv  
+	}
+}
+
+nmos120_10hv { mosfet
+	global {
+		nsig_dela_dw_nmos120_sphv_10hv
+		nsig_dela_lvaro_nmos120_sphv_10hv
+		nsig_dela_lvarw_nmos120_sphv_10hv
+		nsig_dela_thesatl_nmos120_sphv_10hv
+		nsig_dela_thesatlw_nmos120_sphv_10hv
+		nsig_dela_thesato_nmos120_sphv_10hv
+		nsig_dela_thesatw_nmos120_sphv_10hv
+		nsig_dela_vdscale_nmos120_sphv_10hv
+		nsig_dela_vdscalel_nmos120_sphv_10hv
+		nsig_dela_vdscalelw_nmos120_sphv_10hv
+		nsig_dela_vdscalew_nmos120_sphv_10hv
+		nsig_dela_vfb_nmos120_sphv_10hv
+		nsig_dela_vtl_nmos120_sphv_10hv
+		nsig_dela_vtlw_nmos120_sphv_10hv
+		nsig_dela_vtw_nmos120_sphv_10hv
+		nsig_dela_xw_nmos120_sphv_10hv
+		nsig_delr_cj_nmos120_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_nmos120_sphv_10hv
+		nsig_delr_is2_nmos120_sphv_10hv
+		nsig_delr_is_nmos120_sphv_10hv
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_res_nmos120_sphv_10hv
+		nsig_delr_rs_poly_silicide
+		nsig_delr_tox_box
+		nsig_delr_uch_nmos120_sphv_10hv
+		nsig_delr_uchl_nmos120_sphv_10hv
+	}
+	local {
+		nsmm_dela_vfb_nmos120_sphv_10hv  
+		nsmm_dela_vtw_nmos120_sphv_10hv  
+		nsmm_delr_nsub_nmos120_sphv_10hv 
+		nsmm_delr_res_nmos120_sphv_10hv  
+		nsmm_delr_tox_nmos120_sphv_10hv  
+		nsmm_delr_uch_nmos120_sphv_10hv  
+	}
+}
+
+pmos10_10hv { mosfet
+	global {
+		nsig_dela_dl_pmos10_sphv_10hv
+		nsig_dela_dlw_pmos10_sphv_10hv
+		nsig_dela_dw_pmos10_sphv_10hv
+		nsig_dela_thesatl_pmos10_sphv_10hv
+		nsig_dela_thesatlw_pmos10_sphv_10hv
+		nsig_dela_thesato_pmos10_sphv_10hv
+		nsig_dela_thesatw_pmos10_sphv_10hv
+		nsig_dela_vdscalel_pmos10_sphv_10hv
+		nsig_dela_vdscaleo_pmos10_sphv_10hv
+		nsig_dela_vfb_pmos10_sphv_10hv
+		nsig_dela_vtl_pmos10_sphv_10hv
+		nsig_dela_vtlw_pmos10_sphv_10hv
+		nsig_dela_vtw_pmos10_sphv_10hv
+		nsig_delr_cj_pmos10_sphv_10hv
+		nsig_delr_cpp_ply_fld
+		nsig_delr_ir_pmos10_sphv_10hv
+		nsig_delr_is2_pmos10_sphv_10hv
+		nsig_delr_is_pmos10_sphv_10hv
+		nsig_delr_mosfet_thick_tox
+		nsig_delr_res_pmos10_sphv_10hv
+		nsig_delr_tox_box
+		nsig_delr_uch_pmos10_sphv_10hv
+	}
+	local {
+		nsmm_dela_dl_pmos10_sphv_10hv   
+		nsmm_dela_dw_pmos10_sphv_10hv   
+		nsmm_dela_vfb_pmos10_sphv_10hv  
+		nsmm_dela_vtl_pmos10_sphv_10hv  
+		nsmm_dela_vtw_pmos10_sphv_10hv  
+		nsmm_delr_gox_pmos10_sphv_10hv  
+		nsmm_delr_res_pmos10_sphv_10hv  
+		nsmm_delr_uch_pmos10_sphv_10hv  
+	}
+}
+
+
+#.lib resistor
+rpoly0_10hv { resistor
+	global {
+		nsig_dela_dl_poly0_r3
+		nsig_dela_dlw_poly0_r3
+		nsig_dela_dw_poly0_r3
+		nsig_dela_tc1_poly0_r3
+		nsig_dela_tc2_poly0_r3
+		nsig_delr_cfr_ply0_fld
+		nsig_delr_cpp_ply0_fld
+		nsig_delr_rs_poly0_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rpoly0_10hv_r3
+	}
+}
+
+rpoly_10hv { resistor
+	global {
+		nsig_dela_dl_poly_r3
+		nsig_dela_dw_poly_r3
+		nsig_delr_cfr_m1_ply
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cpp_m1_ply
+		nsig_delr_cpp_ply_fld
+		nsig_delr_rs_poly_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rpoly_10hv_r3
+	}
+}
+
+rhvpw_10hv { resistor
+	global {
+		nsig_dela_dl_hvpw_nbl_r3
+		nsig_dela_dw_hvpw_nbl_r3
+		nsig_delr_acj0_junc_pepi_nbl
+		nsig_delr_ajs_junc_pepi_nbl
+		nsig_delr_cfr_m1_sd
+		nsig_delr_cpp_m1_sd
+		nsig_delr_pcj0_junc_pepi_nbl
+		nsig_delr_pjs_junc_pepi_nbl
+		nsig_delr_rs_hvpw_nbl_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rhvpw_10hv_r3
+	}
+}
+
+rphv_10hv { resistor
+	global {
+		nsig_dela_dl_phv_nbl_r3
+		nsig_dela_dw_phv_nbl_r3
+		nsig_delr_acj0_junc_pepi_nbl
+		nsig_delr_ajs_junc_pepi_nbl
+		nsig_delr_cfr_m1_sd
+		nsig_delr_cpp_m1_sd
+		nsig_delr_pcj0_junc_pepi_nbl
+		nsig_delr_pjs_junc_pepi_nbl
+		nsig_delr_rs_phv_nbl_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rphv_10hv_r3
+	}
+}
+
+antifuse_t_10hv { resistor
+	global {
+		nsig_delr_tox_box
+		nsig_off_antifuse_t
+		nsig_on_antifuse_t
+	}
+	local {
+	}
+}
+
+antifuse_10hv { resistor
+	global {
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cfr_ply_sd
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sd
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+rpoly_1meg_10hv { resistor
+	global {
+		nsig_delr_cfr_m1_ply
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cpp_m1_ply
+		nsig_delr_cpp_ply_fld
+		nsig_delr_rs_poly_1meg_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rpoly_1meg_10hv_r3
+	}
+}
+
+rm1_10hv { resistor
+	global {
+		nsig_dela_dl_m1
+		nsig_dela_dw_m1
+		nsig_delr_rs_m1
+	}
+	local {
+		nsmm_delr_rsh_rm1_10hv
+	}
+}
+
+rm2_10hv { resistor
+	global {
+		nsig_dela_dl_m2
+		nsig_dela_dw_m2
+		nsig_delr_rs_m2
+	}
+	local {
+		nsmm_delr_rsh_rm2_10hv
+	}
+}
+
+rm3_10hv { resistor
+	global {
+		nsig_dela_dl_m3
+		nsig_dela_dw_m3
+		nsig_delr_rs_m3
+	}
+	local {
+		nsmm_delr_rsh_rm3_10hv
+	}
+}
+
+rm4_10hv { resistor
+	global {
+		nsig_dela_dl_m4
+		nsig_dela_dw_m4
+		nsig_delr_rs_m4
+	}
+	local {
+		nsmm_delr_rsh_rm4_10hv
+	}
+}
+
+ralcap_10hv { resistor
+	global {
+		nsig_dela_dl_alcap
+		nsig_dela_dw_alcap
+		nsig_delr_rs_alcap
+	}
+	local {
+		nsmm_delr_rsh_ralcap_10hv
+	}
+}
+
+rulm_10hv { resistor
+	global {
+		nsig_dela_dl_ulm
+		nsig_dela_dw_ulm
+		nsig_delr_rs_ulm
+	}
+	local {
+		nsmm_delr_rsh_rulm_10hv
+	}
+}
+
+
+#.lib resistor_simple
+rpoly0_10hv { resistor
+	global {
+		nsig_dela_dl_poly0_r3
+		nsig_dela_dlw_poly0_r3
+		nsig_dela_dw_poly0_r3
+		nsig_delr_cfr_ply0_fld
+		nsig_delr_cpp_ply0_fld
+		nsig_delr_rs_poly0_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rpoly0_10hv_r3
+	}
+}
+
+rpoly_10hv { resistor
+	global {
+		nsig_dela_dl_poly_r3
+		nsig_dela_dw_poly_r3
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cpp_ply_fld
+		nsig_delr_rs_poly_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rpoly_10hv_r3
+	}
+}
+
+rhvpw_10hv { resistor
+	global {
+		nsig_dela_dl_hvpw_nbl_r3
+		nsig_dela_dw_hvpw_nbl_r3
+		nsig_delr_acj0_junc_pepi_nbl
+		nsig_delr_ajs_junc_pepi_nbl
+		nsig_delr_pcj0_junc_pepi_nbl
+		nsig_delr_pjs_junc_pepi_nbl
+		nsig_delr_rs_hvpw_nbl_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rhvpw_10hv_r3
+	}
+}
+
+rphv_10hv { resistor
+	global {
+		nsig_dela_dl_phv_nbl_r3
+		nsig_dela_dw_phv_nbl_r3
+		nsig_delr_acj0_junc_pepi_nbl
+		nsig_delr_ajs_junc_pepi_nbl
+		nsig_delr_pcj0_junc_pepi_nbl
+		nsig_delr_pjs_junc_pepi_nbl
+		nsig_delr_rs_phv_nbl_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rphv_10hv_r3
+	}
+}
+
+antifuse_10hv { resistor
+	global {
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cfr_ply_sd
+		nsig_delr_cpp_ply_fld
+		nsig_delr_cpp_ply_sd
+		nsig_delr_tox_box
+	}
+	local {
+	}
+}
+
+rpoly_1meg_10hv { resistor
+	global {
+		nsig_delr_cfr_ply_fld
+		nsig_delr_cpp_ply_fld
+		nsig_delr_rs_poly_1meg_r3
+		nsig_delr_tox_box
+	}
+	local {
+		nsmm_delr_rsh_rpoly_1meg_10hv_r3
+	}
+}
+
+rm1_10hv { resistor
+	global {
+		nsig_dela_dl_m1
+		nsig_dela_dw_m1
+		nsig_delr_rs_m1
+	}
+	local {
+		nsmm_delr_rsh_rm1_10hv
+	}
+}
+
+rm2_10hv { resistor
+	global {
+		nsig_dela_dl_m2
+		nsig_dela_dw_m2
+		nsig_delr_rs_m2
+	}
+	local {
+		nsmm_delr_rsh_rm2_10hv
+	}
+}
+
+rm3_10hv { resistor
+	global {
+		nsig_dela_dl_m3
+		nsig_dela_dw_m3
+		nsig_delr_rs_m3
+	}
+	local {
+		nsmm_delr_rsh_rm3_10hv
+	}
+}
+
+rm4_10hv { resistor
+	global {
+		nsig_dela_dl_m4
+		nsig_dela_dw_m4
+		nsig_delr_rs_m4
+	}
+	local {
+		nsmm_delr_rsh_rm4_10hv
+	}
+}
+
+ralcap_10hv { resistor
+	global {
+		nsig_dela_dl_alcap
+		nsig_dela_dw_alcap
+		nsig_delr_rs_alcap
+	}
+	local {
+		nsmm_delr_rsh_ralcap_10hv
+	}
+}
+
+rulm_10hv { resistor
+	global {
+		nsig_dela_dl_ulm
+		nsig_dela_dw_ulm
+		nsig_delr_rs_ulm
+	}
+	local {
+		nsmm_delr_rsh_rulm_10hv
+	}
+}
+
+

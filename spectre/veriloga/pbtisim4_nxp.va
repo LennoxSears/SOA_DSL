@@ -1,0 +1,549 @@
+/* ======================================================================== *
+
+                          F I L E   I N F O R M A T I O N
+
+ * ==================================================================== *//**
+
+   @file        pbtisim_nxp.va
+                Verilog-A model file
+
+   This file contains the PBTI reliability model from NXP.
+
+   @author      Marq Kole, Bart De Vries
+
+   @version     4.3.0
+
+ * ==================================================================== *//**
+
+   @history
+
+   MK = Marq Kole (NXP CR&D/DP/DM/TFS)
+   BDV = Bart De Vries (NXP CR&D/ITP/MCSL-Eindhoven)
+
+   @date 19-03-2018 (BDV,RVL):
+   - Set version to 4.0.0.
+   - Creation of selfheating model pbtishsim model (through precompiler switch
+     SELFHEATING).
+   - Updated parameter names to be more compliant to other prestoplus models
+     and to the common parameter naming used in literature.
+       - parameter n renamed to m.
+       - parameter ma renamed to n.
+   - Added new parameters fstat, vgexp, wpow, lpow and vbxexp and lexp.
+   - Removed parameter tscale.
+   - Reformulated the inverse lifetime equation.  This means that parameters can
+     not be re-used from previous model versions; recalculation is necessary!
+   - Add type parameter to PBTI model.  This is done in a backwards compatible
+     way by setting the default value to -1 (= `PMOS).
+
+   @date 09-08-2018 (BDV):
+   - Set version to 4.1.0.
+   - Add attribute clipped="yes" to xml output to make sure that the prestoplus
+     post-processor knows when model parameter updates have been clipped.
+
+   @date 2021-04-08 (BDV):
+   - Set version to 4.2.0.
+   - Adapt flagging output to correspond to the new "aging lite" format.
+   - Implement DC stress capability.
+
+   @date 2021-04-26 (BDV)
+   - Set version to 4.2.1.
+   - Solve potential issue with multi-step/mission profile simulations not
+     giving correct results when one of the steps has eq_stress_time = 0.0.
+
+   @date 2022-11-18 (BDV)
+   - Set version to 4.3.0.
+   - Add new parameter "swagecheck" to switch off aging_lite messages (default 1).
+
+ *//* ===================================================================== */
+
+`include "disciplines.vams"
+`include "constants.vams"
+
+// Uncomment the following line to compile the self-heating version of the
+// PBTI model.
+//`define SELFHEATING 1
+
+// Uncomment the following line to have the model produce additional debug
+// information during the simulation run.
+//`define DEBUG 1
+
+// Uncomment the following line to correctly close the output files at the
+// end of the simulation run. Now they are left open and the simulator
+// process itself takes care of closing the files. The default is needed
+// for Spectre 5.x.
+//`define DO_CLOSE_FILES 1
+
+// Uncomment the following line to open the XML and INFO output files using
+// the append mode. This is only supported in Verilog-AMS 2.3 compliant
+// compilers.
+//`define OPEN_FOR_APPEND 1
+
+`ifdef OPEN_FOR_APPEND
+`define FOPEN_MODE "a"
+`else
+`define FOPEN_MODE "w"
+`endif // OPEN_FOR_APPEND
+
+// Uncomment the following line to have the localparam statements replaced by
+// parameter statements in case the localparam statement is not supported. This
+// is needed for Spectre versions 6.1.x and earlier.
+//`define NO_LOCALPARAM 1
+`ifdef NO_LOCALPARAM
+`define localparam parameter
+`else
+`define localparam localparam
+`endif
+
+// Names for the output files to be created by the model instances.
+`define EFFECT_NAME     "pbti"
+`define XML_FILE_NAME   "pbti.xml"
+
+`define UPDATE_XML_ELEMENT(FILE,PARAM,VALUE,DELTA,CLIPPED) \
+if (DELTA) begin \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <parameter name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"", `EFFECT_NAME, PARAM, VALUE, DELTA); \
+if (CLIPPED) begin \
+$fwrite(FILE, " clipped=\"yes\""); \
+end \
+$fwrite(FILE, "/>\n </instance>\n"); \
+end
+
+`define UPDATE_DAMAGE_XML_ELEMENT(FILE,PARAM,VALUE,DELTA) \
+if (DELTA) \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <damage name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"/>\n </instance>\n", `EFFECT_NAME, PARAM, VALUE, DELTA);
+
+`define UPDATE_OP_XML_ELEMENT(FILE,PARAM,VALUE,DELTA,CLIPPED) \
+if (DELTA) begin \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <oppoint name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"", `EFFECT_NAME, PARAM, VALUE, DELTA); \
+if (CLIPPED) begin \
+$fwrite(FILE, " clipped=\"yes\""); \
+end \
+$fwrite(FILE, "/>\n </instance>\n"); \
+end
+
+`define SOACHECK_WARNING_DELTAVT(AGE, TEMP, DELTAVT, CLIPPED) \
+$write("\n[AGECHECK_INFO] instance: %M, rule: aging_%s, age: %gY, temperature: %gC, deltaVT: %gV", `EFFECT_NAME, (AGE), (TEMP), (DELTAVT)); \
+if (CLIPPED) begin \
+$write(", message: \"WARNING: VT shift has been clipped to its maximum value of %gV\"\n", (DELTAVT)); \
+end else begin \
+$write("\n"); \
+end
+
+`ifdef M_INF
+`else
+`ifdef __TIBURONDA__
+`define M_INF   1.797693134862e+308     // 64-bit IEEE 752 (double)
+`else
+`define M_INF   3.40282e+38             // 32-bit IEEE 752 (double)
+`endif // __TIBURONDA__
+`endif // M_INF
+
+`define NMOS 1
+`define PMOS -1
+
+/**
+ * @brief 4-terminal MOS transistor wrapper with PBTI stress measurement.
+ *
+ * The wrapper instances gets the parameters for each instance from the
+ * subcircuit wrapper that also provide the parameters for the MOS model
+ * itself.
+ *
+ * @param dta       Delta-Temperature to Ambient [K]; Default is 0 K.
+ *
+ * @param active    Flag to activate/deactivate PBTI measurement; Default
+ *                  is 1 (on).
+ * @param mode      Unused parameter; left for backwards compatibility.
+ *
+ * @param tage      Time to which the stress is extrapolated for the
+ *                  parameter update calculations [s].
+ * @param tstart    Time when stress measurement begins [s]; Default is 0 s.
+ * @param tstop     Time when stress measurement ends [s]; Default is inf s.
+ *
+ * @param type      Type of the wrapped MOS instance. Valid values are
+ *                  `NMOS and `PMOS.  Default is `PMOS (i.e. -1).
+ * @param k         MOS body factor for low bias correction [-].  Will only
+ *                  affect NMOS degradation.
+ *
+ * @param a         PBTI scale factor for permanent damage [-]. Setting a
+ *                  to 0 will effectively disable any calculations for the
+ *                  model.
+ * @param fstat     Prefactor taking into account the effect of statistical
+ *                  spread [-].
+ * @param n         PBTI time dependency exponent for permanent damage [-].
+ * @param m         PBTI oxide voltage exponent for permanent damage [-].
+ * @param vgexp     Alternative exponential PBTI oxide voltage dependence
+ *                  parameter for permanent damage [1/V].
+ * @param ea        PBTI activation energy for permanent damage [eV].
+ * @param lpow      PBTI length dependence exponent for permanent damage [-].
+ * @param wpow      PBTI width dependence exponent for permanent damage [-].
+ * @param vbxexp    PBTI backbias dependence exponent [1/V].
+ * @param lexp      Alternative exponential PBTI length dependence parameter for
+ *                  permanent damage (for relimo legacy models) [m].
+ *
+ * @param damage    Parameter holding the value of the total accumulated damage
+ *                  at the end of the previous step of multi-step aging; Default
+ *                  is 0.  This parameter is only to be set by the aging tool.
+ *
+ * @param dvthmax   Clipping value for Vth change [V]; Default is 250 mV.
+ *
+ * @param swagecheck Switch to control whether "aging lite"/agecheck messages
+ *                  are printed to the log file to be picked up by the SOA
+ *                  browsers; Default is 1 (on).
+ * @param dvtcrit   Threshold of Vth change above which a warning will be
+ *                  given [V]; default is 0.02 V.
+ * @param tempcrit  Minimum temperature at which the Vth shift due to PBTI
+ *                  will be calculated [degrees C]; default is 125 degrees C.
+ *                  This parameter is not functional anymore; just kept format
+ *                  backwards-compatibility.
+ */
+(* instrument_module *)
+`ifdef SELFHEATING
+module mpbtish4 (d, g, s, b, dt);
+  inout d, g, s, b, dt;
+  electrical d, g, s, b;
+  thermal dt;
+`else // i.e. NO SELFHEATING
+module mpbti4 (d, g, s, b);
+  inout d, g, s, b;
+  electrical d, g, s, b;
+`endif // SELFHEATING
+
+  // parameters related to the wrapped device
+  parameter integer type   = `PMOS   from [`PMOS : `NMOS] exclude 0;
+  parameter real l         = 1e-6    from (0:inf);
+  parameter real w         = 1e-6    from (0:inf);
+  parameter real dta       = 0.0;
+  parameter real k         = 0.0;
+
+  // parameters related to simulation
+  parameter real tage      = 0.0     from [0:inf);
+  parameter real tstart    = 0.0     from [0:inf);
+  parameter real tstop     = `M_INF  from [0:inf);
+
+  // parameters relating to PBTI
+  parameter real a         = 0.0     from [0:inf);
+  parameter real fstat     = 1.0     from [0:inf);
+  parameter real n         = 1.0;
+  parameter real m         = 0.0;
+  parameter real vgexp     = 0.0;
+  parameter real ea        = 0.0;
+  parameter real lpow      = 0.0;
+  parameter real wpow      = 0.0;
+  parameter real vbxexp    = 0.0;
+  parameter real lexp      = 0.0;
+
+  parameter real damage    = 0.0     from [0:inf);
+
+  parameter real dvthmax   = 0.250   from [0:inf);
+
+  // parameters relating to flagging
+  parameter integer swagecheck = 1   from [0:1];
+  parameter real dvtcrit   = 0.02;
+  parameter real tempcrit  = 125;
+
+  // parameters for activation, debugging and output
+  parameter integer active = 1       from [0:1];
+  parameter integer mode   = 0       from [0:2];
+
+  `localparam integer year_in_secs = 365 * 24 * 60 * 60;
+  `localparam real ref_stress_time = 1.0e-06 from (0:inf);
+  `localparam real wref    = 1e-6;
+  `localparam real lref    = 1e-6;
+
+  // --------------------------------------------------------------------------
+  //
+  // Variables
+  //
+  // --------------------------------------------------------------------------
+
+  integer stressed, clipped;
+  integer update_file;
+
+  real eq_stress_time;
+`ifdef SELFHEATING
+  real temp_sh, invkt;
+`endif // SELFHEATING
+  real temp, exp_temp;
+  real prefactor, pow_l, pow_w, exp_l, exp_vbx, vbx;
+  real pow_vx, exp_vx, vx, inv_tau, contrib_inv_tlife;
+  real eq_pbti_dp, damage_delta, dp_pbti, deltavth;
+
+  // --------------------------------------------------------------------------
+  //
+  // Functions
+  //
+  // --------------------------------------------------------------------------
+
+  analog function real f_pbti_vx;
+
+    input type, vgb, vgs, vgd, k;
+    integer type;
+    real vgb, vgs, vgd, k;
+    real vbgx, vox;
+
+    begin
+
+      if (type == `NMOS) begin
+        if (k > 0.0) begin
+
+          // For low source and drain biases the Si-oxide interface can be
+          // depleted, while a bias is present over the oxide (|Vgs| < Vth and
+          // Vb > Vs,Vd). In this mode there probably is PBTI present as well.
+          vbgx = 1.0 + type*vgb + 0.25 * k * k;
+          vbgx = max(vbgx, 0.0);
+          vox  = k * (sqrt(vbgx) - 0.5 * k);
+
+`ifdef DEBUG
+          $write("\nvbgx(%M)      = %g", vbgx);
+          $write("\nvox(%M)       = %g", vox);
+`endif // DEBUG
+
+          f_pbti_vx = max(max(vgs, vgd), max(vox, 0.0));
+        end else begin
+          f_pbti_vx = max(max(vgs, vgd), 0.0);
+        end
+      end else begin // type == `PMOS
+        f_pbti_vx = max(vgb, 0.0);
+      end
+
+`ifdef DEBUG
+      $write("\nvx(%M)        = %g", f_pbti_vx);
+`endif // DEBUG
+
+    end
+
+  endfunction // f_pbti_vx
+
+
+  // --------------------------------------------------------------------------
+  //
+  // Analog block
+  //
+  // --------------------------------------------------------------------------
+
+  analog begin
+
+`ifdef DEBUG
+    @(initial_step) begin
+      $write("\n\nPRESTOPLUS PARAMETERS (%M)");
+      $write("\nactive(%M)              = %d", active);
+      $write("\na(%M)                   = %g", a);
+      $write("\ntage(%M)                = %g", tage);
+    end
+`endif // DEBUG
+
+    if (active && (a > 0.0) && (tage > 0.0)) begin
+
+      // ----------------------------------------------------------------------
+      //
+      // Initialization
+      //
+      // ----------------------------------------------------------------------
+
+      @(initial_step) begin
+
+        contrib_inv_tlife = 0.0;
+        eq_pbti_dp        = 0.0;
+        clipped           = 0;
+        temp              = $temperature + dta;
+
+        if (analysis("dc", "tran")) begin
+
+          // opening files for later write
+          update_file = $fopen(`XML_FILE_NAME, `FOPEN_MODE);
+
+        end // if (analysis("dc", "tran"))
+
+        // calculate model contributions which do not vary during simulation
+        exp_temp = exp(-ea * `P_Q / (`P_K * temp));
+
+        if ((l > 0.0) && (lref > 0.0)) begin
+          pow_l = pow((l / lref), lpow);
+        end else begin
+          pow_l = 1.0;
+        end
+
+        if ((w > 0.0) && (wref > 0.0)) begin
+          pow_w = pow((w / wref), wpow);
+        end else begin
+          pow_w = 1.0;
+        end
+
+        if ((lexp > 0.0) && (l > 0.0)) begin
+          exp_l = exp(-lexp / l);
+        end else begin
+          exp_l = 1.0;
+        end
+
+        if (fstat > 0.0) begin
+          prefactor = a * pow_l * pow_w * exp_l / fstat;
+        end else begin
+          prefactor = 0.0;
+        end
+
+`ifdef DEBUG
+        $write("\ndvtcrit(%M)             = %g", dvtcrit);
+        $write("\n\nTEMPERATURE DEPENDENT PARAMETERS (%M)");
+        $write("\ntemp(%M)                = %g", temp);
+        $write("\nexp_temp(%M)            = %g", exp_temp);
+        $write("\n\nBIAS AND TEMP INDEPENDENT PARAMETERS (%M)");
+        $write("\npow_l(%M)               = %g", pow_l);
+        $write("\npow_w(%M)               = %g", pow_w);
+        $write("\nexp_l(%M)               = %g", exp_l);
+        $write("\nfstat(%M)               = %g", fstat);
+        $write("\nprefactor(%M)           = %g", prefactor);
+`endif // DEBUG
+
+      end // initial_step
+
+      // ----------------------------------------------------------------------
+      //
+      // PBTI model calculations (dc and tran)
+      //
+      // ----------------------------------------------------------------------
+
+      if (analysis("dc", "tran")) begin
+
+        vx = f_pbti_vx(type, V(g, b), V(g, s), V(g, d), k);
+
+`ifdef SELFHEATING
+        temp_sh  = temp + Temp(dt);
+        invkt    = 1.0/$vt(temp_sh);
+        exp_temp = exp(-ea * invkt);
+`endif // SELFHEATING
+
+        vbx = max(type*V(s, b), type*V(d, b));
+        if (vbx > 0.0) begin
+          exp_vbx = exp(vbxexp * vbx);
+        end else begin
+          exp_vbx = 1.0;
+        end
+
+        if (vx > 0.0) begin
+          pow_vx = (m == 0.0) ? 1.0 : pow(abs(vx), m);
+          exp_vx = exp(abs(vx)*vgexp);
+          inv_tau = prefactor * exp_temp * pow_vx * exp_vx * exp_vbx;
+        end else begin
+          inv_tau = 0.0;
+        end
+
+        contrib_inv_tlife = (inv_tau > 0.0) ? inv_tau : 0.0;
+
+        if (analysis("tran")) begin
+          // activation flag to sync with user specified tstart and tstop
+          stressed = ($abstime > tstart) ? (($abstime > tstop) ? 0 : 1) : 0;
+          eq_pbti_dp = idt(stressed ? contrib_inv_tlife : 0.0, 0.0);
+        end else begin // analysis is "dc"
+          stressed = 1;
+          eq_pbti_dp = contrib_inv_tlife * ref_stress_time;
+        end // if (analysis("tran"))
+
+`ifdef DEBUG
+        $write("\n\nLIFETIME CALCULATION AND AGING (%M)");
+`ifdef SELFHEATING
+        $write("\ntemp_sh(%M)             = %g", temp_sh);
+        $write("\nexp_temp(%M)            = %g", exp_temp);
+`endif // SELFHEATING
+        $write("\npow_vx(%M)              = %g", pow_vx);
+        $write("\nexp_vx(%M)              = %g", exp_vx);
+        $write("\nexp_vbx(%M)             = %g", exp_vbx);
+        $write("\ninv_tau(%M)             = %g", inv_tau);
+        $write("\ncontrib_inv_tlife(%M)   = %g", contrib_inv_tlife);
+        $write("\neq_pbti_dp(%M)          = %g", eq_pbti_dp);
+        $write("\ntotal stress time(%M)   = %g", $abstime);
+`endif // DEBUG
+
+      end // if (analysis("dc", "tran"))
+
+      // ----------------------------------------------------------------------
+      //
+      // Output stress data
+      //
+      // ----------------------------------------------------------------------
+
+      @(final_step) begin
+
+        if (analysis("dc", "tran")) begin
+          if (analysis("tran")) begin
+            // Get the total simulation time for PBTI stress measurement.
+            eq_stress_time = ($param_given(tstop) && (tstop < $abstime)
+                             ? tstop : $abstime) - tstart;
+          end else begin
+            eq_stress_time = ref_stress_time;
+          end
+
+          // Permanent damage calculation with simple linear extrapolation.
+          damage_delta = ( eq_stress_time > 0.0 )
+                           ? abs(eq_pbti_dp) * tage/eq_stress_time
+                           : 0.0;
+          dp_pbti      = ( (damage_delta + damage) > 0.0 )
+                           ? pow(damage_delta + damage, n)
+                           : 0.0;
+
+          // Computation of parameter changes.
+          deltavth = dp_pbti;
+
+          if ((dvthmax > 0.0) && (deltavth > dvthmax)) begin
+            deltavth = dvthmax;
+            clipped  = 1;
+          end
+
+          if ((abs(deltavth) > dvtcrit) && (swagecheck > 0)) begin
+            `SOACHECK_WARNING_DELTAVT(tage/year_in_secs, temp-`P_CELSIUS0, deltavth, clipped)
+          end
+
+          `UPDATE_XML_ELEMENT(update_file, "pbtivthdegr", 0.0, deltavth, clipped)
+          `UPDATE_OP_XML_ELEMENT(update_file, "pbtideltavth", 0.0, deltavth, clipped)
+          `UPDATE_DAMAGE_XML_ELEMENT(update_file, "pbtidamage", damage, damage_delta)
+
+`ifdef DO_CLOSE_FILES
+          $fclose(update_file);
+`endif
+
+`ifdef DEBUG
+          $write("\ndamage_delta(%M)        = %g", damage_delta);
+          $write("\ndamage(%M)              = %g", damage);
+          $write("\ndp_pbti(%M)             = %g", dp_pbti);
+          $write("\n\nPARAMETER CHANGES (%M)");
+          $write("\ndeltavth(%M)            = %g", deltavth);
+`endif // DEBUG
+
+        end // if (analysis("dc", "tran"))
+
+      end // final_step
+
+    end // if (active & ...)
+
+    // ------------------------------------------------------------------------
+
+  end // analog
+
+endmodule // mpbtix or mpbtishx
+
+`undef UPDATE_XML_ELEMENT
+`undef UPDATE_DAMAGE_XML_ELEMENT
+`undef UPDATE_OP_XML_ELEMENT
+`undef SOACHECK_WARNING_DELTAVT
+
+`undef XML_FILE_NAME
+`undef EFFECT_NAME
+
+`ifdef DO_CLOSE_FILES
+`undef DO_CLOSE_FILES
+`endif // DO_CLOSE_FILES
+
+`undef FOPEN_MODE
+`ifdef OPEN_FOR_APPEND
+`undef OPEN_FOR_APPEND
+`endif // OPEN_FOR_APPEND
+
+`undef localparam
+`ifdef NO_LOCALPARAM
+`undef NO_LOCALPARAM
+`endif //NO_LOCALPARAM
+
+`ifdef SELFHEATING
+`undef SELFHEATING
+`endif // SELFHEATING
+
+`undef NMOS
+`undef PMOS

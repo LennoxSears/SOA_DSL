@@ -1,0 +1,2606 @@
+/* ======================================================================== *
+
+                          F I L E   I N F O R M A T I O N
+
+ * ==================================================================== *//**
+
+   @file        hcihvsim5_nxp.va
+                Verilog-A model file
+
+   This file contains the HCI reliability model for HV devices from NXP.
+
+   @author      Bart De Vries, Ronald van Langevelde
+
+   @version     5.1.2
+
+ * ==================================================================== *//**
+
+   @history
+
+   BDV = Bart De Vries (NXP T&O/TI/FEI/MCSL-Eindhoven)
+   RVL = Ronald van Langevelde (NXP T&O/TI/FEI/MCSL-Nijmegen)
+
+   @date 2021-11-23 (BDV):
+   - Set version number set to 5.0.0.
+   - Get rid of old models (20V and 60V), focusing only on the new equations.
+   - Implements HCI HV, offstate HCI and high-VDS-VGS models
+
+   @date 2022-06-22 (BDV):
+   - Set version number to 5.0.1
+   - Bugfix for incomplete division-by-zero protection in hvsdvt calculation
+
+   @date 2022-06-29 (BDV):
+   - Set version number to 5.0.2
+   - Bugfix for incomplete division-by-zero protection in offdrondegrfac
+     calculation.
+   - Fix of offstate calculation for offnmosmodelswitch == 1
+
+   @date 2022-07-25 (BDV):
+   - Set version number to 5.0.3
+   - Workaround for issue with implicit type conversion of $simprobe values with
+     spectre
+
+   @date 2022-11-18 (BDV)
+   - Set version to 5.1.0.
+   - Add new parameter "swagecheck" to switch off aging_lite messages (default 1).
+
+   @date 2022-11-29 (BDV)
+   - Set version to 5.1.1.
+   - Add safeguard for numerical noise causing issues with the lifetime becoming
+     negative.
+
+   @date 2022-12-01 (BDV)
+   - Set version to 5.1.2.
+   - Add safeguard to avoid idrain becoming zero or negative.
+
+ *//* ===================================================================== */
+
+`include "disciplines.vams"
+`include "constants.vams"
+
+// Uncomment the following line to have the model produce additional debug
+// information during the simulation run.
+//`define DEBUG 1
+
+// Uncomment the following line to correctly close the output files at the
+// end of the simulation run. Now they are left open and the simulator
+// process itself takes care of closing the files. The default is needed
+// for Spectre 5.x.
+//`define DO_CLOSE_FILES 1
+
+// Uncomment the following line to open the XML and INFO output files using
+// the append mode. This is only supported in Verilog-AMS 2.3 compliant
+// compilers.
+//`define OPEN_FOR_APPEND 1
+
+`ifdef OPEN_FOR_APPEND
+`define FOPEN_MODE "a"
+`else
+`define FOPEN_MODE "w"
+`endif // OPEN_FOR_APPEND
+
+// Uncomment the following line to have the localparam statements replaced by
+// parameter statements in case the localparam statement is not supported. This
+// is needed for Spectre versions 6.1.x and earlier.
+//`define NO_LOCALPARAM 1
+`ifdef NO_LOCALPARAM
+`define localparam parameter
+`else
+`define localparam localparam
+`endif
+
+// Names for the output files to be created by the model instances.
+`define EFFECT_NAME_HCI     "hci"
+`define XML_FILE_NAME_HCI   "hci.xml"
+`define EFFECT_NAME_OFF     "offstate"
+`define XML_FILE_NAME_OFF   "offstate.xml"
+`define EFFECT_NAME_HVGS    "hvgs"
+`define XML_FILE_NAME_HVGS  "hvgs.xml"
+
+`define UPDATE_XML_ELEMENT(FILE,EFFECT,PARAM,VALUE,DELTA,CLIPPED) \
+if (DELTA) begin \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <parameter name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"", EFFECT, PARAM, VALUE, DELTA); \
+if (CLIPPED) begin \
+$fwrite(FILE, " clipped=\"yes\""); \
+end \
+$fwrite(FILE, "/>\n </instance>\n"); \
+end
+
+`define UPDATE_DAMAGE_XML_ELEMENT(FILE,EFFECT,PARAM,VALUE,DELTA) \
+if (DELTA) \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <damage name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"/>\n </instance>\n", EFFECT, PARAM, VALUE, DELTA);
+
+`define UPDATE_OP_XML_ELEMENT(FILE,EFFECT,PARAM,VALUE,DELTA,CLIPPED) \
+if (DELTA) begin \
+$fwrite(FILE, " <instance name=\"%M\" model=\"%s\">\n  <oppoint name=\"%s\" value=\"%1.8g\" delta=\"%1.8g\"", EFFECT, PARAM, VALUE, DELTA); \
+if (CLIPPED) begin \
+$fwrite(FILE, " clipped=\"yes\""); \
+end \
+$fwrite(FILE, "/>\n </instance>\n"); \
+end
+
+`define SOACHECK_WARNING_RONDEGRFAC(EFFECT, AGE, TEMP, RONDEGRFAC, CLIPPED) \
+$write("\n[AGECHECK_INFO] instance: %M, rule: aging_%s, age: %gY, temperature: %gC, deltaRON: %gPct", EFFECT, (AGE), (TEMP), ((RONDEGRFAC)*100)); \
+if (CLIPPED) begin \
+$write(", message: \"WARNING: RON shift has been clipped to its maximum value of %gPct\"\n", ((RONDEGRFAC)*100)); \
+end else begin \
+$write("\n"); \
+end
+
+`define SOACHECK_WARNING_DELTAVT(EFFECT, AGE, TEMP, DELTAVT, CLIPPED) \
+$write("\n[AGECHECK_INFO] instance: %M, rule: aging_%s, age: %gY, temperature: %gC, deltaVT: %gV", EFFECT, (AGE), (TEMP), (DELTAVT)); \
+if (CLIPPED) begin \
+$write(", message: \"WARNING: VT shift has been clipped to its maximum value of %gV\"\n", (DELTAVT)); \
+end else begin \
+$write("\n"); \
+end
+
+`ifdef M_INF
+`else
+`ifdef __TIBURONDA__
+`define M_INF   1.797693134862e+308     // 64-bit IEEE 752 (double)
+`else
+`define M_INF   3.40282e+38             // 32-bit IEEE 752 (double)
+`endif // __TIBURONDA__
+`endif // M_INF
+
+`define NMOS 1
+`define PMOS -1
+`define TYPE(ndef,pdef) ((type==`NMOS) ? ndef : pdef)
+
+// model constants for hyp smoothing functions
+`define EPS1 1e-3
+`define EPS2 1e-15
+`define EPS3 1e-25
+
+// macro to calculate electric field Em1
+`define EM1(T, VGS, VDS, VSubS) \
+    b0_b0_b0_em1 = linear(b0_b0_b0_b0_em1, a0_b0_b0_b0_em1, (T)); \
+    a0_b0_b0_em1 = linear(b0_a0_b0_b0_em1, a0_a0_b0_b0_em1, (T)); \
+    b0_a0_b0_em1 = linear(b0_b0_a0_b0_em1, a0_b0_a0_b0_em1, (T)); \
+    a0_a0_b0_em1 = linear(b0_a0_a0_b0_em1, a0_a0_a0_b0_em1, (T)); \
+    b0_a1_b0_em1 = linear(b0_b0_a1_b0_em1, a0_b0_a1_b0_em1, (T)); \
+    a0_a1_b0_em1 = linear(b0_a0_a1_b0_em1, a0_a0_a1_b0_em1, (T)); \
+    b0_a2_b0_em1 = linear(b0_b0_a2_b0_em1, a0_b0_a2_b0_em1, (T)); \
+    a0_a2_b0_em1 = linear(b0_a0_a2_b0_em1, a0_a0_a2_b0_em1, (T)); \
+    b0_a3_b0_em1 = linear(b0_b0_a3_b0_em1, a0_b0_a3_b0_em1, (T)); \
+    a0_a3_b0_em1 = linear(b0_a0_a3_b0_em1, a0_a0_a3_b0_em1, (T)); \
+    b0_a4_b0_em1 = linear(b0_b0_a4_b0_em1, a0_b0_a4_b0_em1, (T)); \
+    a0_a4_b0_em1 = linear(b0_a0_a4_b0_em1, a0_a0_a4_b0_em1, (T)); \
+    b0_p1_b0_em1 = linear(b0_b0_p1_b0_em1, a0_b0_p1_b0_em1, (T)); \
+    a0_p1_b0_em1 = linear(b0_a0_p1_b0_em1, a0_a0_p1_b0_em1, (T)); \
+    b0_p2_b0_em1 = linear(b0_b0_p2_b0_em1, a0_b0_p2_b0_em1, (T)); \
+    a0_p2_b0_em1 = linear(b0_a0_p2_b0_em1, a0_a0_p2_b0_em1, (T)); \
+    b0_p3_b0_em1 = linear(b0_b0_p3_b0_em1, a0_b0_p3_b0_em1, (T)); \
+    a0_p3_b0_em1 = linear(b0_a0_p3_b0_em1, a0_a0_p3_b0_em1, (T)); \
+    b0_p4_b0_em1 = linear(b0_b0_p4_b0_em1, a0_b0_p4_b0_em1, (T)); \
+    a0_p4_b0_em1 = linear(b0_a0_p4_b0_em1, a0_a0_p4_b0_em1, (T)); \
+    b0_b0_a0_em1 = linear(b0_b0_b0_a0_em1, a0_b0_b0_a0_em1, (T)); \
+    a0_b0_a0_em1 = linear(b0_a0_b0_a0_em1, a0_a0_b0_a0_em1, (T)); \
+    b0_a0_a0_em1 = linear(b0_b0_a0_a0_em1, a0_b0_a0_a0_em1, (T)); \
+    a0_a0_a0_em1 = linear(b0_a0_a0_a0_em1, a0_a0_a0_a0_em1, (T)); \
+    b0_a1_a0_em1 = linear(b0_b0_a1_a0_em1, a0_b0_a1_a0_em1, (T)); \
+    a0_a1_a0_em1 = linear(b0_a0_a1_a0_em1, a0_a0_a1_a0_em1, (T)); \
+    b0_a2_a0_em1 = linear(b0_b0_a2_a0_em1, a0_b0_a2_a0_em1, (T)); \
+    a0_a2_a0_em1 = linear(b0_a0_a2_a0_em1, a0_a0_a2_a0_em1, (T)); \
+    b0_a3_a0_em1 = linear(b0_b0_a3_a0_em1, a0_b0_a3_a0_em1, (T)); \
+    a0_a3_a0_em1 = linear(b0_a0_a3_a0_em1, a0_a0_a3_a0_em1, (T)); \
+    b0_a4_a0_em1 = linear(b0_b0_a4_a0_em1, a0_b0_a4_a0_em1, (T)); \
+    a0_a4_a0_em1 = linear(b0_a0_a4_a0_em1, a0_a0_a4_a0_em1, (T)); \
+    b0_p1_a0_em1 = linear(b0_b0_p1_a0_em1, a0_b0_p1_a0_em1, (T)); \
+    a0_p1_a0_em1 = linear(b0_a0_p1_a0_em1, a0_a0_p1_a0_em1, (T)); \
+    b0_p2_a0_em1 = linear(b0_b0_p2_a0_em1, a0_b0_p2_a0_em1, (T)); \
+    a0_p2_a0_em1 = linear(b0_a0_p2_a0_em1, a0_a0_p2_a0_em1, (T)); \
+    b0_p3_a0_em1 = linear(b0_b0_p3_a0_em1, a0_b0_p3_a0_em1, (T)); \
+    a0_p3_a0_em1 = linear(b0_a0_p3_a0_em1, a0_a0_p3_a0_em1, (T)); \
+    b0_p4_a0_em1 = linear(b0_b0_p4_a0_em1, a0_b0_p4_a0_em1, (T)); \
+    a0_p4_a0_em1 = linear(b0_a0_p4_a0_em1, a0_a0_p4_a0_em1, (T)); \
+    b0_b0_a1_em1 = linear(b0_b0_b0_a1_em1, a0_b0_b0_a1_em1, (T)); \
+    a0_b0_a1_em1 = linear(b0_a0_b0_a1_em1, a0_a0_b0_a1_em1, (T)); \
+    b0_a0_a1_em1 = linear(b0_b0_a0_a1_em1, a0_b0_a0_a1_em1, (T)); \
+    a0_a0_a1_em1 = linear(b0_a0_a0_a1_em1, a0_a0_a0_a1_em1, (T)); \
+    b0_a1_a1_em1 = linear(b0_b0_a1_a1_em1, a0_b0_a1_a1_em1, (T)); \
+    a0_a1_a1_em1 = linear(b0_a0_a1_a1_em1, a0_a0_a1_a1_em1, (T)); \
+    b0_a2_a1_em1 = linear(b0_b0_a2_a1_em1, a0_b0_a2_a1_em1, (T)); \
+    a0_a2_a1_em1 = linear(b0_a0_a2_a1_em1, a0_a0_a2_a1_em1, (T)); \
+    b0_a3_a1_em1 = linear(b0_b0_a3_a1_em1, a0_b0_a3_a1_em1, (T)); \
+    a0_a3_a1_em1 = linear(b0_a0_a3_a1_em1, a0_a0_a3_a1_em1, (T)); \
+    b0_a4_a1_em1 = linear(b0_b0_a4_a1_em1, a0_b0_a4_a1_em1, (T)); \
+    a0_a4_a1_em1 = linear(b0_a0_a4_a1_em1, a0_a0_a4_a1_em1, (T)); \
+    b0_p1_a1_em1 = linear(b0_b0_p1_a1_em1, a0_b0_p1_a1_em1, (T)); \
+    a0_p1_a1_em1 = linear(b0_a0_p1_a1_em1, a0_a0_p1_a1_em1, (T)); \
+    b0_p2_a1_em1 = linear(b0_b0_p2_a1_em1, a0_b0_p2_a1_em1, (T)); \
+    a0_p2_a1_em1 = linear(b0_a0_p2_a1_em1, a0_a0_p2_a1_em1, (T)); \
+    b0_p3_a1_em1 = linear(b0_b0_p3_a1_em1, a0_b0_p3_a1_em1, (T)); \
+    a0_p3_a1_em1 = linear(b0_a0_p3_a1_em1, a0_a0_p3_a1_em1, (T)); \
+    b0_p4_a1_em1 = linear(b0_b0_p4_a1_em1, a0_b0_p4_a1_em1, (T)); \
+    a0_p4_a1_em1 = linear(b0_a0_p4_a1_em1, a0_a0_p4_a1_em1, (T)); \
+    b0_b0_a2_em1 = linear(b0_b0_b0_a2_em1, a0_b0_b0_a2_em1, (T)); \
+    a0_b0_a2_em1 = linear(b0_a0_b0_a2_em1, a0_a0_b0_a2_em1, (T)); \
+    b0_a0_a2_em1 = linear(b0_b0_a0_a2_em1, a0_b0_a0_a2_em1, (T)); \
+    a0_a0_a2_em1 = linear(b0_a0_a0_a2_em1, a0_a0_a0_a2_em1, (T)); \
+    b0_a1_a2_em1 = linear(b0_b0_a1_a2_em1, a0_b0_a1_a2_em1, (T)); \
+    a0_a1_a2_em1 = linear(b0_a0_a1_a2_em1, a0_a0_a1_a2_em1, (T)); \
+    b0_a2_a2_em1 = linear(b0_b0_a2_a2_em1, a0_b0_a2_a2_em1, (T)); \
+    a0_a2_a2_em1 = linear(b0_a0_a2_a2_em1, a0_a0_a2_a2_em1, (T)); \
+    b0_a3_a2_em1 = linear(b0_b0_a3_a2_em1, a0_b0_a3_a2_em1, (T)); \
+    a0_a3_a2_em1 = linear(b0_a0_a3_a2_em1, a0_a0_a3_a2_em1, (T)); \
+    b0_a4_a2_em1 = linear(b0_b0_a4_a2_em1, a0_b0_a4_a2_em1, (T)); \
+    a0_a4_a2_em1 = linear(b0_a0_a4_a2_em1, a0_a0_a4_a2_em1, (T)); \
+    b0_p1_a2_em1 = linear(b0_b0_p1_a2_em1, a0_b0_p1_a2_em1, (T)); \
+    a0_p1_a2_em1 = linear(b0_a0_p1_a2_em1, a0_a0_p1_a2_em1, (T)); \
+    b0_p2_a2_em1 = linear(b0_b0_p2_a2_em1, a0_b0_p2_a2_em1, (T)); \
+    a0_p2_a2_em1 = linear(b0_a0_p2_a2_em1, a0_a0_p2_a2_em1, (T)); \
+    b0_p3_a2_em1 = linear(b0_b0_p3_a2_em1, a0_b0_p3_a2_em1, (T)); \
+    a0_p3_a2_em1 = linear(b0_a0_p3_a2_em1, a0_a0_p3_a2_em1, (T)); \
+    b0_p4_a2_em1 = linear(b0_b0_p4_a2_em1, a0_b0_p4_a2_em1, (T)); \
+    a0_p4_a2_em1 = linear(b0_a0_p4_a2_em1, a0_a0_p4_a2_em1, (T)); \
+    b0_b0_a3_em1 = linear(b0_b0_b0_a3_em1, a0_b0_b0_a3_em1, (T)); \
+    a0_b0_a3_em1 = linear(b0_a0_b0_a3_em1, a0_a0_b0_a3_em1, (T)); \
+    b0_a0_a3_em1 = linear(b0_b0_a0_a3_em1, a0_b0_a0_a3_em1, (T)); \
+    a0_a0_a3_em1 = linear(b0_a0_a0_a3_em1, a0_a0_a0_a3_em1, (T)); \
+    b0_a1_a3_em1 = linear(b0_b0_a1_a3_em1, a0_b0_a1_a3_em1, (T)); \
+    a0_a1_a3_em1 = linear(b0_a0_a1_a3_em1, a0_a0_a1_a3_em1, (T)); \
+    b0_a2_a3_em1 = linear(b0_b0_a2_a3_em1, a0_b0_a2_a3_em1, (T)); \
+    a0_a2_a3_em1 = linear(b0_a0_a2_a3_em1, a0_a0_a2_a3_em1, (T)); \
+    b0_a3_a3_em1 = linear(b0_b0_a3_a3_em1, a0_b0_a3_a3_em1, (T)); \
+    a0_a3_a3_em1 = linear(b0_a0_a3_a3_em1, a0_a0_a3_a3_em1, (T)); \
+    b0_a4_a3_em1 = linear(b0_b0_a4_a3_em1, a0_b0_a4_a3_em1, (T)); \
+    a0_a4_a3_em1 = linear(b0_a0_a4_a3_em1, a0_a0_a4_a3_em1, (T)); \
+    b0_p1_a3_em1 = linear(b0_b0_p1_a3_em1, a0_b0_p1_a3_em1, (T)); \
+    a0_p1_a3_em1 = linear(b0_a0_p1_a3_em1, a0_a0_p1_a3_em1, (T)); \
+    b0_p2_a3_em1 = linear(b0_b0_p2_a3_em1, a0_b0_p2_a3_em1, (T)); \
+    a0_p2_a3_em1 = linear(b0_a0_p2_a3_em1, a0_a0_p2_a3_em1, (T)); \
+    b0_p3_a3_em1 = linear(b0_b0_p3_a3_em1, a0_b0_p3_a3_em1, (T)); \
+    a0_p3_a3_em1 = linear(b0_a0_p3_a3_em1, a0_a0_p3_a3_em1, (T)); \
+    b0_p4_a3_em1 = linear(b0_b0_p4_a3_em1, a0_b0_p4_a3_em1, (T)); \
+    a0_p4_a3_em1 = linear(b0_a0_p4_a3_em1, a0_a0_p4_a3_em1, (T)); \
+    b0_b0_a4_em1 = linear(b0_b0_b0_a4_em1, a0_b0_b0_a4_em1, (T)); \
+    a0_b0_a4_em1 = linear(b0_a0_b0_a4_em1, a0_a0_b0_a4_em1, (T)); \
+    b0_a0_a4_em1 = linear(b0_b0_a0_a4_em1, a0_b0_a0_a4_em1, (T)); \
+    a0_a0_a4_em1 = linear(b0_a0_a0_a4_em1, a0_a0_a0_a4_em1, (T)); \
+    b0_a1_a4_em1 = linear(b0_b0_a1_a4_em1, a0_b0_a1_a4_em1, (T)); \
+    a0_a1_a4_em1 = linear(b0_a0_a1_a4_em1, a0_a0_a1_a4_em1, (T)); \
+    b0_a2_a4_em1 = linear(b0_b0_a2_a4_em1, a0_b0_a2_a4_em1, (T)); \
+    a0_a2_a4_em1 = linear(b0_a0_a2_a4_em1, a0_a0_a2_a4_em1, (T)); \
+    b0_a3_a4_em1 = linear(b0_b0_a3_a4_em1, a0_b0_a3_a4_em1, (T)); \
+    a0_a3_a4_em1 = linear(b0_a0_a3_a4_em1, a0_a0_a3_a4_em1, (T)); \
+    b0_a4_a4_em1 = linear(b0_b0_a4_a4_em1, a0_b0_a4_a4_em1, (T)); \
+    a0_a4_a4_em1 = linear(b0_a0_a4_a4_em1, a0_a0_a4_a4_em1, (T)); \
+    b0_p1_a4_em1 = linear(b0_b0_p1_a4_em1, a0_b0_p1_a4_em1, (T)); \
+    a0_p1_a4_em1 = linear(b0_a0_p1_a4_em1, a0_a0_p1_a4_em1, (T)); \
+    b0_p2_a4_em1 = linear(b0_b0_p2_a4_em1, a0_b0_p2_a4_em1, (T)); \
+    a0_p2_a4_em1 = linear(b0_a0_p2_a4_em1, a0_a0_p2_a4_em1, (T)); \
+    b0_p3_a4_em1 = linear(b0_b0_p3_a4_em1, a0_b0_p3_a4_em1, (T)); \
+    a0_p3_a4_em1 = linear(b0_a0_p3_a4_em1, a0_a0_p3_a4_em1, (T)); \
+    b0_p4_a4_em1 = linear(b0_b0_p4_a4_em1, a0_b0_p4_a4_em1, (T)); \
+    a0_p4_a4_em1 = linear(b0_a0_p4_a4_em1, a0_a0_p4_a4_em1, (T)); \
+    b0_b0_p1_em1 = linear(b0_b0_b0_p1_em1, a0_b0_b0_p1_em1, (T)); \
+    a0_b0_p1_em1 = linear(b0_a0_b0_p1_em1, a0_a0_b0_p1_em1, (T)); \
+    b0_a0_p1_em1 = linear(b0_b0_a0_p1_em1, a0_b0_a0_p1_em1, (T)); \
+    a0_a0_p1_em1 = linear(b0_a0_a0_p1_em1, a0_a0_a0_p1_em1, (T)); \
+    b0_a1_p1_em1 = linear(b0_b0_a1_p1_em1, a0_b0_a1_p1_em1, (T)); \
+    a0_a1_p1_em1 = linear(b0_a0_a1_p1_em1, a0_a0_a1_p1_em1, (T)); \
+    b0_a2_p1_em1 = linear(b0_b0_a2_p1_em1, a0_b0_a2_p1_em1, (T)); \
+    a0_a2_p1_em1 = linear(b0_a0_a2_p1_em1, a0_a0_a2_p1_em1, (T)); \
+    b0_a3_p1_em1 = linear(b0_b0_a3_p1_em1, a0_b0_a3_p1_em1, (T)); \
+    a0_a3_p1_em1 = linear(b0_a0_a3_p1_em1, a0_a0_a3_p1_em1, (T)); \
+    b0_a4_p1_em1 = linear(b0_b0_a4_p1_em1, a0_b0_a4_p1_em1, (T)); \
+    a0_a4_p1_em1 = linear(b0_a0_a4_p1_em1, a0_a0_a4_p1_em1, (T)); \
+    b0_p1_p1_em1 = linear(b0_b0_p1_p1_em1, a0_b0_p1_p1_em1, (T)); \
+    a0_p1_p1_em1 = linear(b0_a0_p1_p1_em1, a0_a0_p1_p1_em1, (T)); \
+    b0_p2_p1_em1 = linear(b0_b0_p2_p1_em1, a0_b0_p2_p1_em1, (T)); \
+    a0_p2_p1_em1 = linear(b0_a0_p2_p1_em1, a0_a0_p2_p1_em1, (T)); \
+    b0_p3_p1_em1 = linear(b0_b0_p3_p1_em1, a0_b0_p3_p1_em1, (T)); \
+    a0_p3_p1_em1 = linear(b0_a0_p3_p1_em1, a0_a0_p3_p1_em1, (T)); \
+    b0_p4_p1_em1 = linear(b0_b0_p4_p1_em1, a0_b0_p4_p1_em1, (T)); \
+    a0_p4_p1_em1 = linear(b0_a0_p4_p1_em1, a0_a0_p4_p1_em1, (T)); \
+    b0_b0_p2_em1 = linear(b0_b0_b0_p2_em1, a0_b0_b0_p2_em1, (T)); \
+    a0_b0_p2_em1 = linear(b0_a0_b0_p2_em1, a0_a0_b0_p2_em1, (T)); \
+    b0_a0_p2_em1 = linear(b0_b0_a0_p2_em1, a0_b0_a0_p2_em1, (T)); \
+    a0_a0_p2_em1 = linear(b0_a0_a0_p2_em1, a0_a0_a0_p2_em1, (T)); \
+    b0_a1_p2_em1 = linear(b0_b0_a1_p2_em1, a0_b0_a1_p2_em1, (T)); \
+    a0_a1_p2_em1 = linear(b0_a0_a1_p2_em1, a0_a0_a1_p2_em1, (T)); \
+    b0_a2_p2_em1 = linear(b0_b0_a2_p2_em1, a0_b0_a2_p2_em1, (T)); \
+    a0_a2_p2_em1 = linear(b0_a0_a2_p2_em1, a0_a0_a2_p2_em1, (T)); \
+    b0_a3_p2_em1 = linear(b0_b0_a3_p2_em1, a0_b0_a3_p2_em1, (T)); \
+    a0_a3_p2_em1 = linear(b0_a0_a3_p2_em1, a0_a0_a3_p2_em1, (T)); \
+    b0_a4_p2_em1 = linear(b0_b0_a4_p2_em1, a0_b0_a4_p2_em1, (T)); \
+    a0_a4_p2_em1 = linear(b0_a0_a4_p2_em1, a0_a0_a4_p2_em1, (T)); \
+    b0_p1_p2_em1 = linear(b0_b0_p1_p2_em1, a0_b0_p1_p2_em1, (T)); \
+    a0_p1_p2_em1 = linear(b0_a0_p1_p2_em1, a0_a0_p1_p2_em1, (T)); \
+    b0_p2_p2_em1 = linear(b0_b0_p2_p2_em1, a0_b0_p2_p2_em1, (T)); \
+    a0_p2_p2_em1 = linear(b0_a0_p2_p2_em1, a0_a0_p2_p2_em1, (T)); \
+    b0_p3_p2_em1 = linear(b0_b0_p3_p2_em1, a0_b0_p3_p2_em1, (T)); \
+    a0_p3_p2_em1 = linear(b0_a0_p3_p2_em1, a0_a0_p3_p2_em1, (T)); \
+    b0_p4_p2_em1 = linear(b0_b0_p4_p2_em1, a0_b0_p4_p2_em1, (T)); \
+    a0_p4_p2_em1 = linear(b0_a0_p4_p2_em1, a0_a0_p4_p2_em1, (T)); \
+    b0_b0_p3_em1 = linear(b0_b0_b0_p3_em1, a0_b0_b0_p3_em1, (T)); \
+    a0_b0_p3_em1 = linear(b0_a0_b0_p3_em1, a0_a0_b0_p3_em1, (T)); \
+    b0_a0_p3_em1 = linear(b0_b0_a0_p3_em1, a0_b0_a0_p3_em1, (T)); \
+    a0_a0_p3_em1 = linear(b0_a0_a0_p3_em1, a0_a0_a0_p3_em1, (T)); \
+    b0_a1_p3_em1 = linear(b0_b0_a1_p3_em1, a0_b0_a1_p3_em1, (T)); \
+    a0_a1_p3_em1 = linear(b0_a0_a1_p3_em1, a0_a0_a1_p3_em1, (T)); \
+    b0_a2_p3_em1 = linear(b0_b0_a2_p3_em1, a0_b0_a2_p3_em1, (T)); \
+    a0_a2_p3_em1 = linear(b0_a0_a2_p3_em1, a0_a0_a2_p3_em1, (T)); \
+    b0_a3_p3_em1 = linear(b0_b0_a3_p3_em1, a0_b0_a3_p3_em1, (T)); \
+    a0_a3_p3_em1 = linear(b0_a0_a3_p3_em1, a0_a0_a3_p3_em1, (T)); \
+    b0_a4_p3_em1 = linear(b0_b0_a4_p3_em1, a0_b0_a4_p3_em1, (T)); \
+    a0_a4_p3_em1 = linear(b0_a0_a4_p3_em1, a0_a0_a4_p3_em1, (T)); \
+    b0_p1_p3_em1 = linear(b0_b0_p1_p3_em1, a0_b0_p1_p3_em1, (T)); \
+    a0_p1_p3_em1 = linear(b0_a0_p1_p3_em1, a0_a0_p1_p3_em1, (T)); \
+    b0_p2_p3_em1 = linear(b0_b0_p2_p3_em1, a0_b0_p2_p3_em1, (T)); \
+    a0_p2_p3_em1 = linear(b0_a0_p2_p3_em1, a0_a0_p2_p3_em1, (T)); \
+    b0_p3_p3_em1 = linear(b0_b0_p3_p3_em1, a0_b0_p3_p3_em1, (T)); \
+    a0_p3_p3_em1 = linear(b0_a0_p3_p3_em1, a0_a0_p3_p3_em1, (T)); \
+    b0_p4_p3_em1 = linear(b0_b0_p4_p3_em1, a0_b0_p4_p3_em1, (T)); \
+    a0_p4_p3_em1 = linear(b0_a0_p4_p3_em1, a0_a0_p4_p3_em1, (T)); \
+    b0_b0_p4_em1 = linear(b0_b0_b0_p4_em1, a0_b0_b0_p4_em1, (T)); \
+    a0_b0_p4_em1 = linear(b0_a0_b0_p4_em1, a0_a0_b0_p4_em1, (T)); \
+    b0_a0_p4_em1 = linear(b0_b0_a0_p4_em1, a0_b0_a0_p4_em1, (T)); \
+    a0_a0_p4_em1 = linear(b0_a0_a0_p4_em1, a0_a0_a0_p4_em1, (T)); \
+    b0_a1_p4_em1 = linear(b0_b0_a1_p4_em1, a0_b0_a1_p4_em1, (T)); \
+    a0_a1_p4_em1 = linear(b0_a0_a1_p4_em1, a0_a0_a1_p4_em1, (T)); \
+    b0_a2_p4_em1 = linear(b0_b0_a2_p4_em1, a0_b0_a2_p4_em1, (T)); \
+    a0_a2_p4_em1 = linear(b0_a0_a2_p4_em1, a0_a0_a2_p4_em1, (T)); \
+    b0_a3_p4_em1 = linear(b0_b0_a3_p4_em1, a0_b0_a3_p4_em1, (T)); \
+    a0_a3_p4_em1 = linear(b0_a0_a3_p4_em1, a0_a0_a3_p4_em1, (T)); \
+    b0_a4_p4_em1 = linear(b0_b0_a4_p4_em1, a0_b0_a4_p4_em1, (T)); \
+    a0_a4_p4_em1 = linear(b0_a0_a4_p4_em1, a0_a0_a4_p4_em1, (T)); \
+    b0_p1_p4_em1 = linear(b0_b0_p1_p4_em1, a0_b0_p1_p4_em1, (T)); \
+    a0_p1_p4_em1 = linear(b0_a0_p1_p4_em1, a0_a0_p1_p4_em1, (T)); \
+    b0_p2_p4_em1 = linear(b0_b0_p2_p4_em1, a0_b0_p2_p4_em1, (T)); \
+    a0_p2_p4_em1 = linear(b0_a0_p2_p4_em1, a0_a0_p2_p4_em1, (T)); \
+    b0_p3_p4_em1 = linear(b0_b0_p3_p4_em1, a0_b0_p3_p4_em1, (T)); \
+    a0_p3_p4_em1 = linear(b0_a0_p3_p4_em1, a0_a0_p3_p4_em1, (T)); \
+    b0_p4_p4_em1 = linear(b0_b0_p4_p4_em1, a0_b0_p4_p4_em1, (T)); \
+    a0_p4_p4_em1 = linear(b0_a0_p4_p4_em1, a0_a0_p4_p4_em1, (T)); \
+    b0_b0_em1    = linear(b0_b0_b0_em1,    a0_b0_b0_em1,    (VSubS)); \
+    a0_b0_em1    = linear(b0_a0_b0_em1,    a0_a0_b0_em1,    (VSubS)); \
+    a1_b0_em1    = linear(b0_a1_b0_em1,    a0_a1_b0_em1,    (VSubS)); \
+    a2_b0_em1    = linear(b0_a2_b0_em1,    a0_a2_b0_em1,    (VSubS)); \
+    a3_b0_em1    = linear(b0_a3_b0_em1,    a0_a3_b0_em1,    (VSubS)); \
+    a4_b0_em1    = linear(b0_a4_b0_em1,    a0_a4_b0_em1,    (VSubS)); \
+    p1_b0_em1    = linear(b0_p1_b0_em1,    a0_p1_b0_em1,    (VSubS)); \
+    p2_b0_em1    = linear(b0_p2_b0_em1,    a0_p2_b0_em1,    (VSubS)); \
+    p3_b0_em1    = linear(b0_p3_b0_em1,    a0_p3_b0_em1,    (VSubS)); \
+    p4_b0_em1    = linear(b0_p4_b0_em1,    a0_p4_b0_em1,    (VSubS)); \
+    b0_a0_em1    = linear(b0_b0_a0_em1,    a0_b0_a0_em1,    (VSubS)); \
+    a0_a0_em1    = linear(b0_a0_a0_em1,    a0_a0_a0_em1,    (VSubS)); \
+    a1_a0_em1    = linear(b0_a1_a0_em1,    a0_a1_a0_em1,    (VSubS)); \
+    a2_a0_em1    = linear(b0_a2_a0_em1,    a0_a2_a0_em1,    (VSubS)); \
+    a3_a0_em1    = linear(b0_a3_a0_em1,    a0_a3_a0_em1,    (VSubS)); \
+    a4_a0_em1    = linear(b0_a4_a0_em1,    a0_a4_a0_em1,    (VSubS)); \
+    p1_a0_em1    = linear(b0_p1_a0_em1,    a0_p1_a0_em1,    (VSubS)); \
+    p2_a0_em1    = linear(b0_p2_a0_em1,    a0_p2_a0_em1,    (VSubS)); \
+    p3_a0_em1    = linear(b0_p3_a0_em1,    a0_p3_a0_em1,    (VSubS)); \
+    p4_a0_em1    = linear(b0_p4_a0_em1,    a0_p4_a0_em1,    (VSubS)); \
+    b0_a1_em1    = linear(b0_b0_a1_em1,    a0_b0_a1_em1,    (VSubS)); \
+    a0_a1_em1    = linear(b0_a0_a1_em1,    a0_a0_a1_em1,    (VSubS)); \
+    a1_a1_em1    = linear(b0_a1_a1_em1,    a0_a1_a1_em1,    (VSubS)); \
+    a2_a1_em1    = linear(b0_a2_a1_em1,    a0_a2_a1_em1,    (VSubS)); \
+    a3_a1_em1    = linear(b0_a3_a1_em1,    a0_a3_a1_em1,    (VSubS)); \
+    a4_a1_em1    = linear(b0_a4_a1_em1,    a0_a4_a1_em1,    (VSubS)); \
+    p1_a1_em1    = linear(b0_p1_a1_em1,    a0_p1_a1_em1,    (VSubS)); \
+    p2_a1_em1    = linear(b0_p2_a1_em1,    a0_p2_a1_em1,    (VSubS)); \
+    p3_a1_em1    = linear(b0_p3_a1_em1,    a0_p3_a1_em1,    (VSubS)); \
+    p4_a1_em1    = linear(b0_p4_a1_em1,    a0_p4_a1_em1,    (VSubS)); \
+    b0_a2_em1    = linear(b0_b0_a2_em1,    a0_b0_a2_em1,    (VSubS)); \
+    a0_a2_em1    = linear(b0_a0_a2_em1,    a0_a0_a2_em1,    (VSubS)); \
+    a1_a2_em1    = linear(b0_a1_a2_em1,    a0_a1_a2_em1,    (VSubS)); \
+    a2_a2_em1    = linear(b0_a2_a2_em1,    a0_a2_a2_em1,    (VSubS)); \
+    a3_a2_em1    = linear(b0_a3_a2_em1,    a0_a3_a2_em1,    (VSubS)); \
+    a4_a2_em1    = linear(b0_a4_a2_em1,    a0_a4_a2_em1,    (VSubS)); \
+    p1_a2_em1    = linear(b0_p1_a2_em1,    a0_p1_a2_em1,    (VSubS)); \
+    p2_a2_em1    = linear(b0_p2_a2_em1,    a0_p2_a2_em1,    (VSubS)); \
+    p3_a2_em1    = linear(b0_p3_a2_em1,    a0_p3_a2_em1,    (VSubS)); \
+    p4_a2_em1    = linear(b0_p4_a2_em1,    a0_p4_a2_em1,    (VSubS)); \
+    b0_a3_em1    = linear(b0_b0_a3_em1,    a0_b0_a3_em1,    (VSubS)); \
+    a0_a3_em1    = linear(b0_a0_a3_em1,    a0_a0_a3_em1,    (VSubS)); \
+    a1_a3_em1    = linear(b0_a1_a3_em1,    a0_a1_a3_em1,    (VSubS)); \
+    a2_a3_em1    = linear(b0_a2_a3_em1,    a0_a2_a3_em1,    (VSubS)); \
+    a3_a3_em1    = linear(b0_a3_a3_em1,    a0_a3_a3_em1,    (VSubS)); \
+    a4_a3_em1    = linear(b0_a4_a3_em1,    a0_a4_a3_em1,    (VSubS)); \
+    p1_a3_em1    = linear(b0_p1_a3_em1,    a0_p1_a3_em1,    (VSubS)); \
+    p2_a3_em1    = linear(b0_p2_a3_em1,    a0_p2_a3_em1,    (VSubS)); \
+    p3_a3_em1    = linear(b0_p3_a3_em1,    a0_p3_a3_em1,    (VSubS)); \
+    p4_a3_em1    = linear(b0_p4_a3_em1,    a0_p4_a3_em1,    (VSubS)); \
+    b0_a4_em1    = linear(b0_b0_a4_em1,    a0_b0_a4_em1,    (VSubS)); \
+    a0_a4_em1    = linear(b0_a0_a4_em1,    a0_a0_a4_em1,    (VSubS)); \
+    a1_a4_em1    = linear(b0_a1_a4_em1,    a0_a1_a4_em1,    (VSubS)); \
+    a2_a4_em1    = linear(b0_a2_a4_em1,    a0_a2_a4_em1,    (VSubS)); \
+    a3_a4_em1    = linear(b0_a3_a4_em1,    a0_a3_a4_em1,    (VSubS)); \
+    a4_a4_em1    = linear(b0_a4_a4_em1,    a0_a4_a4_em1,    (VSubS)); \
+    p1_a4_em1    = linear(b0_p1_a4_em1,    a0_p1_a4_em1,    (VSubS)); \
+    p2_a4_em1    = linear(b0_p2_a4_em1,    a0_p2_a4_em1,    (VSubS)); \
+    p3_a4_em1    = linear(b0_p3_a4_em1,    a0_p3_a4_em1,    (VSubS)); \
+    p4_a4_em1    = linear(b0_p4_a4_em1,    a0_p4_a4_em1,    (VSubS)); \
+    b0_p1_em1    = linear(b0_b0_p1_em1,    a0_b0_p1_em1,    (VSubS)); \
+    a0_p1_em1    = linear(b0_a0_p1_em1,    a0_a0_p1_em1,    (VSubS)); \
+    a1_p1_em1    = linear(b0_a1_p1_em1,    a0_a1_p1_em1,    (VSubS)); \
+    a2_p1_em1    = linear(b0_a2_p1_em1,    a0_a2_p1_em1,    (VSubS)); \
+    a3_p1_em1    = linear(b0_a3_p1_em1,    a0_a3_p1_em1,    (VSubS)); \
+    a4_p1_em1    = linear(b0_a4_p1_em1,    a0_a4_p1_em1,    (VSubS)); \
+    p1_p1_em1    = linear(b0_p1_p1_em1,    a0_p1_p1_em1,    (VSubS)); \
+    p2_p1_em1    = linear(b0_p2_p1_em1,    a0_p2_p1_em1,    (VSubS)); \
+    p3_p1_em1    = linear(b0_p3_p1_em1,    a0_p3_p1_em1,    (VSubS)); \
+    p4_p1_em1    = linear(b0_p4_p1_em1,    a0_p4_p1_em1,    (VSubS)); \
+    b0_p2_em1    = linear(b0_b0_p2_em1,    a0_b0_p2_em1,    (VSubS)); \
+    a0_p2_em1    = linear(b0_a0_p2_em1,    a0_a0_p2_em1,    (VSubS)); \
+    a1_p2_em1    = linear(b0_a1_p2_em1,    a0_a1_p2_em1,    (VSubS)); \
+    a2_p2_em1    = linear(b0_a2_p2_em1,    a0_a2_p2_em1,    (VSubS)); \
+    a3_p2_em1    = linear(b0_a3_p2_em1,    a0_a3_p2_em1,    (VSubS)); \
+    a4_p2_em1    = linear(b0_a4_p2_em1,    a0_a4_p2_em1,    (VSubS)); \
+    p1_p2_em1    = linear(b0_p1_p2_em1,    a0_p1_p2_em1,    (VSubS)); \
+    p2_p2_em1    = linear(b0_p2_p2_em1,    a0_p2_p2_em1,    (VSubS)); \
+    p3_p2_em1    = linear(b0_p3_p2_em1,    a0_p3_p2_em1,    (VSubS)); \
+    p4_p2_em1    = linear(b0_p4_p2_em1,    a0_p4_p2_em1,    (VSubS)); \
+    b0_p3_em1    = linear(b0_b0_p3_em1,    a0_b0_p3_em1,    (VSubS)); \
+    a0_p3_em1    = linear(b0_a0_p3_em1,    a0_a0_p3_em1,    (VSubS)); \
+    a1_p3_em1    = linear(b0_a1_p3_em1,    a0_a1_p3_em1,    (VSubS)); \
+    a2_p3_em1    = linear(b0_a2_p3_em1,    a0_a2_p3_em1,    (VSubS)); \
+    a3_p3_em1    = linear(b0_a3_p3_em1,    a0_a3_p3_em1,    (VSubS)); \
+    a4_p3_em1    = linear(b0_a4_p3_em1,    a0_a4_p3_em1,    (VSubS)); \
+    p1_p3_em1    = linear(b0_p1_p3_em1,    a0_p1_p3_em1,    (VSubS)); \
+    p2_p3_em1    = linear(b0_p2_p3_em1,    a0_p2_p3_em1,    (VSubS)); \
+    p3_p3_em1    = linear(b0_p3_p3_em1,    a0_p3_p3_em1,    (VSubS)); \
+    p4_p3_em1    = linear(b0_p4_p3_em1,    a0_p4_p3_em1,    (VSubS)); \
+    b0_p4_em1    = linear(b0_b0_p4_em1,    a0_b0_p4_em1,    (VSubS)); \
+    a0_p4_em1    = linear(b0_a0_p4_em1,    a0_a0_p4_em1,    (VSubS)); \
+    a1_p4_em1    = linear(b0_a1_p4_em1,    a0_a1_p4_em1,    (VSubS)); \
+    a2_p4_em1    = linear(b0_a2_p4_em1,    a0_a2_p4_em1,    (VSubS)); \
+    a3_p4_em1    = linear(b0_a3_p4_em1,    a0_a3_p4_em1,    (VSubS)); \
+    a4_p4_em1    = linear(b0_a4_p4_em1,    a0_a4_p4_em1,    (VSubS)); \
+    p1_p4_em1    = linear(b0_p1_p4_em1,    a0_p1_p4_em1,    (VSubS)); \
+    p2_p4_em1    = linear(b0_p2_p4_em1,    a0_p2_p4_em1,    (VSubS)); \
+    p3_p4_em1    = linear(b0_p3_p4_em1,    a0_p3_p4_em1,    (VSubS)); \
+    p4_p4_em1    = linear(b0_p4_p4_em1,    a0_p4_p4_em1,    (VSubS)); \
+    b0_em1 = linear_5reg(b0_b0_em1, a0_b0_em1, a1_b0_em1, a2_b0_em1, a3_b0_em1, a4_b0_em1, p1_b0_em1, p2_b0_em1, p3_b0_em1, p4_b0_em1, (VGS)); \
+    a0_em1 = linear_5reg(b0_a0_em1, a0_a0_em1, a1_a0_em1, a2_a0_em1, a3_a0_em1, a4_a0_em1, p1_a0_em1, p2_a0_em1, p3_a0_em1, p4_a0_em1, (VGS)); \
+    a1_em1 = linear_5reg(b0_a1_em1, a0_a1_em1, a1_a1_em1, a2_a1_em1, a3_a1_em1, a4_a1_em1, p1_a1_em1, p2_a1_em1, p3_a1_em1, p4_a1_em1, (VGS)); \
+    a2_em1 = linear_5reg(b0_a2_em1, a0_a2_em1, a1_a2_em1, a2_a2_em1, a3_a2_em1, a4_a2_em1, p1_a2_em1, p2_a2_em1, p3_a2_em1, p4_a2_em1, (VGS)); \
+    a3_em1 = linear_5reg(b0_a3_em1, a0_a3_em1, a1_a3_em1, a2_a3_em1, a3_a3_em1, a4_a3_em1, p1_a3_em1, p2_a3_em1, p3_a3_em1, p4_a3_em1, (VGS)); \
+    a4_em1 = linear_5reg(b0_a4_em1, a0_a4_em1, a1_a4_em1, a2_a4_em1, a3_a4_em1, a4_a4_em1, p1_a4_em1, p2_a4_em1, p3_a4_em1, p4_a4_em1, (VGS)); \
+    p1_em1 = linear_5reg(b0_p1_em1, a0_p1_em1, a1_p1_em1, a2_p1_em1, a3_p1_em1, a4_p1_em1, p1_p1_em1, p2_p1_em1, p3_p1_em1, p4_p1_em1, (VGS)); \
+    p2_em1 = linear_5reg(b0_p2_em1, a0_p2_em1, a1_p2_em1, a2_p2_em1, a3_p2_em1, a4_p2_em1, p1_p2_em1, p2_p2_em1, p3_p2_em1, p4_p2_em1, (VGS)); \
+    p3_em1 = linear_5reg(b0_p3_em1, a0_p3_em1, a1_p3_em1, a2_p3_em1, a3_p3_em1, a4_p3_em1, p1_p3_em1, p2_p3_em1, p3_p3_em1, p4_p3_em1, (VGS)); \
+    p4_em1 = linear_5reg(b0_p4_em1, a0_p4_em1, a1_p4_em1, a2_p4_em1, a3_p4_em1, a4_p4_em1, p1_p4_em1, p2_p4_em1, p3_p4_em1, p4_p4_em1, (VGS)); \
+    em1    = linear_5reg(b0_em1, a0_em1, a1_em1, a2_em1, a3_em1, a4_em1, p1_em1, p2_em1, p3_em1, p4_em1, (VDS));
+
+// macro to calculate electric field Em1
+`define EM2(T, VGS, VDS, VSubS) \
+    b0_b0_b0_em2 = linear(b0_b0_b0_b0_em2, a0_b0_b0_b0_em2, (T)); \
+    a0_b0_b0_em2 = linear(b0_a0_b0_b0_em2, a0_a0_b0_b0_em2, (T)); \
+    b0_a0_b0_em2 = linear(b0_b0_a0_b0_em2, a0_b0_a0_b0_em2, (T)); \
+    a0_a0_b0_em2 = linear(b0_a0_a0_b0_em2, a0_a0_a0_b0_em2, (T)); \
+    b0_a1_b0_em2 = linear(b0_b0_a1_b0_em2, a0_b0_a1_b0_em2, (T)); \
+    a0_a1_b0_em2 = linear(b0_a0_a1_b0_em2, a0_a0_a1_b0_em2, (T)); \
+    b0_a2_b0_em2 = linear(b0_b0_a2_b0_em2, a0_b0_a2_b0_em2, (T)); \
+    a0_a2_b0_em2 = linear(b0_a0_a2_b0_em2, a0_a0_a2_b0_em2, (T)); \
+    b0_a3_b0_em2 = linear(b0_b0_a3_b0_em2, a0_b0_a3_b0_em2, (T)); \
+    a0_a3_b0_em2 = linear(b0_a0_a3_b0_em2, a0_a0_a3_b0_em2, (T)); \
+    b0_a4_b0_em2 = linear(b0_b0_a4_b0_em2, a0_b0_a4_b0_em2, (T)); \
+    a0_a4_b0_em2 = linear(b0_a0_a4_b0_em2, a0_a0_a4_b0_em2, (T)); \
+    b0_p1_b0_em2 = linear(b0_b0_p1_b0_em2, a0_b0_p1_b0_em2, (T)); \
+    a0_p1_b0_em2 = linear(b0_a0_p1_b0_em2, a0_a0_p1_b0_em2, (T)); \
+    b0_p2_b0_em2 = linear(b0_b0_p2_b0_em2, a0_b0_p2_b0_em2, (T)); \
+    a0_p2_b0_em2 = linear(b0_a0_p2_b0_em2, a0_a0_p2_b0_em2, (T)); \
+    b0_p3_b0_em2 = linear(b0_b0_p3_b0_em2, a0_b0_p3_b0_em2, (T)); \
+    a0_p3_b0_em2 = linear(b0_a0_p3_b0_em2, a0_a0_p3_b0_em2, (T)); \
+    b0_p4_b0_em2 = linear(b0_b0_p4_b0_em2, a0_b0_p4_b0_em2, (T)); \
+    a0_p4_b0_em2 = linear(b0_a0_p4_b0_em2, a0_a0_p4_b0_em2, (T)); \
+    b0_b0_a0_em2 = linear(b0_b0_b0_a0_em2, a0_b0_b0_a0_em2, (T)); \
+    a0_b0_a0_em2 = linear(b0_a0_b0_a0_em2, a0_a0_b0_a0_em2, (T)); \
+    b0_a0_a0_em2 = linear(b0_b0_a0_a0_em2, a0_b0_a0_a0_em2, (T)); \
+    a0_a0_a0_em2 = linear(b0_a0_a0_a0_em2, a0_a0_a0_a0_em2, (T)); \
+    b0_a1_a0_em2 = linear(b0_b0_a1_a0_em2, a0_b0_a1_a0_em2, (T)); \
+    a0_a1_a0_em2 = linear(b0_a0_a1_a0_em2, a0_a0_a1_a0_em2, (T)); \
+    b0_a2_a0_em2 = linear(b0_b0_a2_a0_em2, a0_b0_a2_a0_em2, (T)); \
+    a0_a2_a0_em2 = linear(b0_a0_a2_a0_em2, a0_a0_a2_a0_em2, (T)); \
+    b0_a3_a0_em2 = linear(b0_b0_a3_a0_em2, a0_b0_a3_a0_em2, (T)); \
+    a0_a3_a0_em2 = linear(b0_a0_a3_a0_em2, a0_a0_a3_a0_em2, (T)); \
+    b0_a4_a0_em2 = linear(b0_b0_a4_a0_em2, a0_b0_a4_a0_em2, (T)); \
+    a0_a4_a0_em2 = linear(b0_a0_a4_a0_em2, a0_a0_a4_a0_em2, (T)); \
+    b0_p1_a0_em2 = linear(b0_b0_p1_a0_em2, a0_b0_p1_a0_em2, (T)); \
+    a0_p1_a0_em2 = linear(b0_a0_p1_a0_em2, a0_a0_p1_a0_em2, (T)); \
+    b0_p2_a0_em2 = linear(b0_b0_p2_a0_em2, a0_b0_p2_a0_em2, (T)); \
+    a0_p2_a0_em2 = linear(b0_a0_p2_a0_em2, a0_a0_p2_a0_em2, (T)); \
+    b0_p3_a0_em2 = linear(b0_b0_p3_a0_em2, a0_b0_p3_a0_em2, (T)); \
+    a0_p3_a0_em2 = linear(b0_a0_p3_a0_em2, a0_a0_p3_a0_em2, (T)); \
+    b0_p4_a0_em2 = linear(b0_b0_p4_a0_em2, a0_b0_p4_a0_em2, (T)); \
+    a0_p4_a0_em2 = linear(b0_a0_p4_a0_em2, a0_a0_p4_a0_em2, (T)); \
+    b0_b0_a1_em2 = linear(b0_b0_b0_a1_em2, a0_b0_b0_a1_em2, (T)); \
+    a0_b0_a1_em2 = linear(b0_a0_b0_a1_em2, a0_a0_b0_a1_em2, (T)); \
+    b0_a0_a1_em2 = linear(b0_b0_a0_a1_em2, a0_b0_a0_a1_em2, (T)); \
+    a0_a0_a1_em2 = linear(b0_a0_a0_a1_em2, a0_a0_a0_a1_em2, (T)); \
+    b0_a1_a1_em2 = linear(b0_b0_a1_a1_em2, a0_b0_a1_a1_em2, (T)); \
+    a0_a1_a1_em2 = linear(b0_a0_a1_a1_em2, a0_a0_a1_a1_em2, (T)); \
+    b0_a2_a1_em2 = linear(b0_b0_a2_a1_em2, a0_b0_a2_a1_em2, (T)); \
+    a0_a2_a1_em2 = linear(b0_a0_a2_a1_em2, a0_a0_a2_a1_em2, (T)); \
+    b0_a3_a1_em2 = linear(b0_b0_a3_a1_em2, a0_b0_a3_a1_em2, (T)); \
+    a0_a3_a1_em2 = linear(b0_a0_a3_a1_em2, a0_a0_a3_a1_em2, (T)); \
+    b0_a4_a1_em2 = linear(b0_b0_a4_a1_em2, a0_b0_a4_a1_em2, (T)); \
+    a0_a4_a1_em2 = linear(b0_a0_a4_a1_em2, a0_a0_a4_a1_em2, (T)); \
+    b0_p1_a1_em2 = linear(b0_b0_p1_a1_em2, a0_b0_p1_a1_em2, (T)); \
+    a0_p1_a1_em2 = linear(b0_a0_p1_a1_em2, a0_a0_p1_a1_em2, (T)); \
+    b0_p2_a1_em2 = linear(b0_b0_p2_a1_em2, a0_b0_p2_a1_em2, (T)); \
+    a0_p2_a1_em2 = linear(b0_a0_p2_a1_em2, a0_a0_p2_a1_em2, (T)); \
+    b0_p3_a1_em2 = linear(b0_b0_p3_a1_em2, a0_b0_p3_a1_em2, (T)); \
+    a0_p3_a1_em2 = linear(b0_a0_p3_a1_em2, a0_a0_p3_a1_em2, (T)); \
+    b0_p4_a1_em2 = linear(b0_b0_p4_a1_em2, a0_b0_p4_a1_em2, (T)); \
+    a0_p4_a1_em2 = linear(b0_a0_p4_a1_em2, a0_a0_p4_a1_em2, (T)); \
+    b0_b0_a2_em2 = linear(b0_b0_b0_a2_em2, a0_b0_b0_a2_em2, (T)); \
+    a0_b0_a2_em2 = linear(b0_a0_b0_a2_em2, a0_a0_b0_a2_em2, (T)); \
+    b0_a0_a2_em2 = linear(b0_b0_a0_a2_em2, a0_b0_a0_a2_em2, (T)); \
+    a0_a0_a2_em2 = linear(b0_a0_a0_a2_em2, a0_a0_a0_a2_em2, (T)); \
+    b0_a1_a2_em2 = linear(b0_b0_a1_a2_em2, a0_b0_a1_a2_em2, (T)); \
+    a0_a1_a2_em2 = linear(b0_a0_a1_a2_em2, a0_a0_a1_a2_em2, (T)); \
+    b0_a2_a2_em2 = linear(b0_b0_a2_a2_em2, a0_b0_a2_a2_em2, (T)); \
+    a0_a2_a2_em2 = linear(b0_a0_a2_a2_em2, a0_a0_a2_a2_em2, (T)); \
+    b0_a3_a2_em2 = linear(b0_b0_a3_a2_em2, a0_b0_a3_a2_em2, (T)); \
+    a0_a3_a2_em2 = linear(b0_a0_a3_a2_em2, a0_a0_a3_a2_em2, (T)); \
+    b0_a4_a2_em2 = linear(b0_b0_a4_a2_em2, a0_b0_a4_a2_em2, (T)); \
+    a0_a4_a2_em2 = linear(b0_a0_a4_a2_em2, a0_a0_a4_a2_em2, (T)); \
+    b0_p1_a2_em2 = linear(b0_b0_p1_a2_em2, a0_b0_p1_a2_em2, (T)); \
+    a0_p1_a2_em2 = linear(b0_a0_p1_a2_em2, a0_a0_p1_a2_em2, (T)); \
+    b0_p2_a2_em2 = linear(b0_b0_p2_a2_em2, a0_b0_p2_a2_em2, (T)); \
+    a0_p2_a2_em2 = linear(b0_a0_p2_a2_em2, a0_a0_p2_a2_em2, (T)); \
+    b0_p3_a2_em2 = linear(b0_b0_p3_a2_em2, a0_b0_p3_a2_em2, (T)); \
+    a0_p3_a2_em2 = linear(b0_a0_p3_a2_em2, a0_a0_p3_a2_em2, (T)); \
+    b0_p4_a2_em2 = linear(b0_b0_p4_a2_em2, a0_b0_p4_a2_em2, (T)); \
+    a0_p4_a2_em2 = linear(b0_a0_p4_a2_em2, a0_a0_p4_a2_em2, (T)); \
+    b0_b0_a3_em2 = linear(b0_b0_b0_a3_em2, a0_b0_b0_a3_em2, (T)); \
+    a0_b0_a3_em2 = linear(b0_a0_b0_a3_em2, a0_a0_b0_a3_em2, (T)); \
+    b0_a0_a3_em2 = linear(b0_b0_a0_a3_em2, a0_b0_a0_a3_em2, (T)); \
+    a0_a0_a3_em2 = linear(b0_a0_a0_a3_em2, a0_a0_a0_a3_em2, (T)); \
+    b0_a1_a3_em2 = linear(b0_b0_a1_a3_em2, a0_b0_a1_a3_em2, (T)); \
+    a0_a1_a3_em2 = linear(b0_a0_a1_a3_em2, a0_a0_a1_a3_em2, (T)); \
+    b0_a2_a3_em2 = linear(b0_b0_a2_a3_em2, a0_b0_a2_a3_em2, (T)); \
+    a0_a2_a3_em2 = linear(b0_a0_a2_a3_em2, a0_a0_a2_a3_em2, (T)); \
+    b0_a3_a3_em2 = linear(b0_b0_a3_a3_em2, a0_b0_a3_a3_em2, (T)); \
+    a0_a3_a3_em2 = linear(b0_a0_a3_a3_em2, a0_a0_a3_a3_em2, (T)); \
+    b0_a4_a3_em2 = linear(b0_b0_a4_a3_em2, a0_b0_a4_a3_em2, (T)); \
+    a0_a4_a3_em2 = linear(b0_a0_a4_a3_em2, a0_a0_a4_a3_em2, (T)); \
+    b0_p1_a3_em2 = linear(b0_b0_p1_a3_em2, a0_b0_p1_a3_em2, (T)); \
+    a0_p1_a3_em2 = linear(b0_a0_p1_a3_em2, a0_a0_p1_a3_em2, (T)); \
+    b0_p2_a3_em2 = linear(b0_b0_p2_a3_em2, a0_b0_p2_a3_em2, (T)); \
+    a0_p2_a3_em2 = linear(b0_a0_p2_a3_em2, a0_a0_p2_a3_em2, (T)); \
+    b0_p3_a3_em2 = linear(b0_b0_p3_a3_em2, a0_b0_p3_a3_em2, (T)); \
+    a0_p3_a3_em2 = linear(b0_a0_p3_a3_em2, a0_a0_p3_a3_em2, (T)); \
+    b0_p4_a3_em2 = linear(b0_b0_p4_a3_em2, a0_b0_p4_a3_em2, (T)); \
+    a0_p4_a3_em2 = linear(b0_a0_p4_a3_em2, a0_a0_p4_a3_em2, (T)); \
+    b0_b0_a4_em2 = linear(b0_b0_b0_a4_em2, a0_b0_b0_a4_em2, (T)); \
+    a0_b0_a4_em2 = linear(b0_a0_b0_a4_em2, a0_a0_b0_a4_em2, (T)); \
+    b0_a0_a4_em2 = linear(b0_b0_a0_a4_em2, a0_b0_a0_a4_em2, (T)); \
+    a0_a0_a4_em2 = linear(b0_a0_a0_a4_em2, a0_a0_a0_a4_em2, (T)); \
+    b0_a1_a4_em2 = linear(b0_b0_a1_a4_em2, a0_b0_a1_a4_em2, (T)); \
+    a0_a1_a4_em2 = linear(b0_a0_a1_a4_em2, a0_a0_a1_a4_em2, (T)); \
+    b0_a2_a4_em2 = linear(b0_b0_a2_a4_em2, a0_b0_a2_a4_em2, (T)); \
+    a0_a2_a4_em2 = linear(b0_a0_a2_a4_em2, a0_a0_a2_a4_em2, (T)); \
+    b0_a3_a4_em2 = linear(b0_b0_a3_a4_em2, a0_b0_a3_a4_em2, (T)); \
+    a0_a3_a4_em2 = linear(b0_a0_a3_a4_em2, a0_a0_a3_a4_em2, (T)); \
+    b0_a4_a4_em2 = linear(b0_b0_a4_a4_em2, a0_b0_a4_a4_em2, (T)); \
+    a0_a4_a4_em2 = linear(b0_a0_a4_a4_em2, a0_a0_a4_a4_em2, (T)); \
+    b0_p1_a4_em2 = linear(b0_b0_p1_a4_em2, a0_b0_p1_a4_em2, (T)); \
+    a0_p1_a4_em2 = linear(b0_a0_p1_a4_em2, a0_a0_p1_a4_em2, (T)); \
+    b0_p2_a4_em2 = linear(b0_b0_p2_a4_em2, a0_b0_p2_a4_em2, (T)); \
+    a0_p2_a4_em2 = linear(b0_a0_p2_a4_em2, a0_a0_p2_a4_em2, (T)); \
+    b0_p3_a4_em2 = linear(b0_b0_p3_a4_em2, a0_b0_p3_a4_em2, (T)); \
+    a0_p3_a4_em2 = linear(b0_a0_p3_a4_em2, a0_a0_p3_a4_em2, (T)); \
+    b0_p4_a4_em2 = linear(b0_b0_p4_a4_em2, a0_b0_p4_a4_em2, (T)); \
+    a0_p4_a4_em2 = linear(b0_a0_p4_a4_em2, a0_a0_p4_a4_em2, (T)); \
+    b0_b0_p1_em2 = linear(b0_b0_b0_p1_em2, a0_b0_b0_p1_em2, (T)); \
+    a0_b0_p1_em2 = linear(b0_a0_b0_p1_em2, a0_a0_b0_p1_em2, (T)); \
+    b0_a0_p1_em2 = linear(b0_b0_a0_p1_em2, a0_b0_a0_p1_em2, (T)); \
+    a0_a0_p1_em2 = linear(b0_a0_a0_p1_em2, a0_a0_a0_p1_em2, (T)); \
+    b0_a1_p1_em2 = linear(b0_b0_a1_p1_em2, a0_b0_a1_p1_em2, (T)); \
+    a0_a1_p1_em2 = linear(b0_a0_a1_p1_em2, a0_a0_a1_p1_em2, (T)); \
+    b0_a2_p1_em2 = linear(b0_b0_a2_p1_em2, a0_b0_a2_p1_em2, (T)); \
+    a0_a2_p1_em2 = linear(b0_a0_a2_p1_em2, a0_a0_a2_p1_em2, (T)); \
+    b0_a3_p1_em2 = linear(b0_b0_a3_p1_em2, a0_b0_a3_p1_em2, (T)); \
+    a0_a3_p1_em2 = linear(b0_a0_a3_p1_em2, a0_a0_a3_p1_em2, (T)); \
+    b0_a4_p1_em2 = linear(b0_b0_a4_p1_em2, a0_b0_a4_p1_em2, (T)); \
+    a0_a4_p1_em2 = linear(b0_a0_a4_p1_em2, a0_a0_a4_p1_em2, (T)); \
+    b0_p1_p1_em2 = linear(b0_b0_p1_p1_em2, a0_b0_p1_p1_em2, (T)); \
+    a0_p1_p1_em2 = linear(b0_a0_p1_p1_em2, a0_a0_p1_p1_em2, (T)); \
+    b0_p2_p1_em2 = linear(b0_b0_p2_p1_em2, a0_b0_p2_p1_em2, (T)); \
+    a0_p2_p1_em2 = linear(b0_a0_p2_p1_em2, a0_a0_p2_p1_em2, (T)); \
+    b0_p3_p1_em2 = linear(b0_b0_p3_p1_em2, a0_b0_p3_p1_em2, (T)); \
+    a0_p3_p1_em2 = linear(b0_a0_p3_p1_em2, a0_a0_p3_p1_em2, (T)); \
+    b0_p4_p1_em2 = linear(b0_b0_p4_p1_em2, a0_b0_p4_p1_em2, (T)); \
+    a0_p4_p1_em2 = linear(b0_a0_p4_p1_em2, a0_a0_p4_p1_em2, (T)); \
+    b0_b0_p2_em2 = linear(b0_b0_b0_p2_em2, a0_b0_b0_p2_em2, (T)); \
+    a0_b0_p2_em2 = linear(b0_a0_b0_p2_em2, a0_a0_b0_p2_em2, (T)); \
+    b0_a0_p2_em2 = linear(b0_b0_a0_p2_em2, a0_b0_a0_p2_em2, (T)); \
+    a0_a0_p2_em2 = linear(b0_a0_a0_p2_em2, a0_a0_a0_p2_em2, (T)); \
+    b0_a1_p2_em2 = linear(b0_b0_a1_p2_em2, a0_b0_a1_p2_em2, (T)); \
+    a0_a1_p2_em2 = linear(b0_a0_a1_p2_em2, a0_a0_a1_p2_em2, (T)); \
+    b0_a2_p2_em2 = linear(b0_b0_a2_p2_em2, a0_b0_a2_p2_em2, (T)); \
+    a0_a2_p2_em2 = linear(b0_a0_a2_p2_em2, a0_a0_a2_p2_em2, (T)); \
+    b0_a3_p2_em2 = linear(b0_b0_a3_p2_em2, a0_b0_a3_p2_em2, (T)); \
+    a0_a3_p2_em2 = linear(b0_a0_a3_p2_em2, a0_a0_a3_p2_em2, (T)); \
+    b0_a4_p2_em2 = linear(b0_b0_a4_p2_em2, a0_b0_a4_p2_em2, (T)); \
+    a0_a4_p2_em2 = linear(b0_a0_a4_p2_em2, a0_a0_a4_p2_em2, (T)); \
+    b0_p1_p2_em2 = linear(b0_b0_p1_p2_em2, a0_b0_p1_p2_em2, (T)); \
+    a0_p1_p2_em2 = linear(b0_a0_p1_p2_em2, a0_a0_p1_p2_em2, (T)); \
+    b0_p2_p2_em2 = linear(b0_b0_p2_p2_em2, a0_b0_p2_p2_em2, (T)); \
+    a0_p2_p2_em2 = linear(b0_a0_p2_p2_em2, a0_a0_p2_p2_em2, (T)); \
+    b0_p3_p2_em2 = linear(b0_b0_p3_p2_em2, a0_b0_p3_p2_em2, (T)); \
+    a0_p3_p2_em2 = linear(b0_a0_p3_p2_em2, a0_a0_p3_p2_em2, (T)); \
+    b0_p4_p2_em2 = linear(b0_b0_p4_p2_em2, a0_b0_p4_p2_em2, (T)); \
+    a0_p4_p2_em2 = linear(b0_a0_p4_p2_em2, a0_a0_p4_p2_em2, (T)); \
+    b0_b0_p3_em2 = linear(b0_b0_b0_p3_em2, a0_b0_b0_p3_em2, (T)); \
+    a0_b0_p3_em2 = linear(b0_a0_b0_p3_em2, a0_a0_b0_p3_em2, (T)); \
+    b0_a0_p3_em2 = linear(b0_b0_a0_p3_em2, a0_b0_a0_p3_em2, (T)); \
+    a0_a0_p3_em2 = linear(b0_a0_a0_p3_em2, a0_a0_a0_p3_em2, (T)); \
+    b0_a1_p3_em2 = linear(b0_b0_a1_p3_em2, a0_b0_a1_p3_em2, (T)); \
+    a0_a1_p3_em2 = linear(b0_a0_a1_p3_em2, a0_a0_a1_p3_em2, (T)); \
+    b0_a2_p3_em2 = linear(b0_b0_a2_p3_em2, a0_b0_a2_p3_em2, (T)); \
+    a0_a2_p3_em2 = linear(b0_a0_a2_p3_em2, a0_a0_a2_p3_em2, (T)); \
+    b0_a3_p3_em2 = linear(b0_b0_a3_p3_em2, a0_b0_a3_p3_em2, (T)); \
+    a0_a3_p3_em2 = linear(b0_a0_a3_p3_em2, a0_a0_a3_p3_em2, (T)); \
+    b0_a4_p3_em2 = linear(b0_b0_a4_p3_em2, a0_b0_a4_p3_em2, (T)); \
+    a0_a4_p3_em2 = linear(b0_a0_a4_p3_em2, a0_a0_a4_p3_em2, (T)); \
+    b0_p1_p3_em2 = linear(b0_b0_p1_p3_em2, a0_b0_p1_p3_em2, (T)); \
+    a0_p1_p3_em2 = linear(b0_a0_p1_p3_em2, a0_a0_p1_p3_em2, (T)); \
+    b0_p2_p3_em2 = linear(b0_b0_p2_p3_em2, a0_b0_p2_p3_em2, (T)); \
+    a0_p2_p3_em2 = linear(b0_a0_p2_p3_em2, a0_a0_p2_p3_em2, (T)); \
+    b0_p3_p3_em2 = linear(b0_b0_p3_p3_em2, a0_b0_p3_p3_em2, (T)); \
+    a0_p3_p3_em2 = linear(b0_a0_p3_p3_em2, a0_a0_p3_p3_em2, (T)); \
+    b0_p4_p3_em2 = linear(b0_b0_p4_p3_em2, a0_b0_p4_p3_em2, (T)); \
+    a0_p4_p3_em2 = linear(b0_a0_p4_p3_em2, a0_a0_p4_p3_em2, (T)); \
+    b0_b0_p4_em2 = linear(b0_b0_b0_p4_em2, a0_b0_b0_p4_em2, (T)); \
+    a0_b0_p4_em2 = linear(b0_a0_b0_p4_em2, a0_a0_b0_p4_em2, (T)); \
+    b0_a0_p4_em2 = linear(b0_b0_a0_p4_em2, a0_b0_a0_p4_em2, (T)); \
+    a0_a0_p4_em2 = linear(b0_a0_a0_p4_em2, a0_a0_a0_p4_em2, (T)); \
+    b0_a1_p4_em2 = linear(b0_b0_a1_p4_em2, a0_b0_a1_p4_em2, (T)); \
+    a0_a1_p4_em2 = linear(b0_a0_a1_p4_em2, a0_a0_a1_p4_em2, (T)); \
+    b0_a2_p4_em2 = linear(b0_b0_a2_p4_em2, a0_b0_a2_p4_em2, (T)); \
+    a0_a2_p4_em2 = linear(b0_a0_a2_p4_em2, a0_a0_a2_p4_em2, (T)); \
+    b0_a3_p4_em2 = linear(b0_b0_a3_p4_em2, a0_b0_a3_p4_em2, (T)); \
+    a0_a3_p4_em2 = linear(b0_a0_a3_p4_em2, a0_a0_a3_p4_em2, (T)); \
+    b0_a4_p4_em2 = linear(b0_b0_a4_p4_em2, a0_b0_a4_p4_em2, (T)); \
+    a0_a4_p4_em2 = linear(b0_a0_a4_p4_em2, a0_a0_a4_p4_em2, (T)); \
+    b0_p1_p4_em2 = linear(b0_b0_p1_p4_em2, a0_b0_p1_p4_em2, (T)); \
+    a0_p1_p4_em2 = linear(b0_a0_p1_p4_em2, a0_a0_p1_p4_em2, (T)); \
+    b0_p2_p4_em2 = linear(b0_b0_p2_p4_em2, a0_b0_p2_p4_em2, (T)); \
+    a0_p2_p4_em2 = linear(b0_a0_p2_p4_em2, a0_a0_p2_p4_em2, (T)); \
+    b0_p3_p4_em2 = linear(b0_b0_p3_p4_em2, a0_b0_p3_p4_em2, (T)); \
+    a0_p3_p4_em2 = linear(b0_a0_p3_p4_em2, a0_a0_p3_p4_em2, (T)); \
+    b0_p4_p4_em2 = linear(b0_b0_p4_p4_em2, a0_b0_p4_p4_em2, (T)); \
+    a0_p4_p4_em2 = linear(b0_a0_p4_p4_em2, a0_a0_p4_p4_em2, (T)); \
+    b0_b0_em2    = linear(b0_b0_b0_em2,    a0_b0_b0_em2,    (VSubS)); \
+    a0_b0_em2    = linear(b0_a0_b0_em2,    a0_a0_b0_em2,    (VSubS)); \
+    a1_b0_em2    = linear(b0_a1_b0_em2,    a0_a1_b0_em2,    (VSubS)); \
+    a2_b0_em2    = linear(b0_a2_b0_em2,    a0_a2_b0_em2,    (VSubS)); \
+    a3_b0_em2    = linear(b0_a3_b0_em2,    a0_a3_b0_em2,    (VSubS)); \
+    a4_b0_em2    = linear(b0_a4_b0_em2,    a0_a4_b0_em2,    (VSubS)); \
+    p1_b0_em2    = linear(b0_p1_b0_em2,    a0_p1_b0_em2,    (VSubS)); \
+    p2_b0_em2    = linear(b0_p2_b0_em2,    a0_p2_b0_em2,    (VSubS)); \
+    p3_b0_em2    = linear(b0_p3_b0_em2,    a0_p3_b0_em2,    (VSubS)); \
+    p4_b0_em2    = linear(b0_p4_b0_em2,    a0_p4_b0_em2,    (VSubS)); \
+    b0_a0_em2    = linear(b0_b0_a0_em2,    a0_b0_a0_em2,    (VSubS)); \
+    a0_a0_em2    = linear(b0_a0_a0_em2,    a0_a0_a0_em2,    (VSubS)); \
+    a1_a0_em2    = linear(b0_a1_a0_em2,    a0_a1_a0_em2,    (VSubS)); \
+    a2_a0_em2    = linear(b0_a2_a0_em2,    a0_a2_a0_em2,    (VSubS)); \
+    a3_a0_em2    = linear(b0_a3_a0_em2,    a0_a3_a0_em2,    (VSubS)); \
+    a4_a0_em2    = linear(b0_a4_a0_em2,    a0_a4_a0_em2,    (VSubS)); \
+    p1_a0_em2    = linear(b0_p1_a0_em2,    a0_p1_a0_em2,    (VSubS)); \
+    p2_a0_em2    = linear(b0_p2_a0_em2,    a0_p2_a0_em2,    (VSubS)); \
+    p3_a0_em2    = linear(b0_p3_a0_em2,    a0_p3_a0_em2,    (VSubS)); \
+    p4_a0_em2    = linear(b0_p4_a0_em2,    a0_p4_a0_em2,    (VSubS)); \
+    b0_a1_em2    = linear(b0_b0_a1_em2,    a0_b0_a1_em2,    (VSubS)); \
+    a0_a1_em2    = linear(b0_a0_a1_em2,    a0_a0_a1_em2,    (VSubS)); \
+    a1_a1_em2    = linear(b0_a1_a1_em2,    a0_a1_a1_em2,    (VSubS)); \
+    a2_a1_em2    = linear(b0_a2_a1_em2,    a0_a2_a1_em2,    (VSubS)); \
+    a3_a1_em2    = linear(b0_a3_a1_em2,    a0_a3_a1_em2,    (VSubS)); \
+    a4_a1_em2    = linear(b0_a4_a1_em2,    a0_a4_a1_em2,    (VSubS)); \
+    p1_a1_em2    = linear(b0_p1_a1_em2,    a0_p1_a1_em2,    (VSubS)); \
+    p2_a1_em2    = linear(b0_p2_a1_em2,    a0_p2_a1_em2,    (VSubS)); \
+    p3_a1_em2    = linear(b0_p3_a1_em2,    a0_p3_a1_em2,    (VSubS)); \
+    p4_a1_em2    = linear(b0_p4_a1_em2,    a0_p4_a1_em2,    (VSubS)); \
+    b0_a2_em2    = linear(b0_b0_a2_em2,    a0_b0_a2_em2,    (VSubS)); \
+    a0_a2_em2    = linear(b0_a0_a2_em2,    a0_a0_a2_em2,    (VSubS)); \
+    a1_a2_em2    = linear(b0_a1_a2_em2,    a0_a1_a2_em2,    (VSubS)); \
+    a2_a2_em2    = linear(b0_a2_a2_em2,    a0_a2_a2_em2,    (VSubS)); \
+    a3_a2_em2    = linear(b0_a3_a2_em2,    a0_a3_a2_em2,    (VSubS)); \
+    a4_a2_em2    = linear(b0_a4_a2_em2,    a0_a4_a2_em2,    (VSubS)); \
+    p1_a2_em2    = linear(b0_p1_a2_em2,    a0_p1_a2_em2,    (VSubS)); \
+    p2_a2_em2    = linear(b0_p2_a2_em2,    a0_p2_a2_em2,    (VSubS)); \
+    p3_a2_em2    = linear(b0_p3_a2_em2,    a0_p3_a2_em2,    (VSubS)); \
+    p4_a2_em2    = linear(b0_p4_a2_em2,    a0_p4_a2_em2,    (VSubS)); \
+    b0_a3_em2    = linear(b0_b0_a3_em2,    a0_b0_a3_em2,    (VSubS)); \
+    a0_a3_em2    = linear(b0_a0_a3_em2,    a0_a0_a3_em2,    (VSubS)); \
+    a1_a3_em2    = linear(b0_a1_a3_em2,    a0_a1_a3_em2,    (VSubS)); \
+    a2_a3_em2    = linear(b0_a2_a3_em2,    a0_a2_a3_em2,    (VSubS)); \
+    a3_a3_em2    = linear(b0_a3_a3_em2,    a0_a3_a3_em2,    (VSubS)); \
+    a4_a3_em2    = linear(b0_a4_a3_em2,    a0_a4_a3_em2,    (VSubS)); \
+    p1_a3_em2    = linear(b0_p1_a3_em2,    a0_p1_a3_em2,    (VSubS)); \
+    p2_a3_em2    = linear(b0_p2_a3_em2,    a0_p2_a3_em2,    (VSubS)); \
+    p3_a3_em2    = linear(b0_p3_a3_em2,    a0_p3_a3_em2,    (VSubS)); \
+    p4_a3_em2    = linear(b0_p4_a3_em2,    a0_p4_a3_em2,    (VSubS)); \
+    b0_a4_em2    = linear(b0_b0_a4_em2,    a0_b0_a4_em2,    (VSubS)); \
+    a0_a4_em2    = linear(b0_a0_a4_em2,    a0_a0_a4_em2,    (VSubS)); \
+    a1_a4_em2    = linear(b0_a1_a4_em2,    a0_a1_a4_em2,    (VSubS)); \
+    a2_a4_em2    = linear(b0_a2_a4_em2,    a0_a2_a4_em2,    (VSubS)); \
+    a3_a4_em2    = linear(b0_a3_a4_em2,    a0_a3_a4_em2,    (VSubS)); \
+    a4_a4_em2    = linear(b0_a4_a4_em2,    a0_a4_a4_em2,    (VSubS)); \
+    p1_a4_em2    = linear(b0_p1_a4_em2,    a0_p1_a4_em2,    (VSubS)); \
+    p2_a4_em2    = linear(b0_p2_a4_em2,    a0_p2_a4_em2,    (VSubS)); \
+    p3_a4_em2    = linear(b0_p3_a4_em2,    a0_p3_a4_em2,    (VSubS)); \
+    p4_a4_em2    = linear(b0_p4_a4_em2,    a0_p4_a4_em2,    (VSubS)); \
+    b0_p1_em2    = linear(b0_b0_p1_em2,    a0_b0_p1_em2,    (VSubS)); \
+    a0_p1_em2    = linear(b0_a0_p1_em2,    a0_a0_p1_em2,    (VSubS)); \
+    a1_p1_em2    = linear(b0_a1_p1_em2,    a0_a1_p1_em2,    (VSubS)); \
+    a2_p1_em2    = linear(b0_a2_p1_em2,    a0_a2_p1_em2,    (VSubS)); \
+    a3_p1_em2    = linear(b0_a3_p1_em2,    a0_a3_p1_em2,    (VSubS)); \
+    a4_p1_em2    = linear(b0_a4_p1_em2,    a0_a4_p1_em2,    (VSubS)); \
+    p1_p1_em2    = linear(b0_p1_p1_em2,    a0_p1_p1_em2,    (VSubS)); \
+    p2_p1_em2    = linear(b0_p2_p1_em2,    a0_p2_p1_em2,    (VSubS)); \
+    p3_p1_em2    = linear(b0_p3_p1_em2,    a0_p3_p1_em2,    (VSubS)); \
+    p4_p1_em2    = linear(b0_p4_p1_em2,    a0_p4_p1_em2,    (VSubS)); \
+    b0_p2_em2    = linear(b0_b0_p2_em2,    a0_b0_p2_em2,    (VSubS)); \
+    a0_p2_em2    = linear(b0_a0_p2_em2,    a0_a0_p2_em2,    (VSubS)); \
+    a1_p2_em2    = linear(b0_a1_p2_em2,    a0_a1_p2_em2,    (VSubS)); \
+    a2_p2_em2    = linear(b0_a2_p2_em2,    a0_a2_p2_em2,    (VSubS)); \
+    a3_p2_em2    = linear(b0_a3_p2_em2,    a0_a3_p2_em2,    (VSubS)); \
+    a4_p2_em2    = linear(b0_a4_p2_em2,    a0_a4_p2_em2,    (VSubS)); \
+    p1_p2_em2    = linear(b0_p1_p2_em2,    a0_p1_p2_em2,    (VSubS)); \
+    p2_p2_em2    = linear(b0_p2_p2_em2,    a0_p2_p2_em2,    (VSubS)); \
+    p3_p2_em2    = linear(b0_p3_p2_em2,    a0_p3_p2_em2,    (VSubS)); \
+    p4_p2_em2    = linear(b0_p4_p2_em2,    a0_p4_p2_em2,    (VSubS)); \
+    b0_p3_em2    = linear(b0_b0_p3_em2,    a0_b0_p3_em2,    (VSubS)); \
+    a0_p3_em2    = linear(b0_a0_p3_em2,    a0_a0_p3_em2,    (VSubS)); \
+    a1_p3_em2    = linear(b0_a1_p3_em2,    a0_a1_p3_em2,    (VSubS)); \
+    a2_p3_em2    = linear(b0_a2_p3_em2,    a0_a2_p3_em2,    (VSubS)); \
+    a3_p3_em2    = linear(b0_a3_p3_em2,    a0_a3_p3_em2,    (VSubS)); \
+    a4_p3_em2    = linear(b0_a4_p3_em2,    a0_a4_p3_em2,    (VSubS)); \
+    p1_p3_em2    = linear(b0_p1_p3_em2,    a0_p1_p3_em2,    (VSubS)); \
+    p2_p3_em2    = linear(b0_p2_p3_em2,    a0_p2_p3_em2,    (VSubS)); \
+    p3_p3_em2    = linear(b0_p3_p3_em2,    a0_p3_p3_em2,    (VSubS)); \
+    p4_p3_em2    = linear(b0_p4_p3_em2,    a0_p4_p3_em2,    (VSubS)); \
+    b0_p4_em2    = linear(b0_b0_p4_em2,    a0_b0_p4_em2,    (VSubS)); \
+    a0_p4_em2    = linear(b0_a0_p4_em2,    a0_a0_p4_em2,    (VSubS)); \
+    a1_p4_em2    = linear(b0_a1_p4_em2,    a0_a1_p4_em2,    (VSubS)); \
+    a2_p4_em2    = linear(b0_a2_p4_em2,    a0_a2_p4_em2,    (VSubS)); \
+    a3_p4_em2    = linear(b0_a3_p4_em2,    a0_a3_p4_em2,    (VSubS)); \
+    a4_p4_em2    = linear(b0_a4_p4_em2,    a0_a4_p4_em2,    (VSubS)); \
+    p1_p4_em2    = linear(b0_p1_p4_em2,    a0_p1_p4_em2,    (VSubS)); \
+    p2_p4_em2    = linear(b0_p2_p4_em2,    a0_p2_p4_em2,    (VSubS)); \
+    p3_p4_em2    = linear(b0_p3_p4_em2,    a0_p3_p4_em2,    (VSubS)); \
+    p4_p4_em2    = linear(b0_p4_p4_em2,    a0_p4_p4_em2,    (VSubS)); \
+    b0_em2 = linear_5reg(b0_b0_em2, a0_b0_em2, a1_b0_em2, a2_b0_em2, a3_b0_em2, a4_b0_em2, p1_b0_em2, p2_b0_em2, p3_b0_em2, p4_b0_em2, (VGS)); \
+    a0_em2 = linear_5reg(b0_a0_em2, a0_a0_em2, a1_a0_em2, a2_a0_em2, a3_a0_em2, a4_a0_em2, p1_a0_em2, p2_a0_em2, p3_a0_em2, p4_a0_em2, (VGS)); \
+    a1_em2 = linear_5reg(b0_a1_em2, a0_a1_em2, a1_a1_em2, a2_a1_em2, a3_a1_em2, a4_a1_em2, p1_a1_em2, p2_a1_em2, p3_a1_em2, p4_a1_em2, (VGS)); \
+    a2_em2 = linear_5reg(b0_a2_em2, a0_a2_em2, a1_a2_em2, a2_a2_em2, a3_a2_em2, a4_a2_em2, p1_a2_em2, p2_a2_em2, p3_a2_em2, p4_a2_em2, (VGS)); \
+    a3_em2 = linear_5reg(b0_a3_em2, a0_a3_em2, a1_a3_em2, a2_a3_em2, a3_a3_em2, a4_a3_em2, p1_a3_em2, p2_a3_em2, p3_a3_em2, p4_a3_em2, (VGS)); \
+    a4_em2 = linear_5reg(b0_a4_em2, a0_a4_em2, a1_a4_em2, a2_a4_em2, a3_a4_em2, a4_a4_em2, p1_a4_em2, p2_a4_em2, p3_a4_em2, p4_a4_em2, (VGS)); \
+    p1_em2 = linear_5reg(b0_p1_em2, a0_p1_em2, a1_p1_em2, a2_p1_em2, a3_p1_em2, a4_p1_em2, p1_p1_em2, p2_p1_em2, p3_p1_em2, p4_p1_em2, (VGS)); \
+    p2_em2 = linear_5reg(b0_p2_em2, a0_p2_em2, a1_p2_em2, a2_p2_em2, a3_p2_em2, a4_p2_em2, p1_p2_em2, p2_p2_em2, p3_p2_em2, p4_p2_em2, (VGS)); \
+    p3_em2 = linear_5reg(b0_p3_em2, a0_p3_em2, a1_p3_em2, a2_p3_em2, a3_p3_em2, a4_p3_em2, p1_p3_em2, p2_p3_em2, p3_p3_em2, p4_p3_em2, (VGS)); \
+    p4_em2 = linear_5reg(b0_p4_em2, a0_p4_em2, a1_p4_em2, a2_p4_em2, a3_p4_em2, a4_p4_em2, p1_p4_em2, p2_p4_em2, p3_p4_em2, p4_p4_em2, (VGS)); \
+    em2    = linear_5reg(b0_em2, a0_em2, a1_em2, a2_em2, a3_em2, a4_em2, p1_em2, p2_em2, p3_em2, p4_em2, (VDS));
+
+/**
+ * @brief HVMOS transistor wrapper with HCI stress measurement.
+ *
+ * The wrapper instances gets the parameters for each instance from the
+ * subcircuit wrapper that also provide the parameters for the MOS model
+ * itself.
+ *
+ * @param active    Flag to activate/deactivate HCI measurement; Default
+ *                  is 1 (on).
+ * @param mode      Unused parameter; left for backwards compatibility.
+ *
+ * @param tage      Time to which the stress is extrapolated for the
+ *                  parameter update calculations [s].
+ * @param tstart    Time when stress measurement begins [s]; Default is 0 s.
+ * @param tstop     Time when stress measurement ends [s]; Default is inf s.
+ *
+ *
+ * Parameters related to flagging
+ *
+ * @param swagecheck Switch to control whether "aging lite"/agecheck messages
+ *                  are printed to the log file to be picked up by the SOA
+ *                  browsers; Default is 1 (on).
+ * @param dicrit    Threshold of relative on-resistance (or current) change 
+ *                  above which a warning will be given [-]; default is 0.05.
+ * @param dvtcrit   Threshold of Vth change above which a warning will be
+ *                  given [V]; default is 0.02 V.
+ *
+ * Parameters related to wrapped device
+ *
+ * @param type      Type of the wrapped MOS instance. Valid values are
+ *                  `NMOS and `PMOS.
+ * @param simprobeactive Switch to determine whether or not to use simprobe to
+ *                  retrieve the drain current.  Otherwise the current is
+ *                  calculated from the drop across the external resistor (see
+ *                  rval). 0 = rval-calculation; 1 = simprobe.  Default is 0.
+ * @param simprobedevice Device name of the device to simprobe.
+ * @param simprobeparam Name of the param value to simprobe.
+ * @param simprobeparamsign Parameter to change the sign of the simprobe param
+ *                  if needed.  This might be required for e.g. PMOS OP
+ *                  parameters which are reported as positive values; default is
+ *                  1 [-].
+ * @param rval      Resistance value of wrapped drift region resistor [Ohm].
+ * @param l         Length of the wrapped MOS instance [m].
+ * @param w         Width of the wrapped MOS instance [m].
+ * @param mult      MULT value of the wrapped MOS device instance [-].
+ * @param dta       Delta-Temperature to Ambient [K]; Default is 0 K.
+ * @param swsh      Switch to set whether or not to use the selfheating
+ *                  temperature increase on node dt.  Default is 0.
+ *
+ * List of parameters for the HV HCI model
+ * @param hciactive Flag to activate/deactivate the HCI part of the model;
+ *                  Default is 1 (on).
+ * @param hcidamage Parameters (hcidamage1, hcidamage2) holding the value of
+ *                  the total accumulated damage at the end of the previous step
+ *                  of multi-step aging; Default is 0.
+ *                  These parameters are only to be set by the aging tool!
+ * @param hciep     Thermal activation energy [eV].
+ * @param hciphibel Silicon-oxide barrier height for electrons [eV].
+ * @param hciphibh  Silicon-oxide barrier height for holes [eV].
+ * @param hcifstattau1 Prefactor taking into account the effect of statistical
+ *                  spread on tlife1 [-].
+ * @param hcifstattau2 Prefactor taking into account the effect of statistical
+ *                  spread on tlife2 [-].
+ * @param hcifstattau12 Prefactor taking into account the cross correlation of
+ *                  statistical spread between tlife1 and tlife2 [-].
+ * @param hcifstattau21 Prefactor taking into account the cross correlation of
+ *                  statistical spread between tlife2 and tlife1 [-].
+ * @param hcia1     Prefactor for first RON time-dependence term [-].
+ * @param hcia2     Prefactor for second RON time-dependence term [-].
+ * @param hcib1     Prefactor for third RON time-dependence term [-].
+ * @param hcic1     Prefactor describing the correlation between the tau of the
+ *                  first and second RON logarithmic time-dependence terms. [-]
+ * @param hcin      Exponent for the third RON time-dependence term [-].
+ * @param hcilambdael0 Mean free path for electrons [cm].
+ * @param hcilambdah0 Mean free path for holes [cm].
+ * @param hcialpha1 General prefactor for the tlife1 calculation [s].
+ * @param hcialpha2 General prefactor for the tlife2 calculation [s].
+ * @param hcibeta1  Exponent for Id-dependence of tlife1 [-].
+ * @param hcibeta2  Exponent for Id-dependence of tlife2 [-].
+ * @param hcideltaa Delta parameter for first sigmoid function (fstat calc)
+ *                  [ohm].
+ * @param hcimexpa  Exponent for first sigmoid function (fstat calc) [-].
+ * @param hcideltab Delta parameter for second sigmoid function (fstat calc)
+ *                  [ohm].
+ * @param hcimexpb  Exponent for second sigmoid function (fstat calc) [-].
+ * @param hcivgscutoff Vgs cutoff value for Id calculation [V].
+ * @param hcideltacutoff Delta parameter for second sigmoid function (fstat calc) [-].
+ * @param hcimexpcutoff Exponent for second sigmoid function (fstat calc) [-].
+ * @param *_em1     Parameters for empirical electric field description em1 [-].
+ * @param *_em2     Parameters for empirical electric field description em2 [-].
+ *
+ * List of parameters for the offstate HCI model
+ * @param offactive Flag to activate/deactivate the offstate part of the model;
+ *                  Default is 1 (on).
+ * @param offdamage Parameters (offdamage1, offdamage2) holding the value of
+ *                  the total accumulated damage at the end of the previous step
+ *                  of multi-step aging; Default is 0.
+ *                  These parameters are only to be set by the aging tool!
+ * @param offnmosmodelswitch Switch to select expression to be used for dRon
+ *                  calculation (only applicable to NMOS).  Default is 0.
+ * @param offfstattau1 Prefactor taking into account the effect of statistical
+ *                  spread on tlife1 [-].
+ * @param offfstattau2 Prefactor taking into account the effect of statistical
+ *                  spread on tlife2 [-].
+ * @param offfstattau12 Prefactor taking into account the cross correlation of
+ *                  statistical spread between tlife1 and tlife2 [-].
+ * @param offfstattau21 Prefactor taking into account the cross correlation of
+ *                  statistical spread between tlife2 and tlife1 [-].
+ * @param offa1     Prefactor for first RON time-dependence term [-].
+ * @param offa2     Prefactor for second RON time-dependence term [-].
+ * @param offn1     Exponent for the first RON time-dependence term [-].
+ * @param offn2     Exponent for the second RON time-dependence term [-].
+ * @param offalpha1 General prefactor for the tlife1 calculation [s].
+ * @param offalpha2 General prefactor for the tlife2 calculation [s].
+ * @param offbeta1legacy Exponent for VDS-dependence of tlife1 [-].  This is the
+ *                  legacy expression which does not go to zero at zero bias.
+ * @param offbeta1legacyclip Value below which the offbeta1legacy factor will be
+ *                  clipped to zero [V].
+ * @param offbeta1  Exponent for VDS-dependence of tlife1 [-].
+ * @param offbeta2  Exponent for VDS-dependence of tlife2 [-].
+ * @param offea1    Thermal activation energy for tlife1 [eV].
+ * @param offea2    Thermal activation energy for tlife2 [eV].
+ * @param offdeltaa Delta parameter for first sigmoid function (fstat calc)
+ *                  [ohm].
+ * @param offmexpa  Exponent for first sigmoid function (fstat calc) [-].
+ * @param offdeltab Delta parameter for second sigmoid function (fstat calc)
+ *                  [ohm].
+ * @param offmexpb  Exponent for second sigmoid function (fstat calc) [-].
+ *
+ * List of parameters for the high-VDSVGS HCI model
+ * @param hvgsactive Flag to activate/deactivate the high-VGS/high-VDS part of
+ *                  the model; Default is 1 (on).
+ * @param hvgsdamage Parameter holding the value of the total accumulated
+ *                  damage at the end of the previous step of multi-step aging;
+ *                  Default is 0.
+ *                  This parameter is only to be set by the aging tool!
+ * @param hvgsfstat Prefactor taking into account the effect of statistical
+ *                  spread on tlife [-].
+ * @param hvgsa     Prefactor for the RON time-dependence [-].
+ * @param hvgsn     Exponent for RON time-dependence [-].
+ * @param hvgsalpha General prefactor for the tlife calculation [s].
+ * @param hvgsbeta  Exponent for Id-dependence of tlife [-].
+ * @param hvgsgamma Exponent for Vgs-dependence of tlife [-].
+ * @param hvgsdelta Exponent for Vds-dependence of tlife [-].
+ * @param hvgsepsilon Exponent for Vsub-dependence of tlife [-].
+ * @param hvgsea    Thermal activation energy for tlife [eV].
+ * @param hvgsrth   Thermal resistance per unit width [deg*m/W].
+ */
+
+(* instrument_module *)
+module mhcihv5 (d, g, s, hw, d2, dt);
+
+  // parameters related to simulation
+  parameter real tage            = 0.0        from [0:inf);
+  parameter real tstart          = 0.0        from [0:inf);
+  parameter real tstop           = `M_INF     from [0:inf);
+  // parameters related to simulation robustness
+  parameter real scaling1        = 1.0        from (0:inf);
+  parameter real scaling2        = 1.0        from (0:inf);
+  parameter real scaling3        = 1.0        from (0:inf);
+  parameter real scaling4        = 1.0        from (0:inf);
+  parameter real scaling5        = 1.0        from (0:inf);
+
+  // parameters for activation, debugging and output
+  parameter integer active       = 1          from [0:1];
+  parameter integer mode         = 0          from [0:2]; // only for backwards compat.
+
+  `localparam integer year_in_secs = 365 * 24 * 60 * 60;
+  `localparam real ref_stress_time = 1.0e-06  from (0:inf);
+
+  // parameters relating to flagging
+  parameter integer swagecheck   = 1          from [0:1];
+  parameter real dicrit          = 0.05;
+  parameter real dvtcrit         = 0.02;
+
+  // parameters related to the wrapped device
+  parameter integer simprobeactive = 0        from [0:1];
+  parameter string simprobedevice = "fet";
+  parameter string simprobeparam = "ide";
+  parameter integer simprobeparamsign = 1     from [-1:1] exclude 0;
+  parameter real rval            = 1.0e3;
+  parameter integer type         = `NMOS      from [`PMOS : `NMOS] exclude 0;
+  parameter real l               = 0.75e-6    from (0:inf);
+  parameter real w               = 40e-6      from (0:inf);
+  parameter real mult            = 1.0        from (0:inf);
+  parameter real dta             = 0.0;
+  parameter integer swsh         = 0          from [0:1];
+
+  // parameters related to HV HCI model
+  parameter integer hciactive    = 1          from [0:1];
+  parameter real hcidamage1      = 0.0        from [0:inf);
+  parameter real hcidamage2      = 0.0        from [0:inf);
+  parameter real hciep           = 0.063      from (0:inf);
+  parameter real hciphibel       = 3.2        from (0:inf);
+  parameter real hciphibh        = 4.8        from (0:inf);
+  parameter real hcifstattau1    = 1.0        from (0:inf);
+  parameter real hcifstattau2    = 1.0        from (0:inf);
+  parameter real hcifstattau12   = 1.0        from (0:inf);
+  parameter real hcifstattau21   = 1.0        from (0:inf);
+  parameter real hcia1           = 0.0;
+  parameter real hcia2           = 0.0;
+  parameter real hcib1           = 0.0;
+  parameter real hcic1           = 0.0;
+  parameter real hcin            = 0.5;
+  parameter real hcilambdael0    = 1.0;
+  parameter real hcilambdah0     = 1.0;
+  parameter real hcialpha1       = 1.0;
+  parameter real hcialpha2       = 1.0;
+  parameter real hcibeta1        = 1.0;
+  parameter real hcibeta2        = 1.0;
+  parameter real hcideltaa       = 0.1;
+  parameter real hcimexpa        = 1.0;
+  parameter real hcideltab       = 0.1;
+  parameter real hcimexpb        = 1.0;
+  parameter real hcivgscutoff    = 0.0;
+  parameter real hcideltacutoff  = 0.1;
+  parameter real hcimexpcutoff   = 1.0;
+
+  // parameters related to offstate HCI model
+  parameter integer offactive    = 1          from [0:1];
+  parameter real offdamage1      = 0.0        from [0:inf);
+  parameter real offdamage2      = 0.0        from [0:inf);
+  parameter integer offnmosmodelswitch = 0    from [0:1];
+  parameter real offfstattau1    = 1.0        from (0:inf);
+  parameter real offfstattau2    = 1.0        from (0:inf);
+  parameter real offfstattau12   = 1.0        from (0:inf);
+  parameter real offfstattau21   = 1.0        from (0:inf);
+  parameter real offa1           = 0.0;
+  parameter real offa2           = 0.0;
+  parameter real offn1           = 0.5;
+  parameter real offn2           = 0.5;
+  parameter real offalpha1       = 0.0;
+  parameter real offalpha2       = 0.0;
+  parameter real offbeta1        = 0.0;
+  parameter real offbeta1legacy  = 0.0;
+  parameter real offbeta1legacyclip = 0.0;
+  parameter real offbeta2        = 0.0;
+  parameter real offea1          = 0.0;
+  parameter real offea2          = 0.0;
+  parameter real offdeltaa       = 0.1;
+  parameter real offmexpa        = 1.0;
+  parameter real offdeltab       = 0.1;
+  parameter real offmexpb        = 1.0;
+
+  // parameters related to high-VDSVGS HCI model
+  parameter integer hvgsactive   = 1          from [0:1];
+  parameter real hvgsdamage      = 0.0        from [0:inf);
+  parameter real hvgsfstat       = 1.0        from (0:inf);
+  parameter real hvgsa           = 0.0;
+  parameter real hvgsn           = 0.5;
+  parameter real hvgsalpha       = 0.0;
+  parameter real hvgsbeta        = 0.0;
+  parameter real hvgsgamma       = 0.0;
+  parameter real hvgsdelta       = 0.0;
+  parameter real hvgsepsilon     = 0.0;
+  parameter real hvgsea          = 0.0;
+  parameter real hvgsrth         = 0.0;
+
+  //electric field fitting parameters Em1 (for HV HCI model)
+  parameter real b0_b0_b0_b0_em1 = 0.0;
+  parameter real b0_a0_b0_b0_em1 = 0.0;
+  parameter real b0_b0_a0_b0_em1 = 0.0;
+  parameter real b0_a0_a0_b0_em1 = 0.0;
+  parameter real b0_b0_a1_b0_em1 = 0.0;
+  parameter real b0_a0_a1_b0_em1 = 0.0;
+  parameter real b0_b0_a2_b0_em1 = 0.0;
+  parameter real b0_a0_a2_b0_em1 = 0.0;
+  parameter real b0_b0_a3_b0_em1 = 0.0;
+  parameter real b0_a0_a3_b0_em1 = 0.0;
+  parameter real b0_b0_a4_b0_em1 = 0.0;
+  parameter real b0_a0_a4_b0_em1 = 0.0;
+  parameter real b0_b0_p1_b0_em1 = 0.0;
+  parameter real b0_a0_p1_b0_em1 = 0.0;
+  parameter real b0_b0_p2_b0_em1 = 0.0;
+  parameter real b0_a0_p2_b0_em1 = 0.0;
+  parameter real b0_b0_p3_b0_em1 = 0.0;
+  parameter real b0_a0_p3_b0_em1 = 0.0;
+  parameter real b0_b0_p4_b0_em1 = 0.0;
+  parameter real b0_a0_p4_b0_em1 = 0.0;
+  parameter real b0_b0_b0_a0_em1 = 0.0;
+  parameter real b0_a0_b0_a0_em1 = 0.0;
+  parameter real b0_b0_a0_a0_em1 = 0.0;
+  parameter real b0_a0_a0_a0_em1 = 0.0;
+  parameter real b0_b0_a1_a0_em1 = 0.0;
+  parameter real b0_a0_a1_a0_em1 = 0.0;
+  parameter real b0_b0_a2_a0_em1 = 0.0;
+  parameter real b0_a0_a2_a0_em1 = 0.0;
+  parameter real b0_b0_a3_a0_em1 = 0.0;
+  parameter real b0_a0_a3_a0_em1 = 0.0;
+  parameter real b0_b0_a4_a0_em1 = 0.0;
+  parameter real b0_a0_a4_a0_em1 = 0.0;
+  parameter real b0_b0_p1_a0_em1 = 0.0;
+  parameter real b0_a0_p1_a0_em1 = 0.0;
+  parameter real b0_b0_p2_a0_em1 = 0.0;
+  parameter real b0_a0_p2_a0_em1 = 0.0;
+  parameter real b0_b0_p3_a0_em1 = 0.0;
+  parameter real b0_a0_p3_a0_em1 = 0.0;
+  parameter real b0_b0_p4_a0_em1 = 0.0;
+  parameter real b0_a0_p4_a0_em1 = 0.0;
+  parameter real b0_b0_b0_a1_em1 = 0.0;
+  parameter real b0_a0_b0_a1_em1 = 0.0;
+  parameter real b0_b0_a0_a1_em1 = 0.0;
+  parameter real b0_a0_a0_a1_em1 = 0.0;
+  parameter real b0_b0_a1_a1_em1 = 0.0;
+  parameter real b0_a0_a1_a1_em1 = 0.0;
+  parameter real b0_b0_a2_a1_em1 = 0.0;
+  parameter real b0_a0_a2_a1_em1 = 0.0;
+  parameter real b0_b0_a3_a1_em1 = 0.0;
+  parameter real b0_a0_a3_a1_em1 = 0.0;
+  parameter real b0_b0_a4_a1_em1 = 0.0;
+  parameter real b0_a0_a4_a1_em1 = 0.0;
+  parameter real b0_b0_p1_a1_em1 = 0.0;
+  parameter real b0_a0_p1_a1_em1 = 0.0;
+  parameter real b0_b0_p2_a1_em1 = 0.0;
+  parameter real b0_a0_p2_a1_em1 = 0.0;
+  parameter real b0_b0_p3_a1_em1 = 0.0;
+  parameter real b0_a0_p3_a1_em1 = 0.0;
+  parameter real b0_b0_p4_a1_em1 = 0.0;
+  parameter real b0_a0_p4_a1_em1 = 0.0;
+  parameter real b0_b0_b0_a2_em1 = 0.0;
+  parameter real b0_a0_b0_a2_em1 = 0.0;
+  parameter real b0_b0_a0_a2_em1 = 0.0;
+  parameter real b0_a0_a0_a2_em1 = 0.0;
+  parameter real b0_b0_a1_a2_em1 = 0.0;
+  parameter real b0_a0_a1_a2_em1 = 0.0;
+  parameter real b0_b0_a2_a2_em1 = 0.0;
+  parameter real b0_a0_a2_a2_em1 = 0.0;
+  parameter real b0_b0_a3_a2_em1 = 0.0;
+  parameter real b0_a0_a3_a2_em1 = 0.0;
+  parameter real b0_b0_a4_a2_em1 = 0.0;
+  parameter real b0_a0_a4_a2_em1 = 0.0;
+  parameter real b0_b0_p1_a2_em1 = 0.0;
+  parameter real b0_a0_p1_a2_em1 = 0.0;
+  parameter real b0_b0_p2_a2_em1 = 0.0;
+  parameter real b0_a0_p2_a2_em1 = 0.0;
+  parameter real b0_b0_p3_a2_em1 = 0.0;
+  parameter real b0_a0_p3_a2_em1 = 0.0;
+  parameter real b0_b0_p4_a2_em1 = 0.0;
+  parameter real b0_a0_p4_a2_em1 = 0.0;
+  parameter real b0_b0_b0_a3_em1 = 0.0;
+  parameter real b0_a0_b0_a3_em1 = 0.0;
+  parameter real b0_b0_a0_a3_em1 = 0.0;
+  parameter real b0_a0_a0_a3_em1 = 0.0;
+  parameter real b0_b0_a1_a3_em1 = 0.0;
+  parameter real b0_a0_a1_a3_em1 = 0.0;
+  parameter real b0_b0_a2_a3_em1 = 0.0;
+  parameter real b0_a0_a2_a3_em1 = 0.0;
+  parameter real b0_b0_a3_a3_em1 = 0.0;
+  parameter real b0_a0_a3_a3_em1 = 0.0;
+  parameter real b0_b0_a4_a3_em1 = 0.0;
+  parameter real b0_a0_a4_a3_em1 = 0.0;
+  parameter real b0_b0_p1_a3_em1 = 0.0;
+  parameter real b0_a0_p1_a3_em1 = 0.0;
+  parameter real b0_b0_p2_a3_em1 = 0.0;
+  parameter real b0_a0_p2_a3_em1 = 0.0;
+  parameter real b0_b0_p3_a3_em1 = 0.0;
+  parameter real b0_a0_p3_a3_em1 = 0.0;
+  parameter real b0_b0_p4_a3_em1 = 0.0;
+  parameter real b0_a0_p4_a3_em1 = 0.0;
+  parameter real b0_b0_b0_a4_em1 = 0.0;
+  parameter real b0_a0_b0_a4_em1 = 0.0;
+  parameter real b0_b0_a0_a4_em1 = 0.0;
+  parameter real b0_a0_a0_a4_em1 = 0.0;
+  parameter real b0_b0_a1_a4_em1 = 0.0;
+  parameter real b0_a0_a1_a4_em1 = 0.0;
+  parameter real b0_b0_a2_a4_em1 = 0.0;
+  parameter real b0_a0_a2_a4_em1 = 0.0;
+  parameter real b0_b0_a3_a4_em1 = 0.0;
+  parameter real b0_a0_a3_a4_em1 = 0.0;
+  parameter real b0_b0_a4_a4_em1 = 0.0;
+  parameter real b0_a0_a4_a4_em1 = 0.0;
+  parameter real b0_b0_p1_a4_em1 = 0.0;
+  parameter real b0_a0_p1_a4_em1 = 0.0;
+  parameter real b0_b0_p2_a4_em1 = 0.0;
+  parameter real b0_a0_p2_a4_em1 = 0.0;
+  parameter real b0_b0_p3_a4_em1 = 0.0;
+  parameter real b0_a0_p3_a4_em1 = 0.0;
+  parameter real b0_b0_p4_a4_em1 = 0.0;
+  parameter real b0_a0_p4_a4_em1 = 0.0;
+  parameter real b0_b0_b0_p1_em1 = 0.0;
+  parameter real b0_a0_b0_p1_em1 = 0.0;
+  parameter real b0_b0_a0_p1_em1 = 0.0;
+  parameter real b0_a0_a0_p1_em1 = 0.0;
+  parameter real b0_b0_a1_p1_em1 = 0.0;
+  parameter real b0_a0_a1_p1_em1 = 0.0;
+  parameter real b0_b0_a2_p1_em1 = 0.0;
+  parameter real b0_a0_a2_p1_em1 = 0.0;
+  parameter real b0_b0_a3_p1_em1 = 0.0;
+  parameter real b0_a0_a3_p1_em1 = 0.0;
+  parameter real b0_b0_a4_p1_em1 = 0.0;
+  parameter real b0_a0_a4_p1_em1 = 0.0;
+  parameter real b0_b0_p1_p1_em1 = 0.0;
+  parameter real b0_a0_p1_p1_em1 = 0.0;
+  parameter real b0_b0_p2_p1_em1 = 0.0;
+  parameter real b0_a0_p2_p1_em1 = 0.0;
+  parameter real b0_b0_p3_p1_em1 = 0.0;
+  parameter real b0_a0_p3_p1_em1 = 0.0;
+  parameter real b0_b0_p4_p1_em1 = 0.0;
+  parameter real b0_a0_p4_p1_em1 = 0.0;
+  parameter real b0_b0_b0_p2_em1 = 0.0;
+  parameter real b0_a0_b0_p2_em1 = 0.0;
+  parameter real b0_b0_a0_p2_em1 = 0.0;
+  parameter real b0_a0_a0_p2_em1 = 0.0;
+  parameter real b0_b0_a1_p2_em1 = 0.0;
+  parameter real b0_a0_a1_p2_em1 = 0.0;
+  parameter real b0_b0_a2_p2_em1 = 0.0;
+  parameter real b0_a0_a2_p2_em1 = 0.0;
+  parameter real b0_b0_a3_p2_em1 = 0.0;
+  parameter real b0_a0_a3_p2_em1 = 0.0;
+  parameter real b0_b0_a4_p2_em1 = 0.0;
+  parameter real b0_a0_a4_p2_em1 = 0.0;
+  parameter real b0_b0_p1_p2_em1 = 0.0;
+  parameter real b0_a0_p1_p2_em1 = 0.0;
+  parameter real b0_b0_p2_p2_em1 = 0.0;
+  parameter real b0_a0_p2_p2_em1 = 0.0;
+  parameter real b0_b0_p3_p2_em1 = 0.0;
+  parameter real b0_a0_p3_p2_em1 = 0.0;
+  parameter real b0_b0_p4_p2_em1 = 0.0;
+  parameter real b0_a0_p4_p2_em1 = 0.0;
+  parameter real b0_b0_b0_p3_em1 = 0.0;
+  parameter real b0_a0_b0_p3_em1 = 0.0;
+  parameter real b0_b0_a0_p3_em1 = 0.0;
+  parameter real b0_a0_a0_p3_em1 = 0.0;
+  parameter real b0_b0_a1_p3_em1 = 0.0;
+  parameter real b0_a0_a1_p3_em1 = 0.0;
+  parameter real b0_b0_a2_p3_em1 = 0.0;
+  parameter real b0_a0_a2_p3_em1 = 0.0;
+  parameter real b0_b0_a3_p3_em1 = 0.0;
+  parameter real b0_a0_a3_p3_em1 = 0.0;
+  parameter real b0_b0_a4_p3_em1 = 0.0;
+  parameter real b0_a0_a4_p3_em1 = 0.0;
+  parameter real b0_b0_p1_p3_em1 = 0.0;
+  parameter real b0_a0_p1_p3_em1 = 0.0;
+  parameter real b0_b0_p2_p3_em1 = 0.0;
+  parameter real b0_a0_p2_p3_em1 = 0.0;
+  parameter real b0_b0_p3_p3_em1 = 0.0;
+  parameter real b0_a0_p3_p3_em1 = 0.0;
+  parameter real b0_b0_p4_p3_em1 = 0.0;
+  parameter real b0_a0_p4_p3_em1 = 0.0;
+  parameter real b0_b0_b0_p4_em1 = 0.0;
+  parameter real b0_a0_b0_p4_em1 = 0.0;
+  parameter real b0_b0_a0_p4_em1 = 0.0;
+  parameter real b0_a0_a0_p4_em1 = 0.0;
+  parameter real b0_b0_a1_p4_em1 = 0.0;
+  parameter real b0_a0_a1_p4_em1 = 0.0;
+  parameter real b0_b0_a2_p4_em1 = 0.0;
+  parameter real b0_a0_a2_p4_em1 = 0.0;
+  parameter real b0_b0_a3_p4_em1 = 0.0;
+  parameter real b0_a0_a3_p4_em1 = 0.0;
+  parameter real b0_b0_a4_p4_em1 = 0.0;
+  parameter real b0_a0_a4_p4_em1 = 0.0;
+  parameter real b0_b0_p1_p4_em1 = 0.0;
+  parameter real b0_a0_p1_p4_em1 = 0.0;
+  parameter real b0_b0_p2_p4_em1 = 0.0;
+  parameter real b0_a0_p2_p4_em1 = 0.0;
+  parameter real b0_b0_p3_p4_em1 = 0.0;
+  parameter real b0_a0_p3_p4_em1 = 0.0;
+  parameter real b0_b0_p4_p4_em1 = 0.0;
+  parameter real b0_a0_p4_p4_em1 = 0.0;
+  parameter real a0_b0_b0_b0_em1 = 0.0;
+  parameter real a0_a0_b0_b0_em1 = 0.0;
+  parameter real a0_b0_a0_b0_em1 = 0.0;
+  parameter real a0_a0_a0_b0_em1 = 0.0;
+  parameter real a0_b0_a1_b0_em1 = 0.0;
+  parameter real a0_a0_a1_b0_em1 = 0.0;
+  parameter real a0_b0_a2_b0_em1 = 0.0;
+  parameter real a0_a0_a2_b0_em1 = 0.0;
+  parameter real a0_b0_a3_b0_em1 = 0.0;
+  parameter real a0_a0_a3_b0_em1 = 0.0;
+  parameter real a0_b0_a4_b0_em1 = 0.0;
+  parameter real a0_a0_a4_b0_em1 = 0.0;
+  parameter real a0_b0_p1_b0_em1 = 0.0;
+  parameter real a0_a0_p1_b0_em1 = 0.0;
+  parameter real a0_b0_p2_b0_em1 = 0.0;
+  parameter real a0_a0_p2_b0_em1 = 0.0;
+  parameter real a0_b0_p3_b0_em1 = 0.0;
+  parameter real a0_a0_p3_b0_em1 = 0.0;
+  parameter real a0_b0_p4_b0_em1 = 0.0;
+  parameter real a0_a0_p4_b0_em1 = 0.0;
+  parameter real a0_b0_b0_a0_em1 = 0.0;
+  parameter real a0_a0_b0_a0_em1 = 0.0;
+  parameter real a0_b0_a0_a0_em1 = 0.0;
+  parameter real a0_a0_a0_a0_em1 = 0.0;
+  parameter real a0_b0_a1_a0_em1 = 0.0;
+  parameter real a0_a0_a1_a0_em1 = 0.0;
+  parameter real a0_b0_a2_a0_em1 = 0.0;
+  parameter real a0_a0_a2_a0_em1 = 0.0;
+  parameter real a0_b0_a3_a0_em1 = 0.0;
+  parameter real a0_a0_a3_a0_em1 = 0.0;
+  parameter real a0_b0_a4_a0_em1 = 0.0;
+  parameter real a0_a0_a4_a0_em1 = 0.0;
+  parameter real a0_b0_p1_a0_em1 = 0.0;
+  parameter real a0_a0_p1_a0_em1 = 0.0;
+  parameter real a0_b0_p2_a0_em1 = 0.0;
+  parameter real a0_a0_p2_a0_em1 = 0.0;
+  parameter real a0_b0_p3_a0_em1 = 0.0;
+  parameter real a0_a0_p3_a0_em1 = 0.0;
+  parameter real a0_b0_p4_a0_em1 = 0.0;
+  parameter real a0_a0_p4_a0_em1 = 0.0;
+  parameter real a0_b0_b0_a1_em1 = 0.0;
+  parameter real a0_a0_b0_a1_em1 = 0.0;
+  parameter real a0_b0_a0_a1_em1 = 0.0;
+  parameter real a0_a0_a0_a1_em1 = 0.0;
+  parameter real a0_b0_a1_a1_em1 = 0.0;
+  parameter real a0_a0_a1_a1_em1 = 0.0;
+  parameter real a0_b0_a2_a1_em1 = 0.0;
+  parameter real a0_a0_a2_a1_em1 = 0.0;
+  parameter real a0_b0_a3_a1_em1 = 0.0;
+  parameter real a0_a0_a3_a1_em1 = 0.0;
+  parameter real a0_b0_a4_a1_em1 = 0.0;
+  parameter real a0_a0_a4_a1_em1 = 0.0;
+  parameter real a0_b0_p1_a1_em1 = 0.0;
+  parameter real a0_a0_p1_a1_em1 = 0.0;
+  parameter real a0_b0_p2_a1_em1 = 0.0;
+  parameter real a0_a0_p2_a1_em1 = 0.0;
+  parameter real a0_b0_p3_a1_em1 = 0.0;
+  parameter real a0_a0_p3_a1_em1 = 0.0;
+  parameter real a0_b0_p4_a1_em1 = 0.0;
+  parameter real a0_a0_p4_a1_em1 = 0.0;
+  parameter real a0_b0_b0_a2_em1 = 0.0;
+  parameter real a0_a0_b0_a2_em1 = 0.0;
+  parameter real a0_b0_a0_a2_em1 = 0.0;
+  parameter real a0_a0_a0_a2_em1 = 0.0;
+  parameter real a0_b0_a1_a2_em1 = 0.0;
+  parameter real a0_a0_a1_a2_em1 = 0.0;
+  parameter real a0_b0_a2_a2_em1 = 0.0;
+  parameter real a0_a0_a2_a2_em1 = 0.0;
+  parameter real a0_b0_a3_a2_em1 = 0.0;
+  parameter real a0_a0_a3_a2_em1 = 0.0;
+  parameter real a0_b0_a4_a2_em1 = 0.0;
+  parameter real a0_a0_a4_a2_em1 = 0.0;
+  parameter real a0_b0_p1_a2_em1 = 0.0;
+  parameter real a0_a0_p1_a2_em1 = 0.0;
+  parameter real a0_b0_p2_a2_em1 = 0.0;
+  parameter real a0_a0_p2_a2_em1 = 0.0;
+  parameter real a0_b0_p3_a2_em1 = 0.0;
+  parameter real a0_a0_p3_a2_em1 = 0.0;
+  parameter real a0_b0_p4_a2_em1 = 0.0;
+  parameter real a0_a0_p4_a2_em1 = 0.0;
+  parameter real a0_b0_b0_a3_em1 = 0.0;
+  parameter real a0_a0_b0_a3_em1 = 0.0;
+  parameter real a0_b0_a0_a3_em1 = 0.0;
+  parameter real a0_a0_a0_a3_em1 = 0.0;
+  parameter real a0_b0_a1_a3_em1 = 0.0;
+  parameter real a0_a0_a1_a3_em1 = 0.0;
+  parameter real a0_b0_a2_a3_em1 = 0.0;
+  parameter real a0_a0_a2_a3_em1 = 0.0;
+  parameter real a0_b0_a3_a3_em1 = 0.0;
+  parameter real a0_a0_a3_a3_em1 = 0.0;
+  parameter real a0_b0_a4_a3_em1 = 0.0;
+  parameter real a0_a0_a4_a3_em1 = 0.0;
+  parameter real a0_b0_p1_a3_em1 = 0.0;
+  parameter real a0_a0_p1_a3_em1 = 0.0;
+  parameter real a0_b0_p2_a3_em1 = 0.0;
+  parameter real a0_a0_p2_a3_em1 = 0.0;
+  parameter real a0_b0_p3_a3_em1 = 0.0;
+  parameter real a0_a0_p3_a3_em1 = 0.0;
+  parameter real a0_b0_p4_a3_em1 = 0.0;
+  parameter real a0_a0_p4_a3_em1 = 0.0;
+  parameter real a0_b0_b0_a4_em1 = 0.0;
+  parameter real a0_a0_b0_a4_em1 = 0.0;
+  parameter real a0_b0_a0_a4_em1 = 0.0;
+  parameter real a0_a0_a0_a4_em1 = 0.0;
+  parameter real a0_b0_a1_a4_em1 = 0.0;
+  parameter real a0_a0_a1_a4_em1 = 0.0;
+  parameter real a0_b0_a2_a4_em1 = 0.0;
+  parameter real a0_a0_a2_a4_em1 = 0.0;
+  parameter real a0_b0_a3_a4_em1 = 0.0;
+  parameter real a0_a0_a3_a4_em1 = 0.0;
+  parameter real a0_b0_a4_a4_em1 = 0.0;
+  parameter real a0_a0_a4_a4_em1 = 0.0;
+  parameter real a0_b0_p1_a4_em1 = 0.0;
+  parameter real a0_a0_p1_a4_em1 = 0.0;
+  parameter real a0_b0_p2_a4_em1 = 0.0;
+  parameter real a0_a0_p2_a4_em1 = 0.0;
+  parameter real a0_b0_p3_a4_em1 = 0.0;
+  parameter real a0_a0_p3_a4_em1 = 0.0;
+  parameter real a0_b0_p4_a4_em1 = 0.0;
+  parameter real a0_a0_p4_a4_em1 = 0.0;
+  parameter real a0_b0_b0_p1_em1 = 0.0;
+  parameter real a0_a0_b0_p1_em1 = 0.0;
+  parameter real a0_b0_a0_p1_em1 = 0.0;
+  parameter real a0_a0_a0_p1_em1 = 0.0;
+  parameter real a0_b0_a1_p1_em1 = 0.0;
+  parameter real a0_a0_a1_p1_em1 = 0.0;
+  parameter real a0_b0_a2_p1_em1 = 0.0;
+  parameter real a0_a0_a2_p1_em1 = 0.0;
+  parameter real a0_b0_a3_p1_em1 = 0.0;
+  parameter real a0_a0_a3_p1_em1 = 0.0;
+  parameter real a0_b0_a4_p1_em1 = 0.0;
+  parameter real a0_a0_a4_p1_em1 = 0.0;
+  parameter real a0_b0_p1_p1_em1 = 0.0;
+  parameter real a0_a0_p1_p1_em1 = 0.0;
+  parameter real a0_b0_p2_p1_em1 = 0.0;
+  parameter real a0_a0_p2_p1_em1 = 0.0;
+  parameter real a0_b0_p3_p1_em1 = 0.0;
+  parameter real a0_a0_p3_p1_em1 = 0.0;
+  parameter real a0_b0_p4_p1_em1 = 0.0;
+  parameter real a0_a0_p4_p1_em1 = 0.0;
+  parameter real a0_b0_b0_p2_em1 = 0.0;
+  parameter real a0_a0_b0_p2_em1 = 0.0;
+  parameter real a0_b0_a0_p2_em1 = 0.0;
+  parameter real a0_a0_a0_p2_em1 = 0.0;
+  parameter real a0_b0_a1_p2_em1 = 0.0;
+  parameter real a0_a0_a1_p2_em1 = 0.0;
+  parameter real a0_b0_a2_p2_em1 = 0.0;
+  parameter real a0_a0_a2_p2_em1 = 0.0;
+  parameter real a0_b0_a3_p2_em1 = 0.0;
+  parameter real a0_a0_a3_p2_em1 = 0.0;
+  parameter real a0_b0_a4_p2_em1 = 0.0;
+  parameter real a0_a0_a4_p2_em1 = 0.0;
+  parameter real a0_b0_p1_p2_em1 = 0.0;
+  parameter real a0_a0_p1_p2_em1 = 0.0;
+  parameter real a0_b0_p2_p2_em1 = 0.0;
+  parameter real a0_a0_p2_p2_em1 = 0.0;
+  parameter real a0_b0_p3_p2_em1 = 0.0;
+  parameter real a0_a0_p3_p2_em1 = 0.0;
+  parameter real a0_b0_p4_p2_em1 = 0.0;
+  parameter real a0_a0_p4_p2_em1 = 0.0;
+  parameter real a0_b0_b0_p3_em1 = 0.0;
+  parameter real a0_a0_b0_p3_em1 = 0.0;
+  parameter real a0_b0_a0_p3_em1 = 0.0;
+  parameter real a0_a0_a0_p3_em1 = 0.0;
+  parameter real a0_b0_a1_p3_em1 = 0.0;
+  parameter real a0_a0_a1_p3_em1 = 0.0;
+  parameter real a0_b0_a2_p3_em1 = 0.0;
+  parameter real a0_a0_a2_p3_em1 = 0.0;
+  parameter real a0_b0_a3_p3_em1 = 0.0;
+  parameter real a0_a0_a3_p3_em1 = 0.0;
+  parameter real a0_b0_a4_p3_em1 = 0.0;
+  parameter real a0_a0_a4_p3_em1 = 0.0;
+  parameter real a0_b0_p1_p3_em1 = 0.0;
+  parameter real a0_a0_p1_p3_em1 = 0.0;
+  parameter real a0_b0_p2_p3_em1 = 0.0;
+  parameter real a0_a0_p2_p3_em1 = 0.0;
+  parameter real a0_b0_p3_p3_em1 = 0.0;
+  parameter real a0_a0_p3_p3_em1 = 0.0;
+  parameter real a0_b0_p4_p3_em1 = 0.0;
+  parameter real a0_a0_p4_p3_em1 = 0.0;
+  parameter real a0_b0_b0_p4_em1 = 0.0;
+  parameter real a0_a0_b0_p4_em1 = 0.0;
+  parameter real a0_b0_a0_p4_em1 = 0.0;
+  parameter real a0_a0_a0_p4_em1 = 0.0;
+  parameter real a0_b0_a1_p4_em1 = 0.0;
+  parameter real a0_a0_a1_p4_em1 = 0.0;
+  parameter real a0_b0_a2_p4_em1 = 0.0;
+  parameter real a0_a0_a2_p4_em1 = 0.0;
+  parameter real a0_b0_a3_p4_em1 = 0.0;
+  parameter real a0_a0_a3_p4_em1 = 0.0;
+  parameter real a0_b0_a4_p4_em1 = 0.0;
+  parameter real a0_a0_a4_p4_em1 = 0.0;
+  parameter real a0_b0_p1_p4_em1 = 0.0;
+  parameter real a0_a0_p1_p4_em1 = 0.0;
+  parameter real a0_b0_p2_p4_em1 = 0.0;
+  parameter real a0_a0_p2_p4_em1 = 0.0;
+  parameter real a0_b0_p3_p4_em1 = 0.0;
+  parameter real a0_a0_p3_p4_em1 = 0.0;
+  parameter real a0_b0_p4_p4_em1 = 0.0;
+  parameter real a0_a0_p4_p4_em1 = 0.0;
+
+  //electric field fitting parameters Em2 (for HV HCI model)
+  parameter real b0_b0_b0_b0_em2 = 0.0;
+  parameter real b0_a0_b0_b0_em2 = 0.0;
+  parameter real b0_b0_a0_b0_em2 = 0.0;
+  parameter real b0_a0_a0_b0_em2 = 0.0;
+  parameter real b0_b0_a1_b0_em2 = 0.0;
+  parameter real b0_a0_a1_b0_em2 = 0.0;
+  parameter real b0_b0_a2_b0_em2 = 0.0;
+  parameter real b0_a0_a2_b0_em2 = 0.0;
+  parameter real b0_b0_a3_b0_em2 = 0.0;
+  parameter real b0_a0_a3_b0_em2 = 0.0;
+  parameter real b0_b0_a4_b0_em2 = 0.0;
+  parameter real b0_a0_a4_b0_em2 = 0.0;
+  parameter real b0_b0_p1_b0_em2 = 0.0;
+  parameter real b0_a0_p1_b0_em2 = 0.0;
+  parameter real b0_b0_p2_b0_em2 = 0.0;
+  parameter real b0_a0_p2_b0_em2 = 0.0;
+  parameter real b0_b0_p3_b0_em2 = 0.0;
+  parameter real b0_a0_p3_b0_em2 = 0.0;
+  parameter real b0_b0_p4_b0_em2 = 0.0;
+  parameter real b0_a0_p4_b0_em2 = 0.0;
+  parameter real b0_b0_b0_a0_em2 = 0.0;
+  parameter real b0_a0_b0_a0_em2 = 0.0;
+  parameter real b0_b0_a0_a0_em2 = 0.0;
+  parameter real b0_a0_a0_a0_em2 = 0.0;
+  parameter real b0_b0_a1_a0_em2 = 0.0;
+  parameter real b0_a0_a1_a0_em2 = 0.0;
+  parameter real b0_b0_a2_a0_em2 = 0.0;
+  parameter real b0_a0_a2_a0_em2 = 0.0;
+  parameter real b0_b0_a3_a0_em2 = 0.0;
+  parameter real b0_a0_a3_a0_em2 = 0.0;
+  parameter real b0_b0_a4_a0_em2 = 0.0;
+  parameter real b0_a0_a4_a0_em2 = 0.0;
+  parameter real b0_b0_p1_a0_em2 = 0.0;
+  parameter real b0_a0_p1_a0_em2 = 0.0;
+  parameter real b0_b0_p2_a0_em2 = 0.0;
+  parameter real b0_a0_p2_a0_em2 = 0.0;
+  parameter real b0_b0_p3_a0_em2 = 0.0;
+  parameter real b0_a0_p3_a0_em2 = 0.0;
+  parameter real b0_b0_p4_a0_em2 = 0.0;
+  parameter real b0_a0_p4_a0_em2 = 0.0;
+  parameter real b0_b0_b0_a1_em2 = 0.0;
+  parameter real b0_a0_b0_a1_em2 = 0.0;
+  parameter real b0_b0_a0_a1_em2 = 0.0;
+  parameter real b0_a0_a0_a1_em2 = 0.0;
+  parameter real b0_b0_a1_a1_em2 = 0.0;
+  parameter real b0_a0_a1_a1_em2 = 0.0;
+  parameter real b0_b0_a2_a1_em2 = 0.0;
+  parameter real b0_a0_a2_a1_em2 = 0.0;
+  parameter real b0_b0_a3_a1_em2 = 0.0;
+  parameter real b0_a0_a3_a1_em2 = 0.0;
+  parameter real b0_b0_a4_a1_em2 = 0.0;
+  parameter real b0_a0_a4_a1_em2 = 0.0;
+  parameter real b0_b0_p1_a1_em2 = 0.0;
+  parameter real b0_a0_p1_a1_em2 = 0.0;
+  parameter real b0_b0_p2_a1_em2 = 0.0;
+  parameter real b0_a0_p2_a1_em2 = 0.0;
+  parameter real b0_b0_p3_a1_em2 = 0.0;
+  parameter real b0_a0_p3_a1_em2 = 0.0;
+  parameter real b0_b0_p4_a1_em2 = 0.0;
+  parameter real b0_a0_p4_a1_em2 = 0.0;
+  parameter real b0_b0_b0_a2_em2 = 0.0;
+  parameter real b0_a0_b0_a2_em2 = 0.0;
+  parameter real b0_b0_a0_a2_em2 = 0.0;
+  parameter real b0_a0_a0_a2_em2 = 0.0;
+  parameter real b0_b0_a1_a2_em2 = 0.0;
+  parameter real b0_a0_a1_a2_em2 = 0.0;
+  parameter real b0_b0_a2_a2_em2 = 0.0;
+  parameter real b0_a0_a2_a2_em2 = 0.0;
+  parameter real b0_b0_a3_a2_em2 = 0.0;
+  parameter real b0_a0_a3_a2_em2 = 0.0;
+  parameter real b0_b0_a4_a2_em2 = 0.0;
+  parameter real b0_a0_a4_a2_em2 = 0.0;
+  parameter real b0_b0_p1_a2_em2 = 0.0;
+  parameter real b0_a0_p1_a2_em2 = 0.0;
+  parameter real b0_b0_p2_a2_em2 = 0.0;
+  parameter real b0_a0_p2_a2_em2 = 0.0;
+  parameter real b0_b0_p3_a2_em2 = 0.0;
+  parameter real b0_a0_p3_a2_em2 = 0.0;
+  parameter real b0_b0_p4_a2_em2 = 0.0;
+  parameter real b0_a0_p4_a2_em2 = 0.0;
+  parameter real b0_b0_b0_a3_em2 = 0.0;
+  parameter real b0_a0_b0_a3_em2 = 0.0;
+  parameter real b0_b0_a0_a3_em2 = 0.0;
+  parameter real b0_a0_a0_a3_em2 = 0.0;
+  parameter real b0_b0_a1_a3_em2 = 0.0;
+  parameter real b0_a0_a1_a3_em2 = 0.0;
+  parameter real b0_b0_a2_a3_em2 = 0.0;
+  parameter real b0_a0_a2_a3_em2 = 0.0;
+  parameter real b0_b0_a3_a3_em2 = 0.0;
+  parameter real b0_a0_a3_a3_em2 = 0.0;
+  parameter real b0_b0_a4_a3_em2 = 0.0;
+  parameter real b0_a0_a4_a3_em2 = 0.0;
+  parameter real b0_b0_p1_a3_em2 = 0.0;
+  parameter real b0_a0_p1_a3_em2 = 0.0;
+  parameter real b0_b0_p2_a3_em2 = 0.0;
+  parameter real b0_a0_p2_a3_em2 = 0.0;
+  parameter real b0_b0_p3_a3_em2 = 0.0;
+  parameter real b0_a0_p3_a3_em2 = 0.0;
+  parameter real b0_b0_p4_a3_em2 = 0.0;
+  parameter real b0_a0_p4_a3_em2 = 0.0;
+  parameter real b0_b0_b0_a4_em2 = 0.0;
+  parameter real b0_a0_b0_a4_em2 = 0.0;
+  parameter real b0_b0_a0_a4_em2 = 0.0;
+  parameter real b0_a0_a0_a4_em2 = 0.0;
+  parameter real b0_b0_a1_a4_em2 = 0.0;
+  parameter real b0_a0_a1_a4_em2 = 0.0;
+  parameter real b0_b0_a2_a4_em2 = 0.0;
+  parameter real b0_a0_a2_a4_em2 = 0.0;
+  parameter real b0_b0_a3_a4_em2 = 0.0;
+  parameter real b0_a0_a3_a4_em2 = 0.0;
+  parameter real b0_b0_a4_a4_em2 = 0.0;
+  parameter real b0_a0_a4_a4_em2 = 0.0;
+  parameter real b0_b0_p1_a4_em2 = 0.0;
+  parameter real b0_a0_p1_a4_em2 = 0.0;
+  parameter real b0_b0_p2_a4_em2 = 0.0;
+  parameter real b0_a0_p2_a4_em2 = 0.0;
+  parameter real b0_b0_p3_a4_em2 = 0.0;
+  parameter real b0_a0_p3_a4_em2 = 0.0;
+  parameter real b0_b0_p4_a4_em2 = 0.0;
+  parameter real b0_a0_p4_a4_em2 = 0.0;
+  parameter real b0_b0_b0_p1_em2 = 0.0;
+  parameter real b0_a0_b0_p1_em2 = 0.0;
+  parameter real b0_b0_a0_p1_em2 = 0.0;
+  parameter real b0_a0_a0_p1_em2 = 0.0;
+  parameter real b0_b0_a1_p1_em2 = 0.0;
+  parameter real b0_a0_a1_p1_em2 = 0.0;
+  parameter real b0_b0_a2_p1_em2 = 0.0;
+  parameter real b0_a0_a2_p1_em2 = 0.0;
+  parameter real b0_b0_a3_p1_em2 = 0.0;
+  parameter real b0_a0_a3_p1_em2 = 0.0;
+  parameter real b0_b0_a4_p1_em2 = 0.0;
+  parameter real b0_a0_a4_p1_em2 = 0.0;
+  parameter real b0_b0_p1_p1_em2 = 0.0;
+  parameter real b0_a0_p1_p1_em2 = 0.0;
+  parameter real b0_b0_p2_p1_em2 = 0.0;
+  parameter real b0_a0_p2_p1_em2 = 0.0;
+  parameter real b0_b0_p3_p1_em2 = 0.0;
+  parameter real b0_a0_p3_p1_em2 = 0.0;
+  parameter real b0_b0_p4_p1_em2 = 0.0;
+  parameter real b0_a0_p4_p1_em2 = 0.0;
+  parameter real b0_b0_b0_p2_em2 = 0.0;
+  parameter real b0_a0_b0_p2_em2 = 0.0;
+  parameter real b0_b0_a0_p2_em2 = 0.0;
+  parameter real b0_a0_a0_p2_em2 = 0.0;
+  parameter real b0_b0_a1_p2_em2 = 0.0;
+  parameter real b0_a0_a1_p2_em2 = 0.0;
+  parameter real b0_b0_a2_p2_em2 = 0.0;
+  parameter real b0_a0_a2_p2_em2 = 0.0;
+  parameter real b0_b0_a3_p2_em2 = 0.0;
+  parameter real b0_a0_a3_p2_em2 = 0.0;
+  parameter real b0_b0_a4_p2_em2 = 0.0;
+  parameter real b0_a0_a4_p2_em2 = 0.0;
+  parameter real b0_b0_p1_p2_em2 = 0.0;
+  parameter real b0_a0_p1_p2_em2 = 0.0;
+  parameter real b0_b0_p2_p2_em2 = 0.0;
+  parameter real b0_a0_p2_p2_em2 = 0.0;
+  parameter real b0_b0_p3_p2_em2 = 0.0;
+  parameter real b0_a0_p3_p2_em2 = 0.0;
+  parameter real b0_b0_p4_p2_em2 = 0.0;
+  parameter real b0_a0_p4_p2_em2 = 0.0;
+  parameter real b0_b0_b0_p3_em2 = 0.0;
+  parameter real b0_a0_b0_p3_em2 = 0.0;
+  parameter real b0_b0_a0_p3_em2 = 0.0;
+  parameter real b0_a0_a0_p3_em2 = 0.0;
+  parameter real b0_b0_a1_p3_em2 = 0.0;
+  parameter real b0_a0_a1_p3_em2 = 0.0;
+  parameter real b0_b0_a2_p3_em2 = 0.0;
+  parameter real b0_a0_a2_p3_em2 = 0.0;
+  parameter real b0_b0_a3_p3_em2 = 0.0;
+  parameter real b0_a0_a3_p3_em2 = 0.0;
+  parameter real b0_b0_a4_p3_em2 = 0.0;
+  parameter real b0_a0_a4_p3_em2 = 0.0;
+  parameter real b0_b0_p1_p3_em2 = 0.0;
+  parameter real b0_a0_p1_p3_em2 = 0.0;
+  parameter real b0_b0_p2_p3_em2 = 0.0;
+  parameter real b0_a0_p2_p3_em2 = 0.0;
+  parameter real b0_b0_p3_p3_em2 = 0.0;
+  parameter real b0_a0_p3_p3_em2 = 0.0;
+  parameter real b0_b0_p4_p3_em2 = 0.0;
+  parameter real b0_a0_p4_p3_em2 = 0.0;
+  parameter real b0_b0_b0_p4_em2 = 0.0;
+  parameter real b0_a0_b0_p4_em2 = 0.0;
+  parameter real b0_b0_a0_p4_em2 = 0.0;
+  parameter real b0_a0_a0_p4_em2 = 0.0;
+  parameter real b0_b0_a1_p4_em2 = 0.0;
+  parameter real b0_a0_a1_p4_em2 = 0.0;
+  parameter real b0_b0_a2_p4_em2 = 0.0;
+  parameter real b0_a0_a2_p4_em2 = 0.0;
+  parameter real b0_b0_a3_p4_em2 = 0.0;
+  parameter real b0_a0_a3_p4_em2 = 0.0;
+  parameter real b0_b0_a4_p4_em2 = 0.0;
+  parameter real b0_a0_a4_p4_em2 = 0.0;
+  parameter real b0_b0_p1_p4_em2 = 0.0;
+  parameter real b0_a0_p1_p4_em2 = 0.0;
+  parameter real b0_b0_p2_p4_em2 = 0.0;
+  parameter real b0_a0_p2_p4_em2 = 0.0;
+  parameter real b0_b0_p3_p4_em2 = 0.0;
+  parameter real b0_a0_p3_p4_em2 = 0.0;
+  parameter real b0_b0_p4_p4_em2 = 0.0;
+  parameter real b0_a0_p4_p4_em2 = 0.0;
+  parameter real a0_b0_b0_b0_em2 = 0.0;
+  parameter real a0_a0_b0_b0_em2 = 0.0;
+  parameter real a0_b0_a0_b0_em2 = 0.0;
+  parameter real a0_a0_a0_b0_em2 = 0.0;
+  parameter real a0_b0_a1_b0_em2 = 0.0;
+  parameter real a0_a0_a1_b0_em2 = 0.0;
+  parameter real a0_b0_a2_b0_em2 = 0.0;
+  parameter real a0_a0_a2_b0_em2 = 0.0;
+  parameter real a0_b0_a3_b0_em2 = 0.0;
+  parameter real a0_a0_a3_b0_em2 = 0.0;
+  parameter real a0_b0_a4_b0_em2 = 0.0;
+  parameter real a0_a0_a4_b0_em2 = 0.0;
+  parameter real a0_b0_p1_b0_em2 = 0.0;
+  parameter real a0_a0_p1_b0_em2 = 0.0;
+  parameter real a0_b0_p2_b0_em2 = 0.0;
+  parameter real a0_a0_p2_b0_em2 = 0.0;
+  parameter real a0_b0_p3_b0_em2 = 0.0;
+  parameter real a0_a0_p3_b0_em2 = 0.0;
+  parameter real a0_b0_p4_b0_em2 = 0.0;
+  parameter real a0_a0_p4_b0_em2 = 0.0;
+  parameter real a0_b0_b0_a0_em2 = 0.0;
+  parameter real a0_a0_b0_a0_em2 = 0.0;
+  parameter real a0_b0_a0_a0_em2 = 0.0;
+  parameter real a0_a0_a0_a0_em2 = 0.0;
+  parameter real a0_b0_a1_a0_em2 = 0.0;
+  parameter real a0_a0_a1_a0_em2 = 0.0;
+  parameter real a0_b0_a2_a0_em2 = 0.0;
+  parameter real a0_a0_a2_a0_em2 = 0.0;
+  parameter real a0_b0_a3_a0_em2 = 0.0;
+  parameter real a0_a0_a3_a0_em2 = 0.0;
+  parameter real a0_b0_a4_a0_em2 = 0.0;
+  parameter real a0_a0_a4_a0_em2 = 0.0;
+  parameter real a0_b0_p1_a0_em2 = 0.0;
+  parameter real a0_a0_p1_a0_em2 = 0.0;
+  parameter real a0_b0_p2_a0_em2 = 0.0;
+  parameter real a0_a0_p2_a0_em2 = 0.0;
+  parameter real a0_b0_p3_a0_em2 = 0.0;
+  parameter real a0_a0_p3_a0_em2 = 0.0;
+  parameter real a0_b0_p4_a0_em2 = 0.0;
+  parameter real a0_a0_p4_a0_em2 = 0.0;
+  parameter real a0_b0_b0_a1_em2 = 0.0;
+  parameter real a0_a0_b0_a1_em2 = 0.0;
+  parameter real a0_b0_a0_a1_em2 = 0.0;
+  parameter real a0_a0_a0_a1_em2 = 0.0;
+  parameter real a0_b0_a1_a1_em2 = 0.0;
+  parameter real a0_a0_a1_a1_em2 = 0.0;
+  parameter real a0_b0_a2_a1_em2 = 0.0;
+  parameter real a0_a0_a2_a1_em2 = 0.0;
+  parameter real a0_b0_a3_a1_em2 = 0.0;
+  parameter real a0_a0_a3_a1_em2 = 0.0;
+  parameter real a0_b0_a4_a1_em2 = 0.0;
+  parameter real a0_a0_a4_a1_em2 = 0.0;
+  parameter real a0_b0_p1_a1_em2 = 0.0;
+  parameter real a0_a0_p1_a1_em2 = 0.0;
+  parameter real a0_b0_p2_a1_em2 = 0.0;
+  parameter real a0_a0_p2_a1_em2 = 0.0;
+  parameter real a0_b0_p3_a1_em2 = 0.0;
+  parameter real a0_a0_p3_a1_em2 = 0.0;
+  parameter real a0_b0_p4_a1_em2 = 0.0;
+  parameter real a0_a0_p4_a1_em2 = 0.0;
+  parameter real a0_b0_b0_a2_em2 = 0.0;
+  parameter real a0_a0_b0_a2_em2 = 0.0;
+  parameter real a0_b0_a0_a2_em2 = 0.0;
+  parameter real a0_a0_a0_a2_em2 = 0.0;
+  parameter real a0_b0_a1_a2_em2 = 0.0;
+  parameter real a0_a0_a1_a2_em2 = 0.0;
+  parameter real a0_b0_a2_a2_em2 = 0.0;
+  parameter real a0_a0_a2_a2_em2 = 0.0;
+  parameter real a0_b0_a3_a2_em2 = 0.0;
+  parameter real a0_a0_a3_a2_em2 = 0.0;
+  parameter real a0_b0_a4_a2_em2 = 0.0;
+  parameter real a0_a0_a4_a2_em2 = 0.0;
+  parameter real a0_b0_p1_a2_em2 = 0.0;
+  parameter real a0_a0_p1_a2_em2 = 0.0;
+  parameter real a0_b0_p2_a2_em2 = 0.0;
+  parameter real a0_a0_p2_a2_em2 = 0.0;
+  parameter real a0_b0_p3_a2_em2 = 0.0;
+  parameter real a0_a0_p3_a2_em2 = 0.0;
+  parameter real a0_b0_p4_a2_em2 = 0.0;
+  parameter real a0_a0_p4_a2_em2 = 0.0;
+  parameter real a0_b0_b0_a3_em2 = 0.0;
+  parameter real a0_a0_b0_a3_em2 = 0.0;
+  parameter real a0_b0_a0_a3_em2 = 0.0;
+  parameter real a0_a0_a0_a3_em2 = 0.0;
+  parameter real a0_b0_a1_a3_em2 = 0.0;
+  parameter real a0_a0_a1_a3_em2 = 0.0;
+  parameter real a0_b0_a2_a3_em2 = 0.0;
+  parameter real a0_a0_a2_a3_em2 = 0.0;
+  parameter real a0_b0_a3_a3_em2 = 0.0;
+  parameter real a0_a0_a3_a3_em2 = 0.0;
+  parameter real a0_b0_a4_a3_em2 = 0.0;
+  parameter real a0_a0_a4_a3_em2 = 0.0;
+  parameter real a0_b0_p1_a3_em2 = 0.0;
+  parameter real a0_a0_p1_a3_em2 = 0.0;
+  parameter real a0_b0_p2_a3_em2 = 0.0;
+  parameter real a0_a0_p2_a3_em2 = 0.0;
+  parameter real a0_b0_p3_a3_em2 = 0.0;
+  parameter real a0_a0_p3_a3_em2 = 0.0;
+  parameter real a0_b0_p4_a3_em2 = 0.0;
+  parameter real a0_a0_p4_a3_em2 = 0.0;
+  parameter real a0_b0_b0_a4_em2 = 0.0;
+  parameter real a0_a0_b0_a4_em2 = 0.0;
+  parameter real a0_b0_a0_a4_em2 = 0.0;
+  parameter real a0_a0_a0_a4_em2 = 0.0;
+  parameter real a0_b0_a1_a4_em2 = 0.0;
+  parameter real a0_a0_a1_a4_em2 = 0.0;
+  parameter real a0_b0_a2_a4_em2 = 0.0;
+  parameter real a0_a0_a2_a4_em2 = 0.0;
+  parameter real a0_b0_a3_a4_em2 = 0.0;
+  parameter real a0_a0_a3_a4_em2 = 0.0;
+  parameter real a0_b0_a4_a4_em2 = 0.0;
+  parameter real a0_a0_a4_a4_em2 = 0.0;
+  parameter real a0_b0_p1_a4_em2 = 0.0;
+  parameter real a0_a0_p1_a4_em2 = 0.0;
+  parameter real a0_b0_p2_a4_em2 = 0.0;
+  parameter real a0_a0_p2_a4_em2 = 0.0;
+  parameter real a0_b0_p3_a4_em2 = 0.0;
+  parameter real a0_a0_p3_a4_em2 = 0.0;
+  parameter real a0_b0_p4_a4_em2 = 0.0;
+  parameter real a0_a0_p4_a4_em2 = 0.0;
+  parameter real a0_b0_b0_p1_em2 = 0.0;
+  parameter real a0_a0_b0_p1_em2 = 0.0;
+  parameter real a0_b0_a0_p1_em2 = 0.0;
+  parameter real a0_a0_a0_p1_em2 = 0.0;
+  parameter real a0_b0_a1_p1_em2 = 0.0;
+  parameter real a0_a0_a1_p1_em2 = 0.0;
+  parameter real a0_b0_a2_p1_em2 = 0.0;
+  parameter real a0_a0_a2_p1_em2 = 0.0;
+  parameter real a0_b0_a3_p1_em2 = 0.0;
+  parameter real a0_a0_a3_p1_em2 = 0.0;
+  parameter real a0_b0_a4_p1_em2 = 0.0;
+  parameter real a0_a0_a4_p1_em2 = 0.0;
+  parameter real a0_b0_p1_p1_em2 = 0.0;
+  parameter real a0_a0_p1_p1_em2 = 0.0;
+  parameter real a0_b0_p2_p1_em2 = 0.0;
+  parameter real a0_a0_p2_p1_em2 = 0.0;
+  parameter real a0_b0_p3_p1_em2 = 0.0;
+  parameter real a0_a0_p3_p1_em2 = 0.0;
+  parameter real a0_b0_p4_p1_em2 = 0.0;
+  parameter real a0_a0_p4_p1_em2 = 0.0;
+  parameter real a0_b0_b0_p2_em2 = 0.0;
+  parameter real a0_a0_b0_p2_em2 = 0.0;
+  parameter real a0_b0_a0_p2_em2 = 0.0;
+  parameter real a0_a0_a0_p2_em2 = 0.0;
+  parameter real a0_b0_a1_p2_em2 = 0.0;
+  parameter real a0_a0_a1_p2_em2 = 0.0;
+  parameter real a0_b0_a2_p2_em2 = 0.0;
+  parameter real a0_a0_a2_p2_em2 = 0.0;
+  parameter real a0_b0_a3_p2_em2 = 0.0;
+  parameter real a0_a0_a3_p2_em2 = 0.0;
+  parameter real a0_b0_a4_p2_em2 = 0.0;
+  parameter real a0_a0_a4_p2_em2 = 0.0;
+  parameter real a0_b0_p1_p2_em2 = 0.0;
+  parameter real a0_a0_p1_p2_em2 = 0.0;
+  parameter real a0_b0_p2_p2_em2 = 0.0;
+  parameter real a0_a0_p2_p2_em2 = 0.0;
+  parameter real a0_b0_p3_p2_em2 = 0.0;
+  parameter real a0_a0_p3_p2_em2 = 0.0;
+  parameter real a0_b0_p4_p2_em2 = 0.0;
+  parameter real a0_a0_p4_p2_em2 = 0.0;
+  parameter real a0_b0_b0_p3_em2 = 0.0;
+  parameter real a0_a0_b0_p3_em2 = 0.0;
+  parameter real a0_b0_a0_p3_em2 = 0.0;
+  parameter real a0_a0_a0_p3_em2 = 0.0;
+  parameter real a0_b0_a1_p3_em2 = 0.0;
+  parameter real a0_a0_a1_p3_em2 = 0.0;
+  parameter real a0_b0_a2_p3_em2 = 0.0;
+  parameter real a0_a0_a2_p3_em2 = 0.0;
+  parameter real a0_b0_a3_p3_em2 = 0.0;
+  parameter real a0_a0_a3_p3_em2 = 0.0;
+  parameter real a0_b0_a4_p3_em2 = 0.0;
+  parameter real a0_a0_a4_p3_em2 = 0.0;
+  parameter real a0_b0_p1_p3_em2 = 0.0;
+  parameter real a0_a0_p1_p3_em2 = 0.0;
+  parameter real a0_b0_p2_p3_em2 = 0.0;
+  parameter real a0_a0_p2_p3_em2 = 0.0;
+  parameter real a0_b0_p3_p3_em2 = 0.0;
+  parameter real a0_a0_p3_p3_em2 = 0.0;
+  parameter real a0_b0_p4_p3_em2 = 0.0;
+  parameter real a0_a0_p4_p3_em2 = 0.0;
+  parameter real a0_b0_b0_p4_em2 = 0.0;
+  parameter real a0_a0_b0_p4_em2 = 0.0;
+  parameter real a0_b0_a0_p4_em2 = 0.0;
+  parameter real a0_a0_a0_p4_em2 = 0.0;
+  parameter real a0_b0_a1_p4_em2 = 0.0;
+  parameter real a0_a0_a1_p4_em2 = 0.0;
+  parameter real a0_b0_a2_p4_em2 = 0.0;
+  parameter real a0_a0_a2_p4_em2 = 0.0;
+  parameter real a0_b0_a3_p4_em2 = 0.0;
+  parameter real a0_a0_a3_p4_em2 = 0.0;
+  parameter real a0_b0_a4_p4_em2 = 0.0;
+  parameter real a0_a0_a4_p4_em2 = 0.0;
+  parameter real a0_b0_p1_p4_em2 = 0.0;
+  parameter real a0_a0_p1_p4_em2 = 0.0;
+  parameter real a0_b0_p2_p4_em2 = 0.0;
+  parameter real a0_a0_p2_p4_em2 = 0.0;
+  parameter real a0_b0_p3_p4_em2 = 0.0;
+  parameter real a0_a0_p3_p4_em2 = 0.0;
+  parameter real a0_b0_p4_p4_em2 = 0.0;
+  parameter real a0_a0_p4_p4_em2 = 0.0;
+
+  // --------------------------------------------------------------------------
+  //
+  // Ports
+  //
+  // --------------------------------------------------------------------------
+
+  inout d, g, s, hw, d2, dt;
+  electrical d, g, s, hw, d2;
+  thermal dt;
+
+  // --------------------------------------------------------------------------
+  //
+  // Variables
+  //
+  // --------------------------------------------------------------------------
+
+  // electric field variables
+  real b0_b0_b0_em1, a0_b0_b0_em1, b0_a0_b0_em1, a0_a0_b0_em1, b0_a1_b0_em1;
+  real a0_a1_b0_em1, b0_a2_b0_em1, a0_a2_b0_em1, b0_a3_b0_em1, a0_a3_b0_em1;
+  real b0_a4_b0_em1, a0_a4_b0_em1, b0_p1_b0_em1, a0_p1_b0_em1, b0_p2_b0_em1;
+  real a0_p2_b0_em1, b0_p3_b0_em1, a0_p3_b0_em1, b0_p4_b0_em1, a0_p4_b0_em1;
+  real b0_b0_a0_em1, a0_b0_a0_em1, b0_a0_a0_em1, a0_a0_a0_em1, b0_a1_a0_em1;
+  real a0_a1_a0_em1, b0_a2_a0_em1, a0_a2_a0_em1, b0_a3_a0_em1, a0_a3_a0_em1;
+  real b0_a4_a0_em1, a0_a4_a0_em1, b0_p1_a0_em1, a0_p1_a0_em1, b0_p2_a0_em1;
+  real a0_p2_a0_em1, b0_p3_a0_em1, a0_p3_a0_em1, b0_p4_a0_em1, a0_p4_a0_em1;
+  real b0_b0_a1_em1, a0_b0_a1_em1, b0_a0_a1_em1, a0_a0_a1_em1, b0_a1_a1_em1;
+  real a0_a1_a1_em1, b0_a2_a1_em1, a0_a2_a1_em1, b0_a3_a1_em1, a0_a3_a1_em1;
+  real b0_a4_a1_em1, a0_a4_a1_em1, b0_p1_a1_em1, a0_p1_a1_em1, b0_p2_a1_em1;
+  real a0_p2_a1_em1, b0_p3_a1_em1, a0_p3_a1_em1, b0_p4_a1_em1, a0_p4_a1_em1;
+  real b0_b0_a2_em1, a0_b0_a2_em1, b0_a0_a2_em1, a0_a0_a2_em1, b0_a1_a2_em1;
+  real a0_a1_a2_em1, b0_a2_a2_em1, a0_a2_a2_em1, b0_a3_a2_em1, a0_a3_a2_em1;
+  real b0_a4_a2_em1, a0_a4_a2_em1, b0_p1_a2_em1, a0_p1_a2_em1, b0_p2_a2_em1;
+  real a0_p2_a2_em1, b0_p3_a2_em1, a0_p3_a2_em1, b0_p4_a2_em1, a0_p4_a2_em1;
+  real b0_b0_a3_em1, a0_b0_a3_em1, b0_a0_a3_em1, a0_a0_a3_em1, b0_a1_a3_em1;
+  real a0_a1_a3_em1, b0_a2_a3_em1, a0_a2_a3_em1, b0_a3_a3_em1, a0_a3_a3_em1;
+  real b0_a4_a3_em1, a0_a4_a3_em1, b0_p1_a3_em1, a0_p1_a3_em1, b0_p2_a3_em1;
+  real a0_p2_a3_em1, b0_p3_a3_em1, a0_p3_a3_em1, b0_p4_a3_em1, a0_p4_a3_em1;
+  real b0_b0_a4_em1, a0_b0_a4_em1, b0_a0_a4_em1, a0_a0_a4_em1, b0_a1_a4_em1;
+  real a0_a1_a4_em1, b0_a2_a4_em1, a0_a2_a4_em1, b0_a3_a4_em1, a0_a3_a4_em1;
+  real b0_a4_a4_em1, a0_a4_a4_em1, b0_p1_a4_em1, a0_p1_a4_em1, b0_p2_a4_em1;
+  real a0_p2_a4_em1, b0_p3_a4_em1, a0_p3_a4_em1, b0_p4_a4_em1, a0_p4_a4_em1;
+  real b0_b0_p1_em1, a0_b0_p1_em1, b0_a0_p1_em1, a0_a0_p1_em1, b0_a1_p1_em1;
+  real a0_a1_p1_em1, b0_a2_p1_em1, a0_a2_p1_em1, b0_a3_p1_em1, a0_a3_p1_em1;
+  real b0_a4_p1_em1, a0_a4_p1_em1, b0_p1_p1_em1, a0_p1_p1_em1, b0_p2_p1_em1;
+  real a0_p2_p1_em1, b0_p3_p1_em1, a0_p3_p1_em1, b0_p4_p1_em1, a0_p4_p1_em1;
+  real b0_b0_p2_em1, a0_b0_p2_em1, b0_a0_p2_em1, a0_a0_p2_em1, b0_a1_p2_em1;
+  real a0_a1_p2_em1, b0_a2_p2_em1, a0_a2_p2_em1, b0_a3_p2_em1, a0_a3_p2_em1;
+  real b0_a4_p2_em1, a0_a4_p2_em1, b0_p1_p2_em1, a0_p1_p2_em1, b0_p2_p2_em1;
+  real a0_p2_p2_em1, b0_p3_p2_em1, a0_p3_p2_em1, b0_p4_p2_em1, a0_p4_p2_em1;
+  real b0_b0_p3_em1, a0_b0_p3_em1, b0_a0_p3_em1, a0_a0_p3_em1, b0_a1_p3_em1;
+  real a0_a1_p3_em1, b0_a2_p3_em1, a0_a2_p3_em1, b0_a3_p3_em1, a0_a3_p3_em1;
+  real b0_a4_p3_em1, a0_a4_p3_em1, b0_p1_p3_em1, a0_p1_p3_em1, b0_p2_p3_em1;
+  real a0_p2_p3_em1, b0_p3_p3_em1, a0_p3_p3_em1, b0_p4_p3_em1, a0_p4_p3_em1;
+  real b0_b0_p4_em1, a0_b0_p4_em1, b0_a0_p4_em1, a0_a0_p4_em1, b0_a1_p4_em1;
+  real a0_a1_p4_em1, b0_a2_p4_em1, a0_a2_p4_em1, b0_a3_p4_em1, a0_a3_p4_em1;
+  real b0_a4_p4_em1, a0_a4_p4_em1, b0_p1_p4_em1, a0_p1_p4_em1, b0_p2_p4_em1;
+  real a0_p2_p4_em1, b0_p3_p4_em1, a0_p3_p4_em1, b0_p4_p4_em1, a0_p4_p4_em1;
+  real b0_b0_em1, a0_b0_em1, a1_b0_em1, a2_b0_em1, a3_b0_em1, a4_b0_em1, p1_b0_em1;
+  real p2_b0_em1, p3_b0_em1, p4_b0_em1, b0_a0_em1, a0_a0_em1, a1_a0_em1, a2_a0_em1;
+  real a3_a0_em1, a4_a0_em1, p1_a0_em1, p2_a0_em1, p3_a0_em1, p4_a0_em1, b0_a1_em1;
+  real a0_a1_em1, a1_a1_em1, a2_a1_em1, a3_a1_em1, a4_a1_em1, p1_a1_em1, p2_a1_em1;
+  real p3_a1_em1, p4_a1_em1, b0_a2_em1, a0_a2_em1, a1_a2_em1, a2_a2_em1, a3_a2_em1;
+  real a4_a2_em1, p1_a2_em1, p2_a2_em1, p3_a2_em1, p4_a2_em1, b0_a3_em1, a0_a3_em1;
+  real a1_a3_em1, a2_a3_em1, a3_a3_em1, a4_a3_em1, p1_a3_em1, p2_a3_em1, p3_a3_em1;
+  real p4_a3_em1, b0_a4_em1, a0_a4_em1, a1_a4_em1, a2_a4_em1, a3_a4_em1, a4_a4_em1;
+  real p1_a4_em1, p2_a4_em1, p3_a4_em1, p4_a4_em1, b0_p1_em1, a0_p1_em1, a1_p1_em1;
+  real a2_p1_em1, a3_p1_em1, a4_p1_em1, p1_p1_em1, p2_p1_em1, p3_p1_em1, p4_p1_em1;
+  real b0_p2_em1, a0_p2_em1, a1_p2_em1, a2_p2_em1, a3_p2_em1, a4_p2_em1, p1_p2_em1;
+  real p2_p2_em1, p3_p2_em1, p4_p2_em1, b0_p3_em1, a0_p3_em1, a1_p3_em1, a2_p3_em1;
+  real a3_p3_em1, a4_p3_em1, p1_p3_em1, p2_p3_em1, p3_p3_em1, p4_p3_em1, b0_p4_em1;
+  real a0_p4_em1, a1_p4_em1, a2_p4_em1, a3_p4_em1, a4_p4_em1, p1_p4_em1, p2_p4_em1;
+  real p3_p4_em1, p4_p4_em1;
+  real b0_em1, a0_em1, a1_em1, a2_em1, a3_em1, a4_em1;
+  real p1_em1, p2_em1, p3_em1, p4_em1, em1;
+  real b0_b0_b0_em2, a0_b0_b0_em2, b0_a0_b0_em2, a0_a0_b0_em2, b0_a1_b0_em2;
+  real a0_a1_b0_em2, b0_a2_b0_em2, a0_a2_b0_em2, b0_a3_b0_em2, a0_a3_b0_em2;
+  real b0_a4_b0_em2, a0_a4_b0_em2, b0_p1_b0_em2, a0_p1_b0_em2, b0_p2_b0_em2;
+  real a0_p2_b0_em2, b0_p3_b0_em2, a0_p3_b0_em2, b0_p4_b0_em2, a0_p4_b0_em2;
+  real b0_b0_a0_em2, a0_b0_a0_em2, b0_a0_a0_em2, a0_a0_a0_em2, b0_a1_a0_em2;
+  real a0_a1_a0_em2, b0_a2_a0_em2, a0_a2_a0_em2, b0_a3_a0_em2, a0_a3_a0_em2;
+  real b0_a4_a0_em2, a0_a4_a0_em2, b0_p1_a0_em2, a0_p1_a0_em2, b0_p2_a0_em2;
+  real a0_p2_a0_em2, b0_p3_a0_em2, a0_p3_a0_em2, b0_p4_a0_em2, a0_p4_a0_em2;
+  real b0_b0_a1_em2, a0_b0_a1_em2, b0_a0_a1_em2, a0_a0_a1_em2, b0_a1_a1_em2;
+  real a0_a1_a1_em2, b0_a2_a1_em2, a0_a2_a1_em2, b0_a3_a1_em2, a0_a3_a1_em2;
+  real b0_a4_a1_em2, a0_a4_a1_em2, b0_p1_a1_em2, a0_p1_a1_em2, b0_p2_a1_em2;
+  real a0_p2_a1_em2, b0_p3_a1_em2, a0_p3_a1_em2, b0_p4_a1_em2, a0_p4_a1_em2;
+  real b0_b0_a2_em2, a0_b0_a2_em2, b0_a0_a2_em2, a0_a0_a2_em2, b0_a1_a2_em2;
+  real a0_a1_a2_em2, b0_a2_a2_em2, a0_a2_a2_em2, b0_a3_a2_em2, a0_a3_a2_em2;
+  real b0_a4_a2_em2, a0_a4_a2_em2, b0_p1_a2_em2, a0_p1_a2_em2, b0_p2_a2_em2;
+  real a0_p2_a2_em2, b0_p3_a2_em2, a0_p3_a2_em2, b0_p4_a2_em2, a0_p4_a2_em2;
+  real b0_b0_a3_em2, a0_b0_a3_em2, b0_a0_a3_em2, a0_a0_a3_em2, b0_a1_a3_em2;
+  real a0_a1_a3_em2, b0_a2_a3_em2, a0_a2_a3_em2, b0_a3_a3_em2, a0_a3_a3_em2;
+  real b0_a4_a3_em2, a0_a4_a3_em2, b0_p1_a3_em2, a0_p1_a3_em2, b0_p2_a3_em2;
+  real a0_p2_a3_em2, b0_p3_a3_em2, a0_p3_a3_em2, b0_p4_a3_em2, a0_p4_a3_em2;
+  real b0_b0_a4_em2, a0_b0_a4_em2, b0_a0_a4_em2, a0_a0_a4_em2, b0_a1_a4_em2;
+  real a0_a1_a4_em2, b0_a2_a4_em2, a0_a2_a4_em2, b0_a3_a4_em2, a0_a3_a4_em2;
+  real b0_a4_a4_em2, a0_a4_a4_em2, b0_p1_a4_em2, a0_p1_a4_em2, b0_p2_a4_em2;
+  real a0_p2_a4_em2, b0_p3_a4_em2, a0_p3_a4_em2, b0_p4_a4_em2, a0_p4_a4_em2;
+  real b0_b0_p1_em2, a0_b0_p1_em2, b0_a0_p1_em2, a0_a0_p1_em2, b0_a1_p1_em2;
+  real a0_a1_p1_em2, b0_a2_p1_em2, a0_a2_p1_em2, b0_a3_p1_em2, a0_a3_p1_em2;
+  real b0_a4_p1_em2, a0_a4_p1_em2, b0_p1_p1_em2, a0_p1_p1_em2, b0_p2_p1_em2;
+  real a0_p2_p1_em2, b0_p3_p1_em2, a0_p3_p1_em2, b0_p4_p1_em2, a0_p4_p1_em2;
+  real b0_b0_p2_em2, a0_b0_p2_em2, b0_a0_p2_em2, a0_a0_p2_em2, b0_a1_p2_em2;
+  real a0_a1_p2_em2, b0_a2_p2_em2, a0_a2_p2_em2, b0_a3_p2_em2, a0_a3_p2_em2;
+  real b0_a4_p2_em2, a0_a4_p2_em2, b0_p1_p2_em2, a0_p1_p2_em2, b0_p2_p2_em2;
+  real a0_p2_p2_em2, b0_p3_p2_em2, a0_p3_p2_em2, b0_p4_p2_em2, a0_p4_p2_em2;
+  real b0_b0_p3_em2, a0_b0_p3_em2, b0_a0_p3_em2, a0_a0_p3_em2, b0_a1_p3_em2;
+  real a0_a1_p3_em2, b0_a2_p3_em2, a0_a2_p3_em2, b0_a3_p3_em2, a0_a3_p3_em2;
+  real b0_a4_p3_em2, a0_a4_p3_em2, b0_p1_p3_em2, a0_p1_p3_em2, b0_p2_p3_em2;
+  real a0_p2_p3_em2, b0_p3_p3_em2, a0_p3_p3_em2, b0_p4_p3_em2, a0_p4_p3_em2;
+  real b0_b0_p4_em2, a0_b0_p4_em2, b0_a0_p4_em2, a0_a0_p4_em2, b0_a1_p4_em2;
+  real a0_a1_p4_em2, b0_a2_p4_em2, a0_a2_p4_em2, b0_a3_p4_em2, a0_a3_p4_em2;
+  real b0_a4_p4_em2, a0_a4_p4_em2, b0_p1_p4_em2, a0_p1_p4_em2, b0_p2_p4_em2;
+  real a0_p2_p4_em2, b0_p3_p4_em2, a0_p3_p4_em2, b0_p4_p4_em2, a0_p4_p4_em2;
+  real b0_b0_em2, a0_b0_em2, a1_b0_em2, a2_b0_em2, a3_b0_em2, a4_b0_em2, p1_b0_em2;
+  real p2_b0_em2, p3_b0_em2, p4_b0_em2, b0_a0_em2, a0_a0_em2, a1_a0_em2, a2_a0_em2;
+  real a3_a0_em2, a4_a0_em2, p1_a0_em2, p2_a0_em2, p3_a0_em2, p4_a0_em2, b0_a1_em2;
+  real a0_a1_em2, a1_a1_em2, a2_a1_em2, a3_a1_em2, a4_a1_em2, p1_a1_em2, p2_a1_em2;
+  real p3_a1_em2, p4_a1_em2, b0_a2_em2, a0_a2_em2, a1_a2_em2, a2_a2_em2, a3_a2_em2;
+  real a4_a2_em2, p1_a2_em2, p2_a2_em2, p3_a2_em2, p4_a2_em2, b0_a3_em2, a0_a3_em2;
+  real a1_a3_em2, a2_a3_em2, a3_a3_em2, a4_a3_em2, p1_a3_em2, p2_a3_em2, p3_a3_em2;
+  real p4_a3_em2, b0_a4_em2, a0_a4_em2, a1_a4_em2, a2_a4_em2, a3_a4_em2, a4_a4_em2;
+  real p1_a4_em2, p2_a4_em2, p3_a4_em2, p4_a4_em2, b0_p1_em2, a0_p1_em2, a1_p1_em2;
+  real a2_p1_em2, a3_p1_em2, a4_p1_em2, p1_p1_em2, p2_p1_em2, p3_p1_em2, p4_p1_em2;
+  real b0_p2_em2, a0_p2_em2, a1_p2_em2, a2_p2_em2, a3_p2_em2, a4_p2_em2, p1_p2_em2;
+  real p2_p2_em2, p3_p2_em2, p4_p2_em2, b0_p3_em2, a0_p3_em2, a1_p3_em2, a2_p3_em2;
+  real a3_p3_em2, a4_p3_em2, p1_p3_em2, p2_p3_em2, p3_p3_em2, p4_p3_em2, b0_p4_em2;
+  real a0_p4_em2, a1_p4_em2, a2_p4_em2, a3_p4_em2, a4_p4_em2, p1_p4_em2, p2_p4_em2;
+  real p3_p4_em2, p4_p4_em2;
+  real b0_em2, a0_em2, a1_em2, a2_em2, a3_em2, a4_em2;
+  real p1_em2, p2_em2, p3_em2, p4_em2, em2;
+  // general variables
+  integer stressed;
+  integer update_file_hci, update_file_off, update_file_hvgs;
+  // model variables
+  real eq_stress_time;
+  real eq_inv_tlife1, eq_inv_tlife2, eq_inv_tlife3, eq_inv_tlife4, eq_inv_tlife5;
+  real contrib_inv_tlife1, contrib_inv_tlife2;
+  real contrib_inv_tlife3, contrib_inv_tlife4;
+  real contrib_inv_tlife5;
+  real temp, tempamb, dtemp, invkt;
+  real Vds, Vgs, Vshw, Vr, Igmin, idrain;
+  real temp1, temp2, temp3, temp4;
+  // HCI parameters
+  real idraincutoff, hci_id_ov_w;
+  real hci_pow1_id_ov_w, hci_pow2_id_ov_w;
+  real therm, tanhtherm;
+  real hcidamage_delta1, hcidamage_delta2, hciage1, hciage2;
+  real hcidron_50p, hcis_50p, hcifa, hcidron_fa, hcisa;
+  real hcifstat1, hcifstat2;
+  real hcidron;
+  // offstate HCI parameters
+  real offdamage_delta1, offdamage_delta2, offage1, offage2;
+  real offdron_50p, offs_50p, offfa, offdron_fa, offsa;
+  real offfstat1, offfstat2;
+  real offdron;
+  // high-VDSVGS HCI parameters
+  real hvgs_id_ov_w, hvgs_pow_id_ov_w, hvgstemp;
+  real hvgsdamage_delta, hvgsage, hvgsdvt;
+
+  // --------------------------------------------------------------------------
+  //
+  // Analog Functions
+  //
+  // --------------------------------------------------------------------------
+
+  analog function real hypf;
+    input x, delta;
+    real  x, delta, d, a;
+    begin
+      d = 0.5 * x / delta;
+      a = sqrt(1.0 + d * d);
+      hypf = (x < 0.0) ? delta / (a - d) : delta * (a + d);
+    end
+  endfunction // hypf
+
+  // smoothing function
+  analog function real sigmoid;
+    input x, delta, mexp;
+    real  x, delta, mexp;
+    begin
+      sigmoid = x / pow(pow(x, 2.0*mexp) + pow(delta, 2.0*mexp), 1.0/(2.0*mexp));
+    end
+  endfunction // sigmoid
+
+  analog function real linear;
+    input b, a, x;
+    real  b, a, x;
+    begin
+      linear = a * x + b;
+    end
+  endfunction // linear
+
+  analog function real linear_5reg;
+    input b0, a0, a1, a2, a3, a4, p1, p2, p3, p4, x;
+    real  b0, a0, a1, a2, a3, a4, p1, p2, p3, p4, x;
+    real  b1, b2, b3, b4;
+    begin
+      b1 = (a0 - a1) * p1 + b0;
+      b2 = (a1 - a2) * p2 + b1;
+      b3 = (a2 - a3) * p3 + b2;
+      b4 = (a3 - a4) * p4 + b3;
+
+      if      (x < p1) linear_5reg = a0 * x + b0;
+      else if (x < p2) linear_5reg = a1 * x + b1;
+      else if (x < p3) linear_5reg = a2 * x + b2;
+      else if (x < p4) linear_5reg = a3 * x + b3;
+      else             linear_5reg = a4 * x + b4;
+    end
+  endfunction // linear_5reg
+
+
+  // --------------------------------------------------------------------------
+  //
+  // Analog Block
+  //
+  // --------------------------------------------------------------------------
+
+  analog begin
+
+`ifdef DEBUG
+    @(initial_step) begin
+      $write("\nPRESTOPLUS AND DEVICE DEPENDENT PARAMETERS (%M)");
+      $write("\nactive(%M)              = %d", active);
+      $write("\ntage(%M)                = %g", tage);
+    end
+`endif // DEBUG
+
+    if (active && (tage > 0.0)) begin
+
+      // ----------------------------------------------------------------------
+      //
+      // Initialization
+      //
+      // ----------------------------------------------------------------------
+
+      @(initial_step) begin
+
+        eq_inv_tlife1 = 0.0;
+        eq_inv_tlife2 = 0.0;
+        eq_inv_tlife3 = 0.0;
+        eq_inv_tlife4 = 0.0;
+        eq_inv_tlife5 = 0.0;
+        contrib_inv_tlife1 = 0.0;
+        contrib_inv_tlife2 = 0.0;
+        contrib_inv_tlife3 = 0.0;
+        contrib_inv_tlife4 = 0.0;
+        contrib_inv_tlife5 = 0.0;
+
+        if (analysis("dc", "tran")) begin
+
+          // opening files for later write
+          update_file_hci  = $fopen(`XML_FILE_NAME_HCI,  `FOPEN_MODE);
+          update_file_off  = $fopen(`XML_FILE_NAME_OFF,  `FOPEN_MODE);
+          update_file_hvgs = $fopen(`XML_FILE_NAME_HVGS, `FOPEN_MODE);
+
+        end // if (analysis("dc", "tran"))
+
+        tempamb = $temperature + dta;
+
+        // initialize parameters that don't depend on varying bias or temp
+        // currently nothing
+
+`ifdef DEBUG
+        $write("\ndicrit(%M)              = %g", dicrit);
+`endif // DEBUG
+
+
+      end // initial_step
+
+      // ----------------------------------------------------------------------
+      //
+      // HCI model calculations (dc and tran)
+      //
+      // ----------------------------------------------------------------------
+
+      if (analysis("dc", "tran")) begin
+
+        Vds  = type * V(d, s);
+        Vgs  = type * V(g, s);
+        Vshw = type * V(s, hw);
+        Vr   = type * V(d, d2);
+
+        if (swsh == 0) begin
+          dtemp = 0.0;
+        end else begin
+          dtemp = hypf(Temp(dt),`EPS2);
+        end
+
+        temp = tempamb + dtemp;
+        invkt = 1.0/$vt(temp);
+
+        if (simprobeactive == 1) begin
+          // first fetch simprobe result and only then use/multiply the value
+          // this avoids implicit conversion problems with spectre
+          // spectre probably returns the value as string rather than real
+          idrain = $simprobe(simprobedevice, simprobeparam);
+          idrain = type * simprobeparamsign * idrain;
+        end else begin
+          // compensate for extra current due to gmin
+          Igmin = $simparam("gmin") * Vds;
+          idrain = Vr/rval*mult - Igmin;
+        end
+        // make sure idrain is positive to avoid division by zero
+        idrain = hypf(idrain, `EPS2);
+
+        //////////////////////////////////////
+        // Model calculations for HV HCI model
+        //////////////////////////////////////
+        if (hciactive == 1) begin
+          if (type == `NMOS) begin
+            idraincutoff = idrain;
+          end else begin // type == `PMOS
+            idraincutoff = 0.5 * (1.0 + sigmoid(Vgs - hcivgscutoff, hcideltacutoff, hcimexpcutoff)) * idrain;
+          end
+
+          hci_id_ov_w = (w * mult > 0.0) ? idraincutoff / (w * mult) : `EPS2;
+
+          /* calculate intermediate values for lifetimes */
+          therm         = 0.5 * hciep * invkt;
+          tanhtherm     = tanh(therm);
+
+          hci_pow1_id_ov_w = pow(hci_id_ov_w, hcibeta1);
+
+          /* calculate electric field em1 (for main carrier type:
+          *                               e for NMOS; h for PMOS) */
+          `EM1(tempamb, Vgs, Vds, -Vshw)
+
+          temp1 = em1 * tanhtherm;
+          temp2 = (type == `NMOS)
+                  ? temp1 * hcilambdael0 / hciphibel
+                  : temp1 * hcilambdah0 / hciphibh;
+          contrib_inv_tlife1 = ((temp2 > 0.0) && (hcialpha1 > 0.0))
+                              ? (1.0 / hcialpha1) * hci_pow1_id_ov_w * temp2
+                                * exp(-1.0 / temp2)
+                              : 0.0;
+
+          if (type == `PMOS) begin
+            hci_pow2_id_ov_w = pow(hci_id_ov_w, hcibeta2);
+            /* calculate electric field em2 (only electrons for PMOS) */
+            `EM2(tempamb, Vgs, Vds, -Vshw)
+
+            temp2 = em2 * hcilambdael0 * tanhtherm / hciphibel;
+            contrib_inv_tlife2 = ((temp2 > 0.0) && (hcialpha2 > 0.0))
+                                ? (1.0 / hcialpha2) * hci_pow2_id_ov_w * temp2
+                                  * exp(-1.0 / temp2)
+                                : 0.0;
+          end else begin
+            em2                = 0.0;
+            contrib_inv_tlife2 = 0.0;
+          end
+        end // hciactive
+
+        ////////////////////////////////////////////
+        // Model calculations for offstate HCI model
+        ////////////////////////////////////////////
+        if (offactive == 1) begin
+          temp1 = (Vds > offbeta1legacyclip) ? exp(offbeta1legacy * Vds) : 0.0;
+          temp2 = (offbeta1 > 0.0)
+                 ? ( (Vds > 0.0) ? exp(offbeta1 * Vds) - 1.0 : 0.0 )
+                 : 1.0;
+          temp3 = exp(-offea1 * invkt);
+          contrib_inv_tlife3 = (offalpha1 > 0.0)
+                              ? (1.0 / offalpha1) * temp1 * temp2 * temp3
+                              : 0.0;
+
+          if (type == `NMOS) begin
+            if (offnmosmodelswitch == 0) begin
+              contrib_inv_tlife4 = 0.0;
+            end else begin
+              // add a second tlife which is always = 1
+              contrib_inv_tlife4 = 1.0;
+            end
+          end else begin
+            temp1 = (Vds > 0.0) ? exp(offbeta2 * Vds) - 1.0 : 0.0;
+            temp2 = exp(-offea2 * invkt);
+            contrib_inv_tlife4 = (offalpha2 > 0.0)
+                                ? (1.0 / offalpha2) * temp1 * temp2
+                                : 0.0;
+          end
+        end // offactive
+
+        ///////////////////////////////////////////////
+        // Model calculations for high-VGSVDS HCI model
+        ///////////////////////////////////////////////
+        if (hvgsactive == 1) begin
+          hvgs_id_ov_w = (w * mult > 0.0) ? idrain / (w * mult) : `EPS2;
+          hvgstemp = tempamb + hvgsrth * abs(hvgs_id_ov_w) * abs(Vds);
+
+          hvgs_pow_id_ov_w = pow(hvgs_id_ov_w, hvgsbeta);
+          temp1 = (Vgs > 1e-12) ? pow(Vgs, hvgsgamma) : 0.0;
+          temp2 = (Vds > 1e-12) ? pow(Vds, hvgsdelta) : 0.0;
+          temp3 = exp(hvgsepsilon * abs(Vshw));
+          temp4 = exp(-hvgsea / $vt(hvgstemp));
+
+          contrib_inv_tlife5 = ((hvgsalpha > 0.0) && (hvgsfstat > 0.0))
+                              ? (1.0 / (hvgsalpha * hvgsfstat)) * hvgs_pow_id_ov_w
+                                * temp1 * temp2 * temp3 * temp4
+                              : 0.0;
+        end // hvgsactive
+
+        if (analysis("tran")) begin
+          // activation flag to sync with user specified tstart and tstop
+          stressed = ($abstime > tstart) ? (($abstime > tstop) ? 0 : 1) : 0;
+
+          // if required, apply scaling to avoid integrating values which are
+          // very different in size; this is to aid convergence
+
+          if (hciactive == 1) begin
+            contrib_inv_tlife1 = contrib_inv_tlife1 * scaling1;
+            contrib_inv_tlife2 = contrib_inv_tlife2 * scaling2;
+            eq_inv_tlife1 = idt(stressed ? contrib_inv_tlife1 : 0.0, 0.0);
+            eq_inv_tlife2 = idt(stressed ? contrib_inv_tlife2 : 0.0, 0.0);
+            eq_inv_tlife1 = eq_inv_tlife1 / scaling1;
+            eq_inv_tlife2 = eq_inv_tlife2 / scaling2;
+          end
+          if (offactive == 1) begin
+            contrib_inv_tlife3 = contrib_inv_tlife3 * scaling3;
+            contrib_inv_tlife4 = contrib_inv_tlife4 * scaling4;
+            eq_inv_tlife3 = idt(stressed ? contrib_inv_tlife3 : 0.0, 0.0);
+            eq_inv_tlife4 = idt(stressed ? contrib_inv_tlife4 : 0.0, 0.0);
+            eq_inv_tlife3 = eq_inv_tlife3 / scaling3;
+            eq_inv_tlife4 = eq_inv_tlife4 / scaling4;
+          end
+          if (hvgsactive == 1) begin
+            contrib_inv_tlife5 = contrib_inv_tlife5 * scaling5;
+            eq_inv_tlife5 = idt(stressed ? contrib_inv_tlife5 : 0.0, 0.0);
+            eq_inv_tlife5 = eq_inv_tlife5 / scaling5;
+          end
+
+        end else begin  // i.e. analysis("dc")
+          stressed = 1;
+          eq_inv_tlife1 = contrib_inv_tlife1 * ref_stress_time;
+          eq_inv_tlife2 = contrib_inv_tlife2 * ref_stress_time;
+          eq_inv_tlife3 = contrib_inv_tlife3 * ref_stress_time;
+          eq_inv_tlife4 = contrib_inv_tlife4 * ref_stress_time;
+          eq_inv_tlife5 = contrib_inv_tlife5 * ref_stress_time;
+        end
+
+`ifdef DEBUG
+        $write("\n\nVOLTAGES, CURRENTS AND TEMPERATURES (%M)");
+        $write("\nVgs(%M)                 = %g", Vgs);
+        $write("\nVds(%M)                 = %g", Vds);
+        $write("\nVshw(%M)                = %g", Vshw);
+        $write("\nidrain(%M)              = %g", idrain);
+        $write("\nidraincutoff(%M)        = %g", idraincutoff);
+        $write("\nid_ov_w(%M)             = %g", hci_id_ov_w);
+        $write("\ntemperature(%M)         = %g", tempamb);
+        $write("\ntemp self-heating(%M)   = %g", temp);
+        $write("\n\nINTERMEDIATE VALUES FOR LIFETIME CALCULATION (%M)");
+        if (hciactive == 1) begin
+          $write("\nem1(%M)                 = %g", em1);
+          $write("\nem2(%M)                 = %g", em2);
+        end // hciactive
+        $write("\n\nLIFETIME CALCULATION (%M)");
+        if (hciactive == 1) begin
+          $write("\ncontrib_inv_tlife1(%M)  = %g", contrib_inv_tlife1);
+          $write("\ncontrib_inv_tlife2(%M)  = %g", contrib_inv_tlife2);
+        end // hciactive
+        if (offactive == 1) begin
+          $write("\ncontrib_inv_tlife3(%M)  = %g", contrib_inv_tlife3);
+          $write("\ncontrib_inv_tlife4(%M)  = %g", contrib_inv_tlife4);
+        end // offactive
+        if (hvgsactive == 1) begin
+          $write("\ncontrib_inv_tlife5(%M)  = %g", contrib_inv_tlife5);
+        end // hvgsactive
+        if (hciactive == 1) begin
+          $write("\neq_inv_tlife1(%M)       = %g", eq_inv_tlife1);
+          $write("\neq_inv_tlife2(%M)       = %g", eq_inv_tlife2);
+        end // hciactive
+        if (offactive == 1) begin
+          $write("\neq_inv_tlife3(%M)       = %g", eq_inv_tlife3);
+          $write("\neq_inv_tlife4(%M)       = %g", eq_inv_tlife4);
+        end // offactive
+        if (hvgsactive == 1) begin
+          $write("\neq_inv_tlife5(%M)       = %g", eq_inv_tlife5);
+        end // hvgsactive
+        $write("\ntotal stress time(%M)   = %g\n", $abstime);
+`endif // DEBUG
+
+      end // if (analysis("dc", "tran"))
+
+      // ----------------------------------------------------------------------
+      //
+      // Output stress data
+      //
+      // ----------------------------------------------------------------------
+
+      @(final_step) begin
+
+        if (analysis("dc", "tran")) begin
+          if (analysis("tran")) begin
+            // Get the total simulation time for HCI stress measurement.
+            eq_stress_time = ((tstop < $abstime) ? tstop : $abstime) - tstart;
+          end else begin
+            eq_stress_time = ref_stress_time;
+          end
+
+          ////////////////////////////////////////////////
+          // Permanent damage calculation for HCI HV model
+          ////////////////////////////////////////////////
+          if (hciactive == 1) begin
+            hcidamage_delta1 = (eq_stress_time > 0.0)
+                              ? abs(eq_inv_tlife1) * tage / eq_stress_time
+                              : 0.0;
+            hcidamage_delta2 = (eq_stress_time > 0.0)
+                              ? abs(eq_inv_tlife2) * tage / eq_stress_time
+                              : 0.0;
+
+            hciage1 = (hcidamage_delta1 + hcidamage1 > 0.0)
+                      ? hcidamage_delta1 + hcidamage1
+                      : 0.0;
+            hciage2 = (hcidamage_delta2 + hcidamage2 > 0.0)
+                      ? hcidamage_delta2 + hcidamage2
+                      : 0.0;
+
+            if (type == `NMOS) begin
+              temp1   = (hcifstattau1 > 0.0) ? hciage1 / hcifstattau1 : 0.0;
+              temp2   = (hcic1 > 0.0) ? temp1 / hcic1 : 0.0;
+              hcidron = hcia1 * ln(1.0 + temp1) + hcia2 * ln(1.0 + temp2);
+            end else begin // i.e. type == `PMOS
+              // first iteration
+              temp1 = hciage1;
+              temp2 = (hcic1 > 0.0) ? hciage1 / hcic1 : 0.0;
+              temp3 = (hciage2 > 0.0) ? pow(ln(1.0 + hciage2), hcin) : 0.0;
+              hcidron_50p = hcia1 * ln(1.0 + temp1) + hcia2 * ln(1.0 + temp2)
+                            - hcib1 * temp3;
+
+              // second iteration
+              hcis_50p = sigmoid(hcidron_50p, hcideltaa, hcimexpa);
+              hcifa = 0.5 * (hcis_50p * (hcifstattau1 - hcifstattau2)
+                            + hcifstattau1 + hcifstattau2);
+              temp1 = (hcifa > 0.0) ? hciage1 / hcifa : 0.0;
+              temp2 = (hcic1 > 0.0) ? temp1 / hcic1 : 0.0;
+              temp3 = ((hcifa > 0.0) && (hciage2 > 0.0))
+                      ? pow(ln(1.0 + hciage2 / hcifa), hcin)
+                      : 0.0;
+              hcidron_fa = hcia1 * ln(1.0 + temp1) + hcia2 * ln(1.0 + temp2)
+                          - hcib1 * temp3;
+
+              // third iteration
+              hcisa = sigmoid(hcidron_fa, hcideltab, hcimexpb);
+              hcifstat1 = 0.5 * (hcisa * (hcifa - hcifa * hcifstattau12)
+                                + hcifa * (1.0 + hcifstattau12));
+              hcifstat2 = 0.5 * (hcisa * (hcifa * hcifstattau21 - hcifa)
+                                + hcifa * (1.0 + hcifstattau21));
+              temp1 = (hcifstat1 > 0.0) ? hciage1 / hcifstat1 : 0.0;
+              temp2 = (hcic1 > 0.0) ? temp1 / hcic1 : 0.0;
+              temp3 = ((hcifstat2 > 0.0) && (hciage2 > 0.0))
+                      ? pow(ln(1.0 + hciage2 / hcifstat2), hcin)
+                      : 0.0;
+              hcidron = hcia1 * ln(1.0 + temp1) + hcia2 * ln(1.0 + temp2)
+                        - hcib1 * temp3;
+            end
+          end // hciactive
+
+
+          //////////////////////////////////////////////////////
+          // Permanent damage calculation for offstate HCI model
+          //////////////////////////////////////////////////////
+          if (offactive == 1) begin
+            offdamage_delta1 = (eq_stress_time > 0.0)
+                              ? abs(eq_inv_tlife3) * tage / eq_stress_time
+                              : 0.0;
+            offdamage_delta2 = (eq_stress_time > 0.0)
+                              ? abs(eq_inv_tlife4) * tage / eq_stress_time
+                              : 0.0;
+
+            offage1 = (offdamage_delta1 + offdamage1 > 0.0)
+                      ? offdamage_delta1 + offdamage1
+                      : 0.0;
+            offage2 = (offdamage_delta2 + offdamage2 > 0.0)
+                      ? offdamage_delta2 + offdamage2
+                      : 0.0;
+
+            if (type == `NMOS) begin
+              temp1 = (offfstattau1 > 0.0) ? offage1 / offfstattau1 : 0.0;
+              if (offnmosmodelswitch == 0) begin
+                if (temp1 > 0.0) begin
+                  temp2   = pow(temp1, -offn1);
+                  offdron = offa1 / (1.0 + temp2);
+                end else begin
+                  offdron = 0.0;
+                end
+              end else begin // i.e. offnmosmodelswitch == 1
+                temp2 = pow(temp1, offn1);
+                temp3 = (offage2 > 0.0) ? pow(offage2, offn1-offn2) : 0.0;
+                offdron = (temp2 + temp3 > 0.0)
+                          ? offa1 * (temp2 * temp3) / (temp2 + temp3)
+                          : 0.0;
+              end
+            end else begin // i.e. type == `PMOS
+              // first iteration
+              temp1 = (offage1 > 0.0) ? pow(ln(1.0 + offage1), offn1) : 0.0;
+              temp2 = (offage2 > 0.0) ? pow(ln(1.0 + offage2), offn2) : 0.0;
+              offdron_50p = offa1 * temp1 - offa2 * temp2;
+
+              // second iteration
+              offs_50p = sigmoid(offdron_50p, offdeltaa, offmexpa);
+              offfa = 0.5 * (offs_50p * (offfstattau1 - offfstattau2)
+                            + offfstattau1 + offfstattau2);
+              temp1 = ((offfa > 0.0) && (offage1 > 0.0))
+                      ? pow(ln(1.0 + offage1 / offfa), offn1)
+                      : 0.0;
+              temp2 = ((offfa > 0.0) && (offage2 > 0.0))
+                      ? pow(ln(1.0 + offage2 / offfa), offn2)
+                      : 0.0;
+              offdron_fa = offa1 * temp1 - offa2 * temp2;
+
+              // third iteration
+              offsa = sigmoid(offdron_fa, offdeltab, offmexpb);
+              offfstat1 = 0.5 * (offsa * (offfa - offfa * offfstattau12)
+                                + offfa * (1.0 + offfstattau12));
+              offfstat2 = 0.5 * (offsa * (offfa * offfstattau21 - offfa)
+                                + offfa * (1.0 + offfstattau21));
+              temp1 = ((offfstat1 > 0.0) && (offage1 > 0.0))
+                      ? pow(ln(1.0 + offage1 / offfstat1), offn1)
+                      :0.0;
+              temp2 = ((offfstat2 > 0.0) && (offage2 > 0.0))
+                      ? pow(ln(1.0 + offage2 / offfstat2), offn2)
+                      : 0.0;
+              offdron = offa1 * temp1 - offa2 * temp2;
+            end
+          end // offactive
+
+          /////////////////////////////////////////////////////////
+          // Permanent damage calculation for high-VGSVDS HCI model
+          /////////////////////////////////////////////////////////
+          if (hvgsactive == 1) begin
+            hvgsdamage_delta = (eq_stress_time > 0.0)
+                              ? abs(eq_inv_tlife5) * tage / eq_stress_time
+                              : 0.0;
+            hvgsage = (hvgsdamage_delta + hvgsdamage > 0.0)
+                      ? hvgsdamage_delta + hvgsdamage
+                      : 0.0;
+
+            if (hvgsage > 0.0) begin
+              temp1 = pow(hvgsage, -hvgsn);
+              hvgsdvt = hvgsa / (1.0 + temp1);
+            end else begin // i.e. if (hvgsage <= 0.0)
+              hvgsdvt = 0.0;
+            end
+          end // hvgsactive
+
+
+`ifdef DEBUG
+          if (hciactive == 1) begin
+            $write("\nhcidamage1(%M)          = %g", hcidamage1);
+            $write("\nhcidamage2(%M)          = %g", hcidamage2);
+            $write("\nhcidamage_delta1(%M)    = %g", hcidamage_delta1);
+            $write("\nhcidamage_delta2(%M)    = %g", hcidamage_delta2);
+          end // hciactive
+          if (offactive == 1) begin
+            $write("\noffdamage1(%M)          = %g", offdamage1);
+            $write("\noffdamage2(%M)          = %g", offdamage2);
+            $write("\noffdamage_delta1(%M)    = %g", offdamage_delta1);
+            $write("\noffdamage_delta2(%M)    = %g", offdamage_delta2);
+          end // offactive
+          if (hvgsactive == 1) begin
+            $write("\nhvgsdamage(%M)          = %g", hvgsdamage);
+            $write("\nhvgsdamage_delta(%M)    = %g", hvgsdamage_delta);
+          end // hvgsactive
+            $write("\n\nAGING (%M)");
+          if (hciactive == 1) begin
+            $write("\nhcidron(%M)             = %g", hcidron);
+          end // hciactive
+          if (offactive == 1) begin
+            $write("\noffdron(%M)             = %g", offdron);
+          end // offactive
+          if (hvgsactive == 1) begin
+            $write("\nhvgsdvt(%M)             = %g", hvgsdvt);
+          end // hvgsactive
+`endif // DEBUG
+
+          if (hciactive == 1) begin
+            `UPDATE_XML_ELEMENT(update_file_hci, `EFFECT_NAME_HCI, "hcirondegrfac", 0.0, hcidron, 0)
+            `UPDATE_OP_XML_ELEMENT(update_file_hci, `EFFECT_NAME_HCI, "hcidron/ron", 1.0, hcidron, 0)
+            `UPDATE_DAMAGE_XML_ELEMENT(update_file_hci, `EFFECT_NAME_HCI, "hcidamage1", hcidamage1, hcidamage_delta1)
+            `UPDATE_DAMAGE_XML_ELEMENT(update_file_hci, `EFFECT_NAME_HCI, "hcidamage2", hcidamage2, hcidamage_delta2)
+            if ((abs(hcidron) > dicrit) && (swagecheck > 0)) begin
+              `SOACHECK_WARNING_RONDEGRFAC(`EFFECT_NAME_HCI, tage / year_in_secs, tempamb - `P_CELSIUS0, hcidron, 0)
+            end
+          end // hciactive
+
+          if (offactive == 1) begin
+            `UPDATE_XML_ELEMENT(update_file_off, `EFFECT_NAME_OFF, "offrondegrfac", 0.0, offdron, 0)
+            `UPDATE_OP_XML_ELEMENT(update_file_off, `EFFECT_NAME_OFF, "offdron/ron", 1.0, offdron, 0)
+            `UPDATE_DAMAGE_XML_ELEMENT(update_file_off, `EFFECT_NAME_OFF, "offdamage1", offdamage1, offdamage_delta1)
+            `UPDATE_DAMAGE_XML_ELEMENT(update_file_off, `EFFECT_NAME_OFF, "offdamage2", offdamage2, offdamage_delta2)
+            if ((abs(offdron) > dicrit) && (swagecheck > 0)) begin
+              `SOACHECK_WARNING_RONDEGRFAC(`EFFECT_NAME_OFF, tage / year_in_secs, tempamb - `P_CELSIUS0, offdron, 0)
+            end
+          end // offactive
+
+          if (hvgsactive == 1) begin
+            `UPDATE_XML_ELEMENT(update_file_hvgs, `EFFECT_NAME_HVGS, "hvgsvthdegr", 0.0, hvgsdvt, 0)
+            `UPDATE_OP_XML_ELEMENT(update_file_hvgs, `EFFECT_NAME_HVGS, "hvgsdeltavth", 0.0, hvgsdvt, 0)
+            `UPDATE_DAMAGE_XML_ELEMENT(update_file_hvgs, `EFFECT_NAME_HVGS, "hvgsdamage", hvgsdamage, hvgsdamage_delta)
+
+            if ((abs(hvgsdvt) > dvtcrit) && (swagecheck > 0)) begin
+              `SOACHECK_WARNING_DELTAVT(`EFFECT_NAME_HVGS, tage / year_in_secs, hvgstemp - `P_CELSIUS0, hvgsdvt, 0)
+            end
+          end // hvgsactive
+
+
+          `ifdef DO_CLOSE_FILES
+            $fclose(update_file_hci);
+            $fclose(update_file_off);
+            $fclose(update_file_hvgs);
+          `endif
+
+        end // if (analysis("dc", "tran"))
+
+      end // final_step
+
+    end // if (active && ...)
+
+    // ------------------------------------------------------------------------
+
+  end // analog
+
+endmodule // mhcihv5
+
+`undef UPDATE_XML_ELEMENT
+`undef UPDATE_DAMAGE_XML_ELEMENT
+`undef UPDATE_OP_XML_ELEMENT
+`undef SOACHECK_WARNING_RONDEGRFAC
+`undef SOACHECK_WARNING_DELTAVT
+
+`undef XML_FILE_NAME_HCI
+`undef EFFECT_NAME_HCI
+`undef XML_FILE_NAME_OFF
+`undef EFFECT_NAME_OFF
+`undef XML_FILE_NAME_HVGS
+`undef EFFECT_NAME_HVGS
+
+`undef NMOS
+`undef PMOS
+`undef TYPE
+
+`undef EPS1
+`undef EPS2
+`undef EPS3
+
+`undef FOPEN_MODE
+
+`ifdef OPEN_FOR_APPEND
+`undef OPEN_FOR_APPEND
+`endif // OPEN_FOR_APPEND
+
+`ifdef DO_CLOSE_FILES
+`undef DO_CLOSE_FILES
+`endif // DO_CLOSE_FILES
+
+`undef localparam
+`ifdef NO_LOCALPARAM
+`undef NO_LOCALPARAM
+`endif //NO_LOCALPARAM
+
+`undef EM1
+`undef EM2

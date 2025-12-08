@@ -1,0 +1,334 @@
+;-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;-;              (C) COPYRIGHT 2013, FREESCALE SEMICONDUCTOR, ALL RIGHTS RESERVED
+;-;                      FREESCALE SEMICONDUCTOR CONFIDENTIAL PROPRIETARY
+;-;                              INTERNAL USE ONLY
+;-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;-; $Source: /ds/vault/14824/server_vault/Projects/spice_smos10hv/NXP_SMOS10HV_SPICE/amsmodels/spectre/spectreData_common_ade_mc.rca $
+;-; $Revision: 1.10 $
+;-; $Date: Wed Mar  8 15:07:23 2023 $
+;-; $Author: nxa23194 $
+;-;
+;-; (C) Copyright 2013, Freescale Semiconductor, all rights reserved.
+;-;
+;-; Description: spectreData -> SMOS10HV Spectre data base list for SetSimCase/DesCover
+;-;
+;-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;-;
+;-; $Log: spectreData_common_ade_mc.rca $
+;-; 
+;-;  Revision: 1.10 Wed Mar  8 15:07:23 2023 nxa23194
+;-;  *** empty comment string ***
+;-; 
+;-;  Revision: 1.9 Wed May 11 11:20:05 2022 nxa23194
+;-;  *** empty comment string ***
+;-; 
+;-;  Revision: 1.6 Thu Nov 23 14:23:07 2021 nxa19181
+;-;  smos10hv_enable_aging and smos10hv_res_tc_spread_enable sections were added for ams3.13
+;-; 
+;-;  Revision: 1.5 Thu Dec 17 16:30:29 2020 nxa23194
+;-;  *** empty comment string ***
+;-; 
+;-;  Revision: 1.4 Tue Dec  1 18:11:09 2020 nxa23194
+;-;  *** empty comment string ***
+;-; 
+;-;  Revision: 1.3 Wed Nov 20 13:34:07 2019 nxa22221
+;-;  smos10hv_risk_assessment_enable section was added for ams3.11.0
+;-; 
+;-;  Revision: 1.2 Mon Nov 11 14:21:27 2019 nxa22221
+;-;   s10hv ams3.11 skeleton model package
+;-; 
+;-;  Revision: 1.1 Mon Apr  8 09:59:46 2019 nxa11814
+;-;  -o- Initial version.
+;-; 
+;-;  Revision: 1.14 Tue Apr  2 14:55:32 2019 nxa11814
+;-;  -o- model files V3J_0;
+;-; 
+;-;  Revision: 1.13 Mon Oct 15 10:21:17 2018 nxa11814
+;-;  -o- models V3I_0;
+;-; 
+;-;  Revision: 1.12 Thu Jul  5 17:35:48 2018 nxa11814
+;-;  -o- reverted MOSCAP/MOSVAR switch back because some design teams still see problems with MOSCAP;
+;-; 
+;-;  Revision: 1.11 Thu Jul  5 17:28:36 2018 nxa11814
+;-;  -o- added back moscap section;
+;-; 
+;-;  Revision: 1.10 Wed Jun 13 16:09:37 2018 nxa20199
+;-;  moscap/mosvar section setup has been removed (TKT376247)
+;-; 
+;-;  Revision: 1.9 Sat Apr 28 12:23:11 2018 nxa20199
+;-;  updated for V3I_0 model revision
+;-; 
+;-;  Revision: 1.8 Tue Mar  6 05:41:24 2018 nxa11814
+;-;  -o- added a switch to select MOSCAP/MOSVAR;
+;-; 
+;-;  Revision: 1.7 Mon Feb 19 08:09:53 2018 b23003
+;-;  updated for V3I_0 models;
+;-; 
+;-;  Revision: 1.6 Wed Oct  4 06:15:01 2017 ra7409
+;-;  updated version for ams3.6 beta2
+;-; 
+;-;  Revision: 1.5 Mon Sep 11 11:29:15 2017 ra7409
+;-;  final models for ams3.6
+;-; 
+;-;  Revision: 1.4 Thu Apr 27 08:23:56 2017 ra7409
+;-;  skeleton models for ams3.5
+;-; 
+;-;  Revision: 1.3 Wed Mar  1 04:38:20 2017 ra7409
+;-;  improved visibility of corners
+;-; 
+;-;  Revision: 1.2 Fri Feb 17 05:44:32 2017 ra7409
+;-;  added case control file
+;-; 
+;-; 
+;-;
+;-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+list(
+     
+                              ;; =============== ;;
+                              ;; Model file list ;;
+                              ;; =============== ;;
+     
+     ;; Structure:
+     ;; ----------
+     ;;
+     ;; list( <model file name/list of these files> [<other separate choice of model data>] ...)
+     ;;
+     ;; Full model file names are available too. Simple model file name corresponds to 
+     ;; model control file (current file) location.
+     
+     
+     ;; Please, check then following syntax (' instead list(list() list()) ) is good for Descover.
+     ;; It is a standard way for SKILL.
+     
+     '( ("smos10hv_ade.scs" "smos10hv_base_lpe.scs")
+        ("LABELS" "SMOS10HV Spectre models ")
+       ) ;end of model file list
+     
+     
+     
+                    ;; ============================================= ;;
+                    ;; Available keywords with corresponded sections ;;
+                    ;; ============================================= ;;
+                    
+     ;; Structure:
+     ;; ----------
+     ;; list( <keyword to display as title of corner line> 
+     ;;       < list( <display name of button> 
+     ;;               <real section name> 
+     ;;               [<order(link to model file) - two dimensional list/number(word 'ANY' is available for compaction format)>]
+     ;;             )
+     ;;       >
+     ;;      [<the same list as arg #2 with other corners/model types>]
+     ;;      ) 
+                      
+     
+     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     ;; NOTE: Each following section definition list may be defined as
+     ;;
+     ;;       list(<keyword> list(<display> <section name> list(ANY 1)) ...)
+     ;;
+     ;;       so as library has two model files (bsim3 and ssim)
+     ;;       with the same structure and section names.
+     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     
+     
+     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     ;; NOTE: So as custom model control files with the same keywords are 
+     ;;       possible, then we propose to define <display> field as "std" for
+     ;;       official model control file.
+     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     
+     
+     ;; The libraries w/o displaying (global libraries),
+     ;; so as only two arguments are available
+     ;; ************************************************
+     
+     ;;  base
+     list("SMOS10HV: base"            list("std"  "base"  list(ANY 1))                                     
+          ) ;end for base
+          
+     list("SMOS10HV: SOA ON/OFF"    list("disable_soa"     "smos10hv_disable_soa"     list(ANY 1))
+         );end for SOA
+         
+     list("SMOS10HV: Cases for SELFHEAT"    list("disable_selfheat"    "smos10hv_selfheat_disable"   list(ANY 1))
+                                            list("enable_selfheat"     "smos10hv_selfheat_enable"    list(ANY 1))
+         );end for SELFHEAT                              
+
+     list("SMOS10HV: Cases for RISK ASSESMENT"  list("disable_risk_assessment"	"smos10hv_risk_assessment_disable"   list(ANY 1))
+                                            		list("enable_risk_assessment"		"smos10hv_risk_assessment_enable"    list(ANY 1))
+         );end for RISK ASSESMENT                              
+
+     list("SMOS10HV: Cases for STI"    list("enable_sti"      "smos10hv_enable_sti"      list(ANY 1))
+                                       list("disable_sti"     "smos10hv_disable_sti"     list(ANY 1))
+         );end for STI                              
+         
+     list("SMOS10HV: Cases for WPE"    list("enable_wpe"      "smos10hv_enable_wpe"      list(ANY 1))
+                                       list("disable_wpe"     "smos10hv_disable_wpe"     list(ANY 1))                             
+         );end for WPE
+         
+     list("SMOS10HV: Cases for DTE"    list("enable_dte"      "smos10hv_enable_dte"      list(ANY 1))
+                                       list("disable_dte"     "smos10hv_disable_dte"     list(ANY 1))                             
+         );end for DTE
+         
+     list("SMOS10HV: Cases for XPART"  list("xpart_default"   "smos10hv_xpart_default"   list(ANY 1))
+                                       list("xpart_enable"    "smos10hv_xpart_enable"    list(ANY 1))                             
+         );end for XPART
+
+     list("SMOS10HV: Cases for RES TC SPREAD"  list("disable_res_tc"   "smos10hv_res_tc_spread_disable"   list(ANY 1))
+                                       list("enable_res_tc"   "smos10hv_res_tc_spread_enable"    list(ANY 1))                             
+         );end for RES TC
+	 
+     list("SMOS10HV: Cases for PrestoPlus"  list("disable_presto"   "smos10hv_disable_aging"   list(ANY 1))
+                                       list("enable_presto"   "smos10hv_enable_aging"    list(ANY 1))                             
+         );end for PRESTO
+	                        
+     list("SMOS10HV: Cases for bjt_punch_through"  list("bjt_punch_through_enable"   "smos10hv_bjt_punch_through_enable"     list(ANY 1))
+                                                   list("bjt_punch_through_disable"  "smos10hv_bjt_punch_through_disable"    list(ANY 1))
+         );end for BJT_PUNCH_THROUGH
+
+     list("SMOS10HV: ESDSOA ON/OFF" list("disable_esdsoa"     "smos10hv_disable_esdsoa"     list(ANY 1))
+         );end for ESDSOA    
+          
+     list("SMOS10HV: RELIMO ON/OFF"    list("disable_relimo"     "smos10hv_disable_relimo"     list(ANY 1))
+         );end for RELIMO                            
+     
+     
+     ;; Corners for selection.
+     ;; More then two arguments are available:
+     ;; first:  keyword
+     ;; others: list with definition of corner
+     ;; **************************************
+     
+     
+     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+     ;; NOTE: Proposed syntax doesn't allow to differ the section for process
+     ;;       params from device section. Therefore the better way to implement
+     ;;       more readeble titles(keywords). We propose to support old version 
+     ;;       of SetSimCase tool and add "Cases for" prefix to process params
+     ;;       titles.
+     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 
+     ;; POWERMOSBVDSS
+     list("SMOS10HV: Cases for POWERMOSBVDSS" list("default"  "powermosbvdss_default" list(ANY 1))
+                                              list("off"      "powermosbvdss_off" list(ANY 1))              
+          ) ;end for POWERMOSBVDSS
+            
+            
+     ;;STD power_process_params          
+     list("SMOS10HV: power_process_params" list("std" "power_process_params" list(ANY 1))) 
+     
+     
+     ;;STD stat_mis          
+     list("SMOS10HV: Stat Mismatch" list("std" "stat_mis" list(ANY 1))) 
+                                                      
+     
+     ;; THIN MOS
+     list("SMOS10HV: Cases for THIN MOS"  list("mc_thin"   "mc_thin_mos_process_params" list(ANY 1))
+                                          list("wcs_thin"  "wcs_thin_mos_process_params" list(ANY 1))
+                                          list("wnhp_thin" "wnhp_thin_mos_process_params" list(ANY 1))
+                                          list("wphn_thin" "wphn_thin_mos_process_params" list(ANY 1))
+                                          list("typical_thin"  "typ_thin_mos_process_params" list(ANY 1))
+                                          list("bpln_thin" "bpln_thin_mos_process_params" list(ANY 1))
+                                          list("bnlp_thin" "bnlp_thin_mos_process_params" list(ANY 1))
+                                          list("bcs_thin"  "bcs_thin_mos_process_params" list(ANY 1))                
+           ) ;end for THIN MOS
+     ;; THICK MOS       
+     list("SMOS10HV: Cases for THICK MOS" list("mc_thick"   "mc_thick_mos_process_params" list(ANY 1))
+                                          list("wcs_thick"  "wcs_thick_mos_process_params" list(ANY 1))
+                                          list("wnhp_thick" "wnhp_thick_mos_process_params" list(ANY 1))
+                                          list("wphn_thick" "wphn_thick_mos_process_params" list(ANY 1))
+                                          list("typical_thick"  "typ_thick_mos_process_params" list(ANY 1))
+                                          list("bpln_thick" "bpln_thick_mos_process_params" list(ANY 1))
+                                          list("bnlp_thick" "bnlp_thick_mos_process_params" list(ANY 1))
+                                          list("bcs_thick"  "bcs_thick_mos_process_params" list(ANY 1))                
+            ) ;end for THICK MOS                     
+     ;; RES
+     list("SMOS10HV: Cases for RES"       list("mc" "mc_res_process_params" list(ANY 1))
+                                          list("lo" "lo_res_process_params" list(ANY 1))
+                                          list("typical" "typ_res_process_params" list(ANY 1))
+                                          list("hi" "hi_res_process_params" list(ANY 1))
+            ) ;end for RES  
+            
+     ;; BJT
+     list("SMOS10HV: Cases for BJT"       list("mc"  "mc_bjt_process_params" list(ANY 1))
+                                          list("bcs" "bcs_bjt_process_params" list(ANY 1))
+                                          list("typical" "typ_bjt_process_params" list(ANY 1))
+                                          list("wcs" "wcs_bjt_process_params" list(ANY 1))                       
+            ) ;end for BJT          
+            
+     ;; CAP
+     list("SMOS10HV: Cases for CAP"       list("mc" "mc_capacitor_process_params" list(ANY 1))
+                                          list("lo" "lo_capacitor_process_params" list(ANY 1))
+                                          list("typical" "typ_capacitor_process_params" list(ANY 1))
+                                          list("hi" "hi_capacitor_process_params" list(ANY 1))
+            ) ;end for CAP
+            
+     ;; DRSF_ZENER
+     list("SMOS10HV: Cases for DRSF_ZENER" list("mc" "mc_drsf_zener_process_params" list(ANY 1))
+                                           list("lobv_lovf" "lobv_lovf_drsf_zener_process_params" list(ANY 1))
+                                           list("typical"       "typ_drsf_zener_process_params" list(ANY 1))
+                                           list("hibv_hivf" "hibv_hivf_drsf_zener_process_params" list(ANY 1))
+            ) ;end for DRSF_ZENER
+        
+           
+     ;; POWERMOS
+     list("SMOS10HV: Cases for POWERMOS"  list("mc"  "mc_powermos_process_params" list(ANY 1))
+                                          list("typical"  "typ_powermos_process_params" list(ANY 1))
+                                          list("wcs"  "wcs_powermos_process_params" list(ANY 1))
+                                          list("bcs" "bcs_powermos_process_params" list(ANY 1))              
+            ) ;end for POWERMOS                
+                 
+     ;; PARA
+     list("SMOS10HV: Cases for PARA"      list("mc" "mc_para_process_params" list(ANY 1))
+                                          list("lo" "lo_para_process_params" list(ANY 1))
+                                          list("typical" "typ_para_process_params" list(ANY 1))
+                                          list("hi" "hi_para_process_params" list(ANY 1))
+            ) ;end for PARA                                     
+               
+                     
+     ;; POWERMOS
+     list("SMOS10HV: POWERMOS modeling"  list("powermos"           "powermos" list(ANY 1))
+                                         list("powermos_simple"    "powermos_simple" list(ANY 1))
+         ) ;end for POWERMOS       
+     
+     ;; SUBSTRATE CAP
+     list("SMOS10HV: MOS capacitor modeling"  list("non-linear"  "substrate_cap" list(ANY 1))
+                                              list("linear"      "substrate_cap_simple" list(ANY 1))
+          ) ;end for SUBSTRATE CAP    
+                                              
+     ;; VARACTOR CAP
+     list("SMOS10HV: VARACTOR modeling"  list("moscap"      "smos10hv_moscap_enable" list(ANY 1))
+                                         list("mosvar"      "smos10hv_moscap_disable"  list(ANY 1))
+          ) ;end for VARACTOR CAP    
+
+     ;; The libraries w/o displaying (device library list)
+     ;; **************************************************
+     list("SMOS10HV: drsf_zener"       list("std" "drsf_zener" list(ANY 1)))
+     list("SMOS10HV: diode"            list("std" "diode" list(ANY 1)))
+     
+     ;; CAPACITOR
+     list("SMOS10HV: CAPACITOR modeling"  list("capacitor"           "capacitor" list(ANY 1))
+                                          list("capacitor_simple"    "capacitor_simple" list(ANY 1))
+         ) ;end for CAPACITOR                                  
+     
+     list("SMOS10HV: bjt"              list("std" "bjt" list(ANY 1)))
+     list("SMOS10HV: diode_parasitic"  list("std" "diode_parasitic" list(ANY 1)))
+
+     ;; MOSFET
+     list("SMOS10HV: MOSFET modeling"  list("mosfet"        "mosfet" list(ANY 1))
+         ) ;end of MOSFET modeling
+
+     list("SMOS10HV: process_params"   list("std" "process_params" list(ANY 1)))
+     
+     ;; RESISTOR
+     list("SMOS10HV: RESISTOR modeling"  list("resistor"           "resistor" list(ANY 1))
+                                         list("resistor_simple"    "resistor_simple" list(ANY 1))
+         ) ;end for RESISTOR 
+     
+     ;;  base_lpe
+     list("SMOS10HV: base_lpe"            list("std"  "base_lpe"  list(ANY 2))                                     
+          ) ;end for base_lpe
+     
+     
+) ;; end of model data base list

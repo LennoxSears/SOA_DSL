@@ -1,0 +1,313 @@
+
+//
+//      Verilog-A definition of PowerDiode model
+//
+//	VerilogA implementation of a diode model with reverse recovery
+//      Reverse recovery modeling based on:
+//	"Performance of Power Diode Model For Circuit Simulation"
+//	K.J. Tseng et al. p519-524 vol1
+//	Proceedings of the Int. Conf. on Power Electronics and Drive Systems
+//
+//	Basic diode equations based on spice diode model - eglev=1
+//   
+//
+//      Peggy Kniffin          01 March 2005
+//	Marcel Tutt		May 2013
+//
+//      p       Rs       pi    Core Spice Diode Model 		        n
+//		               |	
+//      o-----/\/\/\-----o-----|<|---------------------o----------------o
+//                       |     |                       |
+//                       |                             |
+//                       |     Cj                      |
+//                       ------||-----------------------
+//
+//                             
+//
+//                       z Qm=QiStatic-ddt(tau*Qi)
+//              ---------o--------
+//              |        |       |
+//              |        |       |
+//              /        |tau    |
+//            1 \      -----    (^)QiStatic
+//           Ohm/      -----     |
+//              \        |       |
+//              |        |       |
+//              |        |       |
+//              ------------------
+//
+//
+
+
+
+
+`include "constants.h"
+`include "discipline.h"
+`include "disciplines.vams"
+//`include "generalMacrosAndDefines.va"
+`include "./generalmacrosanddefines.va"
+
+`define	KB		1.3806226e-23	// Boltzmann constant (J/K) from DIO.admsva
+`define	QQ		1.6021918e-19	// mag. of electronic charge (C) from DIO.admsva
+`define	TABS		2.731500e+02	// 0C in K
+`define PHIFLOOR	0.01		// Used for lower limit in cap calcs at high temperatures
+
+
+module powerdiode(cathode,anode);
+  
+inout      anode, cathode;
+electrical anode, cathode, z;
+ 
+//
+//  Branch definitions
+// 
+ 
+branch (cathode,anode)	dut;
+branch (z) b_cz;
+branch (z) b_zc;
+branch (z) b_zz; 
+
+//
+//  Instance model parameters
+//
+
+//added parameters to handle m factor, num is expected for vlaForSpectre.pl assembly tool
+  parameter  real num=1;
+//commented out line below is expected by vlaForSpectre.pl assembly tool to add for spectre
+
+
+
+//`IPRnb( trise     ,   0.0     ,"degC"                    , "local temperature delta to ambient (before self-heating)")
+    parameter real   trise =   0.0         from[-50:175];
+//
+//  Special model parameters, some may be simulator global parameters
+//
+
+//`MPRco( gmin      ,   $simparam("gmin") ,"S"         ,   0.0,   inf, "minimum conductance")
+//    parameter real   gmin =   1e-15         from[0:1];
+    parameter real   gmin =   $simparam("gmin")         from[0:1];	// Added in powerdiodev5.va
+
+//
+//  General model parameters
+//
+
+//`MPRcc( tnom      ,  27.0     ,"degC"      ,-250.0,1000.0, "nominal (reference) temperature")
+    parameter real   tnom =   27.0         from[-250.0:1000.0];
+
+//
+//  Resistance parameters
+//
+
+//`MPRco( rs        ,   0.0     ,"Ohm"       ,   0.0,   inf, "contact/series resistance")
+    parameter real   rs =   0.0         from[0.0:inf);
+
+//
+//  Main diode current and charge parameters
+//
+
+//`MPRoo( is        ,   1.0e-14 ,"A"         ,   0.0,   inf, "transport saturation current")
+//`MPRco( ik        ,   0.0     ,"A"         ,   0.0,   inf, "knee current  (zero=infinite)")
+//`MPRco( ikr       ,   0.0     ,"A"         ,   0.0,   inf, "reverse knee current  (zero=infinite)")
+//`MPRoo( n         ,   1.0     ,""          ,   0.0,   inf, "fwd emission coefficient (ideality factor)")
+//`MPRco( tau       ,   0.0e-4  ,"s"         ,   0.0,   inf, "forward transit time")
+//`MPRco( trr       ,   0.0e-9  ,"s"         ,   0.0,   inf, "reverse recovery time")
+//`MPRco( cj0       ,   0.0e-10 ,"F"         ,   0.0,   inf, "zero-bias depletion capacitance")
+//`MPRoo( vj        ,   1.0     ,"V"         ,   0.0,   inf, "built-in potential")
+//`MPRco( fc        ,   0.9     ,""          ,   0.0,   1.0, "forward bias depletion capacitance limit")
+//`MPRoc( em        ,   0.5     ,""          ,   0.0,   1.0, "grading coefficient")
+//`MPRoc( eg        ,   1.17    ,"V"         ,   0.0,  10.0, "bandgap voltage")
+    parameter real   is  =   1.0e-14         from[0.0:inf);
+    parameter real   ik  =   0.0             from[0.0:inf);
+    parameter real   ikr =   0.0             from[0.0:inf);
+    parameter real   n   =   1.0             from[0.0:inf);
+    parameter real   tau =   0.0             from[0.0:inf);
+    parameter real   trr =   0.0             from[0.0:inf);
+    parameter real   cj0 =   0.0             from[0.0:inf);
+    parameter real   vj  =   1.0             from[0.0:inf);
+    parameter real   fc  =   0.9             from[0.0:1.0];
+    parameter real   em  =   0.5             from[0.0:1.0];
+    parameter real   eg  =   1.17            from[0.0:10.0];
+
+//
+//  Diode breakdown voltage parameters
+//
+
+//`MPRoo( bv        ,   1000    ,"V"         ,   0.0,   inf, "reverse breakdown voltage")
+//`MPRco( ibv       ,   1e-3    ,"A"         ,   0.0,   inf, "current at breakdown voltage")
+    parameter real   bv   =   1000.0         from[0.0:inf);
+    parameter real   ibv  =   0.001          from[0.0:inf);
+
+//
+//  Temperature dependence model parameters
+//
+
+//`MPRnb( xti       ,   3.0     ,""                        , "temperature exponent of is")
+//`MPRoc( alphaeg   ,   4.73e-4 ,"V/K"       ,   0.0,   1.0, "eg alpha parameter")
+//`MPRoc( betaeg    ,   636.0   ,"K"         ,   0.0,1000.0, "eg beta parameter")
+    parameter real   xti      =   3.0             from[-4.0:50.0];
+    parameter real   alphaeg  =   4.73e-4         from[0.0:1.0];
+    parameter real   betaeg   =   636.0           from[0.0:1000.0];
+
+  
+ parameter real   areafactor =   1         from[0:inf);
+ parameter real   smult      =   1         from[0:1];
+//replaced mag by xmag as mag is reserved in mica  
+//parameter real   mag        =   1         from[1:inf);
+ parameter real   xmag        =   1         from[1:inf);
+ parameter real   shrink     =   0         from[0:100];
+ parameter real   shrink2    =   0         from[0:100];
+
+    //real    shrinkvalue;
+    real    gminef,area;  
+    //real    Iqi,Cst;
+    real    Ieq,Vd,Qe,Qji,kT,kTnom; 
+    real    EgT,EgTnom,Tkel,Tnom,tfactor,isT,vjT,cj0T; 
+    real    bvaj,ibveff,isTeff,Iqb,Ieq0,cj0Teff,rseff,ikeff,ikreff;
+    real    arg1, arg2;		// for the new Qj calculations
+    real    omfc, vjmfcp, xfc;	// for the new Qj calculations
+    real    maxVD, ev, arg;			// New Ieq0 calculations
+    real    shrinkl, shrinka;	// New from DIO for area calculations
+    real  dummy_zero;
+
+analog begin  
+
+	  
+//
+// Geometry Mapping: shrink and shrink2 ignore the .option params
+//
+   dummy_zero = V(cathode,anode)- V(cathode,anode);	// workaround to remove AHDLLINT waring
+   shrinkl = dummy_zero+1.0 - shrink / 100.0;
+   if ($param_given(shrink2)) begin
+       shrinka = 1.0 - shrink2 / 100.0;
+   end else begin
+       shrinka = shrinkl * shrinkl;
+   end                
+//    area=areafactor*smult*smult; //area in m^2
+    area=dummy_zero+areafactor*shrinka;       // From DIO.admsva
+    if ($param_given(gmin)) 
+	gminef=gmin*area*xmag/(smult*smult);
+    else 
+        gminef=gmin; 
+  
+//
+// Thermal Equations
+//
+
+    Tkel     = dummy_zero+$temperature+trise;
+    Tnom     = dummy_zero+`TABS+tnom;
+    kT       = dummy_zero+(`KB*($temperature+trise)/`QQ);
+    kTnom    = (`KB*Tnom/`QQ); 
+    EgT      = (eg-alphaeg*(Tkel*Tkel)/(Tkel+betaeg));
+    EgTnom   = (eg-alphaeg*(Tnom*Tnom)/(Tnom+betaeg));
+    tfactor  = ((EgTnom/kTnom)-(EgT/kT)+xti*ln(Tkel/Tnom));
+    isT      = is*limexp(tfactor/n);
+//    gfactor  = (-3*kT*ln(Tkel/Tnom)+EgT-(Tkel/Tnom)*EgTnom);
+//    vjT      = (vj*(Tkel/Tnom)+gfactor);
+//    if (vjT < `PHIFLOOR) begin
+//        vjT = `PHIFLOOR;
+//    end
+//    cj0T     = cj0*(pow((vjT/vj),(-1*em)));
+    vjT      = dummy_zero+(vj);	// This is used cuz the model file calculates temp dependence of vj.
+    cj0T     = dummy_zero+(cj0);	// This is used cuz the model file calculates temp dependence of cj0.
+  
+    isTeff   = isT*area*xmag;
+    ibveff   = max(ibv*area*xmag, isTeff+gmin*area*xmag*bv);
+    cj0Teff  = cj0T*area*xmag;
+    ikeff    = ik*area*xmag;
+    ikreff   = ikr*area*xmag;
+    rseff    = dummy_zero+rs*smult*smult/(areafactor*xmag);		// Matches DIO.admsva when using areafactor
+//    rseff    = rs*smult*smult/(area*xmag);
+    maxVD    = n*kT*ln(1.0/isTeff + 1.0);
+
+
+    // Steady State Current Equations
+  
+    Vd       = V(dut)-(rseff*I(dut));
+    
+//    if(bv >= 500)  begin 
+    if(bv >= 800)  begin 
+        ///Diode without breakdown
+	if (Vd < maxVD) begin
+            Ieq  = isTeff*(limexp(Vd/(n*kT))-1)+gminef*Vd;
+	end else begin
+	    ev = limexp(maxVD / (n*kT));
+	    Ieq  = isTeff * (ev - 1.0) + (Vd - maxVD) * (isTeff / (n * kT) * ev);
+	end    
+    end else begin
+        ///Diode with breakdown  
+        //if(ibveff-gmin*area*xmag*bv < isTeff) begin
+          //  ibveff  = isTeff+gmin*area*xmag*bv;
+        //end 
+        bvaj = kT*((bv/kT)+ln(1-limexp(-1*bv/kT)))-kT*ln(((ibveff-gminef*bv)/isTeff)+1+limexp(-1*bv/(n*kT)));
+	if (Vd < maxVD) begin
+            Ieq0 = isTeff*(limexp(Vd/(n*kT))-1);
+	end else begin
+	    ev = limexp(maxVD / (n*kT));
+	    Ieq0  = isTeff * (ev - 1.0) + (Vd - maxVD) * (isTeff / (n * kT) * ev);
+	end
+        Iqb  = isTeff*(limexp(-1*bvaj/kT)-limexp(-1*(Vd+bvaj)/kT));
+        Ieq  = Ieq0+Iqb+gminef*Vd;
+    end
+     
+    arg=0.0; 
+    if (Ieq > 0.0 && ikeff > 0.0) begin
+        arg = sqrt(Ieq / ikeff);
+    end else begin
+        if (Ieq < 0.0 && ikreff > 0.0) begin
+	    arg = sqrt(-Ieq / ikreff);
+        end
+    end
+            
+    Ieq = Ieq / (1 + arg);
+ 
+    begin : evaluateDynamic // Dynamic (AC) bias dependent quantities, i.e. charges  
+
+//
+//  Depletion charge using the Mica expressions
+// 
+            if (cj0Teff > 0.0) begin
+	        if (Vd <= fc * vjT) begin
+	            arg1 = 1.0 - Vd / vjT;
+	            if (em == 0.5) 
+		        arg2 = sqrt(arg1);
+	            else
+		        arg2 = pow(arg1, em);
+	            Qji = (cj0Teff * vjT) / (1.0 - em) * (1.0 - arg1 / arg2);
+	        end else begin
+	            omfc = 1 - fc;
+	            vjmfcp = Vd - fc*vjT;
+		    xfc = pow((1.0 - fc), em);
+	            Qji = cj0Teff / xfc * ((xfc - omfc)*vjT / (1.0 - em) +
+			                vjmfcp * (1.0 + em * vjmfcp / (2.0*vjT*omfc)));
+	        end
+            end else begin
+                Qji = 0.0;
+            end
+
+//
+//  Calculate remaining charges
+//
+    
+        Qe=tau*Ieq;
+    end // evaluateDynamic
+    
+    begin : loadStatic // Static (DC) branch contributions, i.e. currents
+        I(dut) <+ (Ieq*num);
+	    I(b_cz) <+ -1.0e-3*1.0e12*Qe*num; // scale so rhs looks reasonable for a current
+        I(b_zz) <+ 1.0e-3*V(b_zc)*num;
+    end // loadStatic
+    
+    begin : loadDynamic // Dynamic (AC) branch contributions, i.e. ddt() of charges  
+        I(b_zc) <+ ddt(1.0e-3*trr*V(b_zc)*num);
+        I(dut) <+ ddt(1.0e-12*V(b_zc)*num); // scale so stamped cap is 1e-12 instead of 1!
+        I(dut) <+ ddt(Qji*num);
+    end // loadDynamic
+//    $strobe("cj0 = %g",cj0);
+//    $strobe("cj0T = %g",cj0T);
+//    $strobe("vjT = %g",vjT);
+//    $strobe("cj0Teff = %g",cj0Teff);
+  
+
+end // analogBlock
+ 
+endmodule

@@ -1,0 +1,417 @@
+//***********************************************************************************
+//*  NXP SOA-check monitor                                                          *
+//***********************************************************************************
+//
+// Filename:           parcheck3.va
+// Version:            3.0.1
+// Date:               2023-12-15
+// Author(s):          Gert-Jan Smit
+// Source:
+//   - git repository: soacheck_va
+//   - git commit:     8321f6a73e3be7149802079cf34919d7b4e59120
+//
+// Description:
+// This monitor is similar to ovcheck.va, except for it not checking a voltage put
+// the value of an OP-output variable.
+//
+// Known limitations:
+// - This code requires mica version 16.1 or higher.
+//
+//***********************************************************************************
+
+`include "disciplines.h"
+
+// calculated value of main quantity to be monitored
+// also include other variables that must be updated at each iteration
+`define get_main_quantity qval = $simprobe(inst2probe, param, 0.0);
+
+// function call to oor_condition()
+`define call_oor_condition oor_condition(qval, plow, phigh)
+
+// function call to oor_measure()
+`define call_oor_measure oor_measure(qval, plow, phigh)
+
+// function call to max_overshoot_perc()
+`define call_max_overshoot_perc max_overshoot_perc(tot_peak_val, plow, phigh)
+
+// Below are all possible output messages. The format string and variable list are in separate macros.
+// (using macros, because string-variables are not recognized as format-strings in $write() statement)
+
+// macro definitions for warning messages (shared)
+
+`define label_fatal   "\n    [SOACHECK_FATAL] "
+`define label_tr      "\n    [SOACHECK_TR] "
+`define label_info    "\n    [SOACHECK_INFO] "
+`define label_dc      "\n    [SOACHECK_DC] "
+`define label_dc_end  "\n    [SOACHECK_DC_END] "
+`define label_debug   "\n    [SOACHECK_DEBUG] "
+
+`define key_instance      "instance: %m"
+`define key_rule          "rule: \"%s\""
+`define key_branch        "branch: \"%s\""
+`define key_boundary      "boundary: \"[%.5g, %.5g]\""
+`define key_boundary_on   "boundary_on: \"[%.5g, %.5g]\""
+`define key_boundary_off  "boundary_off: \"[%.5g, %.5g]\""
+`define key_device        "device: \"%s\""
+`define key_exit_value    "exit value: %.5g"
+`define key_exit_time     "exit time: %.15g"
+`define key_entry_value   "entry value: %.5g"
+`define key_entry_time    "entry time: %.15g"
+`define key_param         "parameter: \"%s\""
+`define key_peak_value    "peak value: %.5g"
+`define key_peak_time     "peak time: %.15g"
+`define key_value         "value: %.5g"
+`define key_duration      "duration: %.3g"
+`define key_duration_perc "duration percentage: %.3g%%"
+`define key_suppr_msg     "suppressed messages: %d"
+`define key_severity      "severity: \"%s\""
+`define key_oversh_perc   "overshoot percentage: %.3g%%"
+`define key_message       "message: \"%s\""
+
+// Debug message (printed when debug=1)
+`define msg_debug \
+    `label_debug, \
+    `key_instance, ", ", \
+    `key_device, device, "\n"
+
+// physical constants
+`define kbol 1.3806226e-23
+`define qele 1.6021918e-19
+
+// Message at first violation, when causing simulation to abort (only when stop==1)
+`define msg_fatal \
+    `label_fatal, \
+    `key_instance, ", ", \
+    `key_device, device, ", ", \
+    `key_param, param, ", ", \
+    `key_boundary, plow, phigh, ", ", \
+    `key_exit_value, exit_value, ", ", \
+    `key_message, msg, "\n"
+
+// Message during transient, when returning to SOA
+`define msg_tr \
+    `label_tr, \
+    `key_instance, ", ", \
+    `key_param, param, ", ", \
+    `key_boundary, plow, phigh, ", ", \
+    `key_exit_value, exit_value, ", ", \
+    `key_exit_time, exit_time, ", ", \
+    `key_entry_value, entry_value, ", ", \
+    `key_entry_time, entry_time, ", ", \
+    `key_peak_value, this_peak_val, ", ", \
+    `key_peak_time, this_peak_time, ", ", \
+    `key_duration, dur, ", ", \
+    `key_message, msg, "\n"
+
+// Summary message (when within SOA at end of transient)
+`define msg_info \
+    `label_info, \
+    `key_instance, ", ", \
+    `key_device, device, ", ", \
+    `key_param, param, ", ", \
+    `key_boundary, plow, phigh, ", ", \
+    `key_peak_value, tot_peak_val, ", ", \
+    `key_peak_time, tot_peak_time, ", ", \
+    `key_duration, dur_tot, ", ", \
+    `key_duration_perc, 100 * frac, ", ", \
+    `key_suppr_msg, num_suppressed_msg, ", ", \
+    `key_severity, severity, ", ", \
+    `key_oversh_perc, oor_perc, ", ", \
+    `key_message, msg, "\n"
+
+// Summary message, with severity removed
+`define msg_info_no_severity \
+    `label_info, \
+    `key_instance, ", ", \
+    `key_device, device, ", ", \
+    `key_param, param, ", ", \
+    `key_boundary, plow, phigh, ", ", \
+    `key_peak_value, tot_peak_val, ", ", \
+    `key_peak_time, tot_peak_time, ", ", \
+    `key_duration, dur_tot, ", ", \
+    `key_duration_perc, 100 * frac, ", ", \
+    `key_suppr_msg, num_suppressed_msg, ", ", \
+    `key_oversh_perc, oor_perc, ", ", \
+    `key_message, msg, "\n"
+
+// Message when leaving SOA during dc analysis
+`define msg_dc_exit \
+    `label_dc, \
+    `key_instance, ", ", \
+    `key_param, param, ", ", \
+    `key_boundary, plow, phigh, ", ", \
+    `key_exit_value, exit_value, ", ", \
+    `key_message, msg, "\n"
+
+// Message when returning to SOA during dc analysis
+`define msg_dc_entry \
+    `label_dc, \
+    `key_instance, ", ", \
+    `key_param, param, ", ", \
+    `key_boundary, plow, phigh, ", ", \
+    `key_exit_value, exit_value, ", ", \
+    `key_entry_value, qval, ", ", \
+    `key_peak_value, tot_peak_val, ", ", \
+    `key_message, msg, "\n"
+
+// Summary message at end of dc analysis
+`define msg_dc_end \
+    `label_dc_end, \
+    `key_instance, ", ", \
+    `key_param, param, ", ", \
+    `key_boundary, plow, phigh, ", ", \
+    `key_value, qval, ", ", \
+    `key_exit_value, exit_value, ", ", \
+    `key_peak_value, tot_peak_val, ", ", \
+    `key_oversh_perc, oor_perc, ", ", \
+    `key_message, msg, "\n"
+
+
+(* instrument_module *)
+module parcheckva3;
+
+    // Mandatory model parameters
+    parameter integer level        = 1;     // General parameter for all simkit devices (not used)
+    parameter integer paramchk     = 0;     // General parameter for all simkit devices used for level of clip warnings
+    (* type="instance" *)
+    parameter string  device       = "";    // Name of the device (or device model)
+    parameter real    tmin         = 0.0;   // Minimal time outside of SOA before a warning is issued
+    parameter real    tdelay       = 0.0;   // Time after start of transient that checking is activated
+    parameter real    tmaxfrac     =-2.0;   // Maximum acceptable fraction of time outside of SOA
+    parameter integer vballmsg     = 1;     // 0: only END/INFO messages; 1: TR message if peak is higher than before; 2: all TR messages
+    parameter integer stop         = 0;     // Stop simulation on SOA violation when STOP==1
+    parameter integer soadebug     = 0;     // If set to 1, print debug-message @initial_step
+
+    parameter string  message1     = "";    // Optional informational message to be used in SOA messages
+
+    // check-specific model parameters
+    (* type="instance" *)
+    parameter string inst2probe = "fet";    // Instance name (within same subcircuit of monitor) of device to be checked
+    parameter string param      = "vth";    // name of OP-output parameter to be monitored
+    parameter real   plow       = 0.0;      // renamed w.r.t. simkit
+    parameter real   phigh      = 0.0;      // renamed w.r.t. simkit
+
+    // definition of out-of-range condition
+    analog function integer oor_condition;
+        input qval, qlow, qhigh;
+        real qval, qlow, qhigh;
+        begin
+            oor_condition = ((qval < qlow) || (qval > qhigh));
+        end
+    endfunction
+
+    // definition of out-of-range measure
+    analog function real oor_measure;
+        input qval, qlow, qhigh;
+        real qval, qlow, qhigh;
+        begin
+            oor_measure = 0;
+            if (qval <= qlow) begin
+                oor_measure = qlow - qval;
+            end else begin
+                if (qval >= qhigh) begin
+                    oor_measure = qval - qhigh;
+                end
+            end
+        end
+    endfunction
+
+    // interpolated boundary crossing time
+    analog function real crossing_time;
+        input t0, t1, q0, q1, qlow, qhigh;
+        output qcross;
+        real t0, t1, q0, q1, qlow, qhigh, qcross;
+        begin
+            if ((q0 > qhigh) || (q1 > qhigh)) begin // crossing upper limit
+                qcross = qhigh;
+            end else begin // crossing lower limit
+                qcross = qlow;
+            end
+            if ((q0 == q1) || (t0 == t1)) begin
+                crossing_time = t1;
+            end else begin
+                crossing_time = t0 + (t1 - t0) * (qcross - q0) / (q1 - q0);
+            end
+        end
+    endfunction
+
+    // calculation of maximum overshoot percentage
+    analog function real max_overshoot_perc;
+        input peak_val, qlow, qhigh;
+        real peak_val, qlow, qhigh;
+        begin
+            max_overshoot_perc = 0.0;
+            if ((peak_val > qhigh) && (qhigh != 0.0)) begin
+                max_overshoot_perc = 100.0 * (peak_val / qhigh - 1.0);
+            end else begin
+                if ((peak_val < qlow) && (qlow != 0.0)) begin
+                    max_overshoot_perc = 100.0 * (1.0 - peak_val / qlow);
+                end
+            end
+        end
+    endfunction
+
+    // mandatory variables
+    integer          outofrange, num_suppressed_msg, do_monitor;
+    real             start_time, exit_time, entry_time, exit_value, entry_value, dur, total_time;
+    real             this_peak_diff, tot_peak_diff, this_peak_time, tot_peak_time, dur_oor;
+    real             qval, qval_prev, this_peak_val, tot_peak_val, oor_meas;
+    real             t_now, t_prev;
+    real             dur_tot, oor_perc, frac, test_simprobe;
+    string           msg, severity;
+
+    // check-specific variables (if any)
+
+    analog begin
+        @(initial_step) begin
+            msg = message1;
+            if (soadebug == 1) begin
+                $write(`msg_debug);
+            end
+            test_simprobe = $simprobe(inst2probe, param, 1e9);
+            if (test_simprobe < 1e8) begin
+                do_monitor = (plow < phigh);
+            end else begin
+                do_monitor = 0;
+                do_monitor = (plow < phigh);
+                $write("\n    [SOACHECK_WARNING] instance: %m, message: \"instance (%s) or parameter (%s) not found, skipping monitoring\"\n", inst2probe, param);
+            end
+        end
+
+        @(initial_step("tran")) begin
+            outofrange = 0;
+            tot_peak_diff = 0;
+            start_time = $abstime; // needed for situation when tran-analysis does not start at t=0.
+            t_now = start_time;
+            dur_oor = 0.0;
+        end
+        @(initial_step("dc")) begin
+            outofrange = 0;
+            tot_peak_diff = 0;
+        end
+
+         // store values from previous iteration (for interpolation)
+        qval_prev = qval;
+        t_prev = t_now;
+
+        // get present values
+        t_now = $abstime;
+        `get_main_quantity
+
+        if (do_monitor && ((t_now >= (start_time + tdelay)) || analysis("dc"))) begin
+            case (outofrange)
+                0 : begin // signal currently in range
+                    if (`call_oor_condition == 1) begin // going out-of-range
+                        outofrange = 1;  // set status to out-of-range
+                        // exit_value exactly matches limit, unless at first time step
+                        exit_time = crossing_time(t_prev, t_now, qval_prev, qval, plow, phigh, exit_value);
+                        oor_meas = `call_oor_measure;
+
+                        // update peak value and time
+                        this_peak_val = qval;
+                        this_peak_diff = oor_meas;
+                        this_peak_time = t_now;
+                        if (analysis("dc")) begin
+                            if (stop >= 1) begin
+                                $write(`msg_fatal);
+                                $fatal(0, "\nFATAL: Simulation is terminated (STOP == 1).");
+                            end
+                            if (vballmsg >= 1) begin
+                                $write(`msg_dc_exit);
+                            end
+                        end
+                    end
+                end
+                1 : begin // signal currently out of range
+                    oor_meas = `call_oor_measure;
+                    if (oor_meas > this_peak_diff) begin // update peak value and time
+                        this_peak_val = qval;
+                        this_peak_diff = oor_meas;
+                        this_peak_time = t_now;
+                    end
+                    if (`call_oor_condition == 0) begin // getting back in range
+                        outofrange = 0;
+                        entry_time = crossing_time(t_prev, t_now, qval_prev, qval, plow, phigh, entry_value);
+                        dur = entry_time - exit_time;
+                        if (dur > tmin) begin
+                            if (stop >= 1) begin
+                                $write(`msg_fatal);
+                                $fatal(0, "\nFATAL: Simulation will be terminated (STOP == 1).");
+                            end
+                            if ((vballmsg >= 2) || ((vballmsg == 1) && (this_peak_diff > tot_peak_diff))) begin
+                                $write(`msg_tr);
+                            end else begin
+                                num_suppressed_msg = num_suppressed_msg + 1;
+                            end
+                        end
+                        dur_oor = dur_oor + dur; // event adds to total, even if shorter than tmin
+                        if (this_peak_diff > tot_peak_diff) begin // update over-all peak value and time
+                            tot_peak_val = this_peak_val;
+                            tot_peak_diff = this_peak_diff;
+                            tot_peak_time = this_peak_time;
+                        end
+                        if (analysis("dc")) begin
+                            if (vballmsg >= 1) begin
+                                $write(`msg_dc_entry);
+                            end
+                        end
+                    end
+                end
+                default : ;// should never get here
+            endcase // case (outofrange)
+        end else begin  // (if $abstime >= tdelay)
+            // keep track of status, even when not monitoring
+            outofrange = `call_oor_condition;
+            exit_time = t_now;
+            exit_value = qval;
+        end
+
+        // Summaries at end of analysis
+        @(final_step("tran")) begin
+            total_time = t_now - start_time - tdelay;
+            if (do_monitor && ((dur_oor > 0.0) || (outofrange != 0))) begin
+                if (outofrange == 1) begin
+                    // handle ongoing violation
+                    entry_time = t_now;
+                    entry_value = qval;
+                    dur = entry_time - exit_time;
+                    if ((vballmsg >= 1) && (dur > tmin)) begin
+                        $write(`msg_tr);
+                    end
+                    // update totals
+                    dur_oor = dur_oor + dur;
+                    if (this_peak_diff > tot_peak_diff) begin
+                        tot_peak_val = this_peak_val;
+                        tot_peak_time = this_peak_time;
+                    end
+                end
+                oor_perc = `call_max_overshoot_perc;
+                dur_tot = dur_oor;
+                frac = dur_tot / total_time;
+                if (tmaxfrac < 0.0) begin
+                    severity = "review";
+                end else begin
+                    if (frac < tmaxfrac) begin
+                        severity = "low";
+                    end else begin
+                        severity = "high";
+                    end
+                end
+                if (tmaxfrac >= -1.5) begin
+                    $write(`msg_info);
+                end else begin
+                    $write(`msg_info_no_severity);
+                end
+            end // if do_monitor
+        end // final_step tran
+        @(final_step("dc")) begin
+            if (do_monitor && (this_peak_diff > tot_peak_diff)) begin // update over-all peak value
+                tot_peak_val = this_peak_val;
+            end
+            if (do_monitor && ((tot_peak_diff > 0.0) || (outofrange != 0))) begin
+                oor_perc = `call_max_overshoot_perc;
+                $write(`msg_dc_end);
+            end
+        end // final_step dc
+    end // analog
+endmodule // parcheck

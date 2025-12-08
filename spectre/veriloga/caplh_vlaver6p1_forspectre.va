@@ -1,0 +1,42 @@
+
+`include "discipline.h"
+`include "constants.h"
+
+module caplh_vla(pnode,nnode);
+    inout       pnode, nnode;
+    electrical  pnode, nnode;
+
+
+
+    parameter   real   area    =    1.0        from(0.1:inf];
+    parameter   real   tnom    =    27.0       from(0.1:inf];
+    parameter   real   c0      =    1.5e-15    from(1.0e-17:100.0e-15];    // [F/um^2]
+    parameter   real   tc1     =    0.0        from[-1.0e-2:1.0e-2];
+    parameter   real   tc2     =    0.0        from[-1.0e-2:1.0e-2];
+    parameter   real   a2      =    0.0        from[-1.0e-2:1.0e-2];
+    parameter   real   a3      =    0.0        from[-1.0e-2:1.0e-2];
+    parameter   real   delv    =    0.0;
+    parameter   real   num     =    1.0;
+
+    real        dTemp, cc0, tfac, vfac, qq;
+    real 	dummy_zero;
+    analog begin
+	dummy_zero = V(pnode,nnode)- V(pnode,nnode);	// workaround to remove AHDLLINT waring
+	dTemp           =  dummy_zero+($temperature-273.15)-tnom;
+        cc0             =  dummy_zero+(c0*area);
+        tfac            =  dummy_zero+((1.0+dTemp*(tc1+dTemp*tc2)));
+        vfac            =  (V(pnode,nnode)*(1.0+V(pnode,nnode)*((((a2-2*a3*delv)/c0)/2)+((a3/c0)/3)*V(pnode,nnode))));
+ 
+	qq              =  (cc0*vfac*tfac*num);
+
+
+        I(pnode,nnode)  <+ ddt(qq);
+
+//        $strobe("vfac : %g", vfac);        // used for debug
+//        $strobe("tfac : %g", tfac);        // used for debug
+//        $strobe("mMod : %g", mfac);        // used for debug
+//        $strobe("cc0  : %g", cc0);         // used for debug
+//        $strobe("qq   : %g", qq);          // used for debug
+    end
+endmodule
+

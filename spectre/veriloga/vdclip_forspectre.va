@@ -1,0 +1,41 @@
+// Verilog-A definition of vdclip model
+
+`include "discipline.h"
+`include "constants.h"
+`include "disciplines.vams"
+`include "constants.vams"
+
+`define hyp(x, eps) (((x) >= 0) ? (eps) * (hypot(1.0, 0.5 * (x)/(eps)) +  0.5 * (x)/(eps)) : (eps) / (hypot(1.0, 0.5 * (x)/(eps)) -  0.5 * (x)/(eps)))
+
+module vdclip (d, di, g);
+
+  // Node definitions
+  inout      d, di, g;
+  electrical d, di, g;
+
+  // Model parameters
+  parameter real vp  = 60;                       // Pinch_off voltage of depletion layer in drift region, units=V
+  parameter real dvp  = 1;                       // Smoothing factor for pinch-off behaviour, units=V
+  parameter real type = 1 from [-1:1] exclude 0; // Transistor type, 1 for NMOS and -1 for PMOS
+
+  // Variables
+  real vd, vg, dvd, dvd0;
+
+  analog begin
+ 
+    @(initial_step) begin      
+      // Calculation of constant parameter dvd0
+      dvd0    = `hyp(-vp, dvp); 
+    end // initial_step
+
+    // Get external bias voltages
+    vd = type * V(d);
+    vg = type * V(g);
+
+    // Model evaluation  
+    dvd = `hyp(vd-vg-vp, dvp) - dvd0;
+    V(d, di) <+ type * dvd;
+    
+  end // analog
+
+endmodule

@@ -1,0 +1,198 @@
+
+//
+//  This file contains general macro and constant definitions.
+//
+//  NOTE: macros that can be embedded in expressions to not include a trailing ";" termination
+//        whereas those that are to be used stand-alone do. If you add an extra ";" to the latter
+//        this is an error as NULL statements are not legal in Verilog-AMS.
+//  NOTE: macros that use local variables explicitly declare these, so no module
+//        level variables have to be declared to use the macros. This makes the
+//        macros stand-alone, but requires block names to passed as macro arguments
+//        as local variables can only be declared in named blocks in Verilog-AMS.
+//        The block names must be unique within a module.
+//
+
+
+//
+//  Physical constants and other generally useful numbers
+//
+
+`define TABS_NIST2004     273.15                 // (NIST2004) 0C in K
+`define QQ_NIST2004       1.60217653e-19         // (NIST2004) mag. of electronic charge (C)
+`define KB_NIST2004       1.3806505e-23          // (NIST2004) Boltzmann constant (J/K)
+`define EPS0_NIST2004     8.854187817e-12        // (NIST2004) Electric constant (F/m)
+`define EPS_OX            3.45313324863e-11      // EPS0_NIST2004*3.90 (F/m)
+`define EPS_SI            1.035939974589e-10     // EPS0_NIST2004*11.7 (F/m)
+`define oneSixth          0.1666666666666667
+`define oneThird          0.3333333333333333
+`define twoThirds         0.6666666666666667
+`define sqrtTwo           1.414213562373095
+`define inv_sqrtTwo       0.7071067811865475
+`define egTsividis(Eg,t_K) \
+    if (t_K<300.0) begin \
+        Eg = 1.17850-t_K*(9.025e-05-t_K*3.05e-07); \
+    end else begin \
+        Eg = 1.20595-t_K*2.7325e-04; \
+    end
+
+//
+//  Clipping macros, these smoothly limit to lower, upper, or both lower and upper
+//  limits. Rather than using a sqrt or log-exp form, which affects values
+//  everywhere, these use a conditional form that is continuous in function
+//  and derivative. If a value is not clipped then no exp() evaluation occurs.
+//  Smooth limiting is preferable to hard limiting (although latter can still
+//  be useful for enforcing parameter limits) for bias dependent quantities
+//  as derivatives do not become zero or have discontinuities.
+//
+
+`define CLIPL0p1(XCLIP,X,LOWER) \
+    if (X<(LOWER+0.1)) \
+        XCLIP    =  LOWER+0.1*exp(10.0*(X-LOWER)-1.0); \
+    else \
+        XCLIP    =  X;
+`define CLIPU0p1(XCLIP,X,UPPER) \
+    if (X>(UPPER-0.1)) \
+        XCLIP    =  UPPER-0.1*exp(10.0*(UPPER-X)-1.0); \
+    else \
+        XCLIP    =  X;
+`define CLIPB0p1(XCLIP,X,LOWER,UPPER) \
+    if (X<(LOWER+0.1)) \
+        XCLIP    =  LOWER+0.1*exp(10.0*(X-LOWER)-1.0); \
+    else if (X>(UPPER-0.1)) \
+        XCLIP    =  UPPER-0.1*exp(10.0*(UPPER-X)-1.0); \
+    else \
+        XCLIP    =  X;
+
+`define CLIPL1p0(XCLIP,X,LOWER) \
+    if (X<(LOWER+1.0)) \
+        XCLIP    =  LOWER+exp(X-LOWER-1.0); \
+    else \
+        XCLIP    =  X;
+`define CLIPU1p0(XCLIP,X,UPPER) \
+    if (X>(UPPER-1.0)) \
+        XCLIP    =  UPPER-exp(UPPER-X-1.0); \
+    else \
+        XCLIP    =  X;
+`define CLIPB1p0(XCLIP,X,LOWER,UPPER) \
+    if (X<(LOWER+1.0)) \
+        XCLIP    =  LOWER+exp(X-LOWER-1.0); \
+    else if (X>(UPPER-1.0)) \
+        XCLIP    =  UPPER-exp(UPPER-X-1.0); \
+    else \
+        XCLIP    =  X;
+
+//
+//  Hard clamping and sqrt clamping macros
+//
+
+`define MAX(x,y)           ((x)>(y)?(x):(y))
+`define MAXA(x,y,a)        (0.5*((x)+(y)+sqrt(((x)-(y))*((x)-(y))+(a))))
+`define MIN(x,y)           ((x)<(y)?(x):(y))
+`define MINA(x,y,a)        (0.5*((x)+(y)-sqrt(((x)-(y))*((x)-(y))+(a))))
+`define CLAMP(val,min,max) ((val)>(min)?((val)<(max)?(val):(max)):(min))
+
+//
+//  Parameter definition macros: "des" description argument is intended to
+//  be a short description, the "inf" information argument is intended to be
+//  a detailed description (e.g. for display as part of on-line help).
+//
+//  MPR      model    parameter real
+//  MPI      model    parameter integer
+//  IPR      instance parameter real
+//  IPI      instance parameter integer
+//  OPP      operating point parameter, includes units and description for printing
+//
+//  There are some issues with passing range directives with some compilers,
+//  so for each parameter declaration there are multiple versions:
+//  cc       closed lower bound, closed upper bound
+//  co       closed lower bound, open   upper bound
+//  oc       open   lower bound, closed upper bound
+//  oo       open   lower bound, open   upper bound
+//  nb       no bounds
+//  sw       switch (integer only, values  0=false  and  1=true)
+//  ty       switch (integer only, values -1=n-type and +1=p-type)
+//
+
+`define ALIAS(alias,paramName) aliasparam alias = paramName;
+`define OPP(nam,uni,des)               (*units=uni,                             desc=des*)           real    nam;
+`define MPRcc(nam,def,uni,lwr,upr,des) (*units=uni,                  ask="yes", desc=des*) parameter real    nam=def from[lwr:upr];
+`define MPRco(nam,def,uni,lwr,upr,des) (*units=uni,                  ask="yes", desc=des*) parameter real    nam=def from[lwr:upr);
+`define MPRoc(nam,def,uni,lwr,upr,des) (*units=uni,                  ask="yes", desc=des*) parameter real    nam=def from(lwr:upr];
+`define MPRoo(nam,def,uni,lwr,upr,des) (*units=uni,                  ask="yes", desc=des*) parameter real    nam=def from(lwr:upr);
+`define MPRnb(nam,def,uni,        des) (*units=uni,                  ask="yes", desc=des*) parameter real    nam=def;
+`define MPIcc(nam,def,uni,lwr,upr,des) (*units=uni,                  ask="yes", desc=des*) parameter integer nam=def from[lwr:upr];
+`define MPIco(nam,def,uni,lwr,upr,des) (*units=uni,                  ask="yes", desc=des*) parameter integer nam=def from[lwr:upr);
+`define MPIoc(nam,def,uni,lwr,upr,des) (*units=uni,                  ask="yes", desc=des*) parameter integer nam=def from(lwr:upr];
+`define MPIoo(nam,def,uni,lwr,upr,des) (*units=uni,                  ask="yes", desc=des*) parameter integer nam=def from(lwr:upr);
+`define MPInb(nam,def,uni,        des) (*units=uni,                  ask="yes", desc=des*) parameter integer nam=def;
+`define MPIsw(nam,def,uni,        des) (*units=uni,                  ask="yes", desc=des*) parameter integer nam=def from[  0:  1];
+`define MPIty(nam,def,uni,        des) (*units=uni,                  ask="yes", desc=des*) parameter integer nam=def from[ -1:  1] exclude 0;
+`define IPRcc(nam,def,uni,lwr,upr,des) (*units=uni, type="instance", ask="yes", desc=des*) parameter real    nam=def from[lwr:upr];
+`define IPRco(nam,def,uni,lwr,upr,des) (*units=uni, type="instance", ask="yes", desc=des*) parameter real    nam=def from[lwr:upr);
+`define IPRoc(nam,def,uni,lwr,upr,des) (*units=uni, type="instance", ask="yes", desc=des*) parameter real    nam=def from(lwr:upr];
+`define IPRoo(nam,def,uni,lwr,upr,des) (*units=uni, type="instance", ask="yes", desc=des*) parameter real    nam=def from(lwr:upr);
+`define IPRnb(nam,def,uni,        des) (*units=uni, type="instance", ask="yes", desc=des*) parameter real    nam=def;
+`define IPIcc(nam,def,uni,lwr,upr,des) (*units=uni, type="instance", ask="yes", desc=des*) parameter integer nam=def from[lwr:upr];
+`define IPIco(nam,def,uni,lwr,upr,des) (*units=uni, type="instance", ask="yes", desc=des*) parameter integer nam=def from[lwr:upr);
+`define IPIoc(nam,def,uni,lwr,upr,des) (*units=uni, type="instance", ask="yes", desc=des*) parameter integer nam=def from(lwr:upr];
+`define IPIoo(nam,def,uni,lwr,upr,des) (*units=uni, type="instance", ask="yes", desc=des*) parameter integer nam=def from(lwr:upr);
+`define IPInb(nam,def,uni,        des) (*units=uni, type="instance", ask="yes", desc=des*) parameter integer nam=def;
+`define IPIsw(nam,def,uni,        des) (*units=uni, type="instance", ask="yes", desc=des*) parameter integer nam=def from[  0:  1];
+`define SCALE \
+    begin \
+        if ($param_given(scale)) begin \
+            scaleFac =  scale; \
+        end else begin \
+            scaleFac = $simparam("scale",1.0); \
+        end \
+    end
+`define SHRINKL \
+    begin \
+        if ($param_given(shrink)) begin \
+            shrinkL  =  1.0-0.01*shrink; \
+        end else begin \
+            shrinkL  =  1.0-0.01*$simparam("shrink",0.0); \
+        end \
+    end
+`define RTHRESH \
+    begin \
+        if ($param_given(rthresh)) begin \
+            rthrMod  =  rthresh; \
+        end else begin \
+            rthrMod  = $simparam("rthresh",1.0e-03); \
+        end \
+    end
+`define GMIN \
+    begin \
+        if ($param_given(gmin)) begin \
+            gminMod  =  gmin; \
+        end else begin \
+            gminMod  = $simparam("gmin",1.0e-12); \
+        end \
+    end
+`define IMAX \
+    begin \
+        if ($param_given(imax)) begin \
+            imaxMod  =  imax; \
+        end else begin \
+            imaxMod  = $simparam("imax",1.0); \
+        end \
+    end
+
+//
+//  exp(V*a) that linearizes for V>Vmax
+//
+//  Outputs:
+//           expv       exponential linearized for V>Vmax
+//  Inputs:
+//           V          input voltage
+//           Vmax       voltage at which to linearize the exponential
+//           a          multiplicative factor for V in the exponential calculation
+//
+
+`define expLinA(expv,V,Vmax,a) \
+    if (V<Vmax) begin \
+        expv    =  exp(V*a); \
+    end else begin \
+        expv    =  exp(Vmax*a)*(1.0+(V-Vmax)*a); \
+    end

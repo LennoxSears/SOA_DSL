@@ -1,0 +1,42 @@
+/* ======================================================================== *
+
+                          F I L E   I N F O R M A T I O N
+
+ * ==================================================================== *//**
+
+   @file        print_version_nxp.va
+                Verilog-A model file
+
+   This file contains the print_version, which prints the current model
+   library version to the simulator log file.
+
+   @author      Bart De Vries
+
+   @version     1.1.0
+
+ * ==================================================================== *//**
+
+   @history
+
+   @date 2020-08-04 (BDV):
+   - Initial version of print_version.
+   - Set version number to 1.0.0.
+   @date 2020-09-10 (JHS):
+   - Added package string per Aldric suggestion.
+   - Set version number to 1.1.0.
+
+*//* ===================================================================== */
+
+module print_version;
+
+    parameter string version = "no version";
+    parameter string package = "no package";
+
+    analog begin
+        @(initial_step)
+        begin
+            $write("\n[MODEL INFO] Package: %s, Version: %s\n", package, version); 
+        end
+    end
+
+endmodule
