@@ -47,3 +47,5 @@ spectre/*.log
 # Temporary files
 *.tmp
 *.bak
+archive/
+reference_materials/

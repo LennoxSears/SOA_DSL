@@ -1,5 +1,7 @@
 # SOA DSL - Safe Operating Area Domain-Specific Language
 
+**Status:** ✅ Production Ready | [Project Status](PROJECT_STATUS.md)
+
 ## Overview
 
 This project implements a Domain-Specific Language (DSL) for describing Safe Operating Area (SOA) rules for semiconductor devices. The DSL enables automated generation of Spectre netlist code with Verilog-A monitor instantiations, replacing manual, error-prone workflows.
