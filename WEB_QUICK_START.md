@@ -1,47 +1,12 @@
 # SOA Rule Creator - Web Interface Quick Start
 
-## 🚀 Get Started in 3 Steps
+## 🚀 Get Started in 1 Step
 
-### Step 1: Install Dependencies
+### Just Open the File!
 
-```bash
-cd SOA_DSL
-pip install -r requirements.txt
-```
+**Double-click** `web/index.html` to open it in your browser.
 
-This installs PyYAML and Flask.
-
-### Step 2: Start the Server
-
-**Linux/Mac:**
-```bash
-cd web
-python3 run.py
-```
-
-**Windows:**
-```cmd
-cd web
-python run.py
-```
-
-You should see:
-```
-============================================================
-SOA Rule Creator - Web Interface
-============================================================
-
-Starting server...
-Open your browser and navigate to:
-  http://localhost:5000
-
-Press Ctrl+C to stop the server
-============================================================
-```
-
-### Step 3: Open Your Browser
-
-Navigate to: **http://localhost:5000**
+That's it! No installation, no dependencies, no server needed.
 
 ---
 
@@ -115,28 +80,21 @@ Navigate to: **http://localhost:5000**
 
 ## 🔧 Troubleshooting
 
-### "Address already in use"
-Port 5000 is taken. Edit `web/run.py` and change the port:
-```python
-app.run(debug=True, host='0.0.0.0', port=5001)
-```
+### File Won't Open
+Right-click `index.html` and select "Open with" → Chrome/Firefox/Edge
 
-### "Module 'flask' not found"
-Install Flask:
+### Can't Download YAML
+Some browsers block downloads from local files. Use a local web server:
+
 ```bash
-pip install flask
+cd SOA_DSL/web
+python3 -m http.server 8080
 ```
 
-### "Module 'yaml' not found"
-Install PyYAML:
-```bash
-pip install pyyaml
-```
+Then open: [http://localhost:8080](http://localhost:8080)
 
-### Can't access from browser
-Make sure the server is running and check the URL:
-- Local: http://localhost:5000
-- Network: http://YOUR_IP:5000
+### Blank Page
+Try a different browser or use the local web server method above.
 
 ---
 
@@ -144,12 +102,16 @@ Make sure the server is running and check the URL:
 
 After downloading `soa_rules.yaml`, use it with the CLI:
 
+**Linux/Mac:**
 ```bash
-# Validate
-python soa_dsl_cli.py validate soa_rules.yaml
+./soa-dsl validate soa_rules.yaml
+./soa-dsl compile soa_rules.yaml -o output/soachecks_top.scs
+```
 
-# Generate Spectre code
-python soa_dsl_cli.py compile soa_rules.yaml -o output/soachecks_top.scs
+**Windows:**
+```cmd
+soa-dsl.bat validate soa_rules.yaml
+soa-dsl.bat compile soa_rules.yaml -o output\soachecks_top.scs
 ```
 
 ---
@@ -167,4 +129,4 @@ python soa_dsl_cli.py compile soa_rules.yaml -o output/soachecks_top.scs
 
 The web interface makes it easy to create SOA rules without learning YAML syntax. Just fill in the form, validate, and download!
 
-**Access the interface:** http://localhost:5000
+**No installation. No dependencies. Just open and use.**

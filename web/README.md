@@ -2,6 +2,8 @@
 
 A user-friendly web interface for Silicon Reliability teams to create SOA (Safe Operating Area) rules without writing YAML manually.
 
+**Pure Frontend** - No backend server or dependencies required! Just open the HTML file in your browser.
+
 ## Features
 
 ### 🎨 Intuitive Interface
@@ -19,9 +21,8 @@ A user-friendly web interface for Silicon Reliability teams to create SOA (Safe 
 
 ### ✅ Validation
 - **Client-side validation** - Immediate feedback
-- **Server-side validation** - Uses the same validator as CLI
 - **Error reporting** - Clear error messages
-- **Warning display** - Shows potential issues
+- **No server required** - All processing happens in your browser
 
 ### 💾 Export
 - **YAML download** - Download generated rules as .yaml file
@@ -29,43 +30,39 @@ A user-friendly web interface for Silicon Reliability teams to create SOA (Safe 
 
 ## Installation
 
-### Prerequisites
-- Python 3.8 or higher
-- pip
-
-### Install Dependencies
-
-```bash
-cd SOA_DSL
-pip install -r requirements.txt
-```
-
-This installs:
-- PyYAML (for YAML generation)
-- Flask (for web server)
+**No installation required!** Just open the HTML file in your browser.
 
 ## Usage
 
-### Start the Web Server
+### Option 1: Direct File Access (Easiest)
 
-**Linux/Mac:**
+Simply **double-click** `web/index.html` to open it in your default browser.
+
+Or right-click and select **"Open with"** → your preferred browser.
+
+### Option 2: Local Web Server (Recommended for some browsers)
+
+Some browsers have security restrictions on local files. If Option 1 doesn't work, serve the file with a simple web server:
+
+**Python 3:**
 ```bash
 cd SOA_DSL/web
-python3 run.py
+python3 -m http.server 8080
 ```
 
-**Windows:**
-```cmd
-cd SOA_DSL\web
-python run.py
+**Python 2:**
+```bash
+cd SOA_DSL/web
+python -m SimpleHTTPServer 8080
 ```
 
-### Access the Interface
+**Node.js (if installed):**
+```bash
+cd SOA_DSL/web
+npx http-server -p 8080
+```
 
-Open your browser and navigate to:
-```
-http://localhost:5000
-```
+Then open your browser and navigate to: [http://localhost:8080](http://localhost:8080)
 
 ### Create Rules
 
@@ -97,12 +94,16 @@ http://localhost:5000
 
 The downloaded YAML file can be used with the CLI tool:
 
+**Linux/Mac:**
 ```bash
-# Validate
-python soa_dsl_cli.py validate soa_rules.yaml
+./soa-dsl validate soa_rules.yaml
+./soa-dsl compile soa_rules.yaml -o output/soachecks_top.scs
+```
 
-# Generate Spectre code
-python soa_dsl_cli.py compile soa_rules.yaml -o output/soachecks_top.scs
+**Windows:**
+```cmd
+soa-dsl.bat validate soa_rules.yaml
+soa-dsl.bat compile soa_rules.yaml -o output\soachecks_top.scs
 ```
 
 ## Examples
@@ -172,170 +173,105 @@ python soa_dsl_cli.py compile soa_rules.yaml -o output/soachecks_top.scs
 
 ## Architecture
 
-### Backend (Flask)
-- **app.py** - Flask application with REST API
-- **Routes:**
-  - `GET /` - Main interface
-  - `POST /api/validate` - Validate single rule
-  - `POST /api/generate-yaml` - Generate YAML from rules
-  - `POST /api/validate-yaml` - Validate complete YAML
-  - `POST /api/download-yaml` - Download YAML file
+### Pure Frontend Design
+- **Single HTML file** - All code embedded (HTML, CSS, JavaScript)
+- **No backend** - No Flask, no Python server needed
+- **No dependencies** - Works offline, no npm/pip install
+- **Client-side only** - All processing in browser
 
-### Frontend
-- **index.html** - Main interface template
-- **style.css** - Responsive styling
-- **script.js** - Client-side logic and API calls
-
-### Integration
-- Uses the same parser and validator as CLI tool
-- Generates YAML compatible with soa-dsl CLI
-- No data stored on server (all client-side)
-
-## API Endpoints
-
-### POST /api/validate
-Validate a single rule before adding.
-
-**Request:**
-```json
-{
-  "name": "NMOS Core VDS Limit",
-  "device": "nmos_core",
-  "parameter": "v[d,s]",
-  "type": "vhigh",
-  "severity": "high",
-  "constraint": {
-    "vhigh": 1.65
-  }
-}
+### File Structure
+```
+web/
+  index.html          # Standalone web interface (open this!)
+  README.md           # This file
 ```
 
-**Response:**
-```json
-{
-  "valid": true,
-  "errors": [],
-  "warnings": []
-}
-```
+### How It Works
+1. User fills form with rule details
+2. JavaScript validates input
+3. JavaScript generates YAML structure
+4. User downloads YAML file
+5. YAML file used with CLI tool
 
-### POST /api/generate-yaml
-Generate YAML from rules list.
+## Browser Compatibility
 
-**Request:**
-```json
-{
-  "process": "SMOS10HV",
-  "rules": [...]
-}
-```
+Works in all modern browsers:
+- ✅ Chrome/Edge (recommended)
+- ✅ Firefox
+- ✅ Safari
+- ✅ Opera
 
-**Response:**
-```json
-{
-  "success": true,
-  "yaml": "version: 1.0\n..."
-}
-```
-
-### POST /api/validate-yaml
-Validate complete YAML document.
-
-**Request:**
-```json
-{
-  "yaml": "version: 1.0\n..."
-}
-```
-
-**Response:**
-```json
-{
-  "valid": true,
-  "errors": [],
-  "warnings": [],
-  "rule_count": 5
-}
-```
+**Note:** Internet Explorer is not supported.
 
 ## Troubleshooting
 
-### Port Already in Use
-If port 5000 is already in use, edit `web/run.py` and change:
-```python
-app.run(debug=True, host='0.0.0.0', port=5001)  # Use different port
-```
+### File Won't Open
+Try opening with a specific browser:
+- Right-click `index.html`
+- Select "Open with" → Chrome/Firefox/Edge
 
-### Module Not Found
-Make sure you're running from the correct directory:
+### Can't Download YAML
+Some browsers block downloads from local files. Use Option 2 (local web server) instead.
+
+### Blank Page
+Check browser console (F12) for errors. Try a different browser or use a local web server.
+
+### Port Already in Use (Option 2)
+If port 8080 is taken, use a different port:
 ```bash
-cd SOA_DSL/web
-python run.py
+python3 -m http.server 8081
 ```
 
-### Flask Not Installed
+## Advantages of Pure Frontend
+
+### ✅ No Installation
+- No Python dependencies
+- No Flask installation
+- No pip/npm commands
+- Just open and use
+
+### ✅ Portable
+- Copy single HTML file anywhere
+- Email to colleagues
+- Put on shared drive
+- Works offline
+
+### ✅ Secure
+- No server to configure
+- No network exposure
+- All data stays local
+- No authentication needed
+
+### ✅ Simple
+- One file to maintain
+- No backend code
+- No API endpoints
+- Easy to understand
+
+## Limitations
+
+### Client-Side Only
+- Basic validation (not as thorough as CLI validator)
+- No integration with existing Python validator
+- Cannot parse existing YAML files for editing
+
+### Workaround
+For full validation, download the YAML and use CLI:
 ```bash
-pip install flask
-```
-
-### Cannot Access from Other Machines
-The server binds to `0.0.0.0` which allows access from other machines on the network.
-Access via: `http://<your-ip>:5000`
-
-## Development
-
-### Run in Debug Mode
-Debug mode is enabled by default in `run.py`:
-```python
-app.run(debug=True, host='0.0.0.0', port=5000)
-```
-
-### Modify Templates
-Edit `templates/index.html` for UI changes.
-Changes are reflected immediately in debug mode.
-
-### Modify Styles
-Edit `static/style.css` for styling changes.
-Refresh browser to see changes.
-
-### Modify Logic
-Edit `static/script.js` for client-side logic.
-Edit `app.py` for server-side logic.
-
-## Security Notes
-
-### Production Deployment
-For production use:
-1. Set `debug=False` in `run.py`
-2. Use a production WSGI server (gunicorn, uwsgi)
-3. Add authentication if needed
-4. Use HTTPS
-5. Add rate limiting
-
-### Example Production Setup
-```bash
-# Install gunicorn
-pip install gunicorn
-
-# Run with gunicorn
-cd SOA_DSL
-gunicorn -w 4 -b 0.0.0.0:5000 web.app:app
+./soa-dsl validate soa_rules.yaml
 ```
 
 ## Future Enhancements
 
 Potential features for future versions:
-- [ ] Multi-level (tmaxfrac) support in UI
-- [ ] State-dependent rule builder
-- [ ] Multi-branch rule builder
-- [ ] Template library (common rules)
 - [ ] Import existing YAML for editing
+- [ ] More advanced validation rules
+- [ ] Template library (common rules)
 - [ ] Rule duplication
-- [ ] Bulk operations
 - [ ] Export to Excel
-- [ ] User authentication
-- [ ] Save/load sessions
-- [ ] Rule validation history
+- [ ] Save/load sessions (localStorage)
+- [ ] Dark mode
+- [ ] Keyboard shortcuts
 
 ## Support
 
