@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOA Rule Creator</title>
+    <title>SOA Rule Creator - Advanced</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,6 +11,7 @@
         <header>
             <h1>🔧 SOA Rule Creator</h1>
             <p>Create Safe Operating Area rules for semiconductor devices</p>
+            <p class="header-note">Supports all rule types: simple, multi-level, state-dependent, multi-branch, and self-heating</p>
         </header>
 
         <div class="main-content">
@@ -19,75 +20,191 @@
                 <h2>Create New Rule</h2>
                 
                 <form id="ruleForm">
-                    <div class="form-group">
-                        <label for="ruleName">Rule Name *</label>
-                        <input type="text" id="ruleName" placeholder="e.g., NMOS Core VDS Limit" required>
+                    <!-- Basic Information -->
+                    <div class="form-section">
+                        <h3>Basic Information</h3>
+                        
+                        <div class="form-group">
+                            <label for="ruleName">Rule Name *</label>
+                            <input type="text" id="ruleName" placeholder="e.g., NMOS Core VDS Limit" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="device">Device Name *</label>
+                                <select id="device" required>
+                                    <option value="">Select device...</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="severity">Severity *</label>
+                                <select id="severity" required>
+                                    <option value="">Select severity...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="parameter">Parameter *</label>
+                                <input type="text" id="parameter" placeholder="e.g., v[d,s], i[device], multi" required>
+                                <small>Examples: v[d,s], i[device], T, $w, or "multi" for multi-branch</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ruleType">Rule Type *</label>
+                                <select id="ruleType" required>
+                                    <option value="">Select type...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <textarea id="description" rows="2" placeholder="Describe the rule purpose..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="condition">Condition (optional)</label>
+                            <input type="text" id="condition" placeholder="e.g., enable_soa == 1">
+                            <small>Optional condition for when this rule applies</small>
+                        </div>
                     </div>
 
-                    <div class="form-row">
+                    <!-- Simple Constraints (for vhigh, vlow, ihigh, ilow, range) -->
+                    <div class="form-section" id="simpleConstraintsSection">
+                        <h3>Constraints</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="vhigh">V High</label>
+                                <input type="text" id="vhigh" placeholder="e.g., 1.65 or expression">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="vlow">V Low</label>
+                                <input type="text" id="vlow" placeholder="e.g., -1.65 or expression">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ihigh">I High</label>
+                                <input type="text" id="ihigh" placeholder="e.g., $w * 4.05e-3">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ilow">I Low</label>
+                                <input type="text" id="ilow" placeholder="e.g., -0.1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multi-Level (tmaxfrac) -->
+                    <div class="form-section hidden" id="tmaxfracSection">
+                        <h3>Multi-Level (Time-Dependent)</h3>
+                        <p class="section-note">Define different limits for different time fractions</p>
+                        <div id="tmaxfracList"></div>
+                        <button type="button" class="btn btn-secondary btn-small" id="addTmaxfracBtn">+ Add Level</button>
+                    </div>
+
+                    <!-- State-Dependent -->
+                    <div class="form-section hidden" id="stateDependentSection">
+                        <h3>State-Dependent Constraints</h3>
+                        <p class="section-note">Different limits for ON and OFF states</p>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="vhigh_on">V High (ON)</label>
+                                <input type="text" id="vhigh_on" placeholder="e.g., 1.84">
+                            </div>
+                            <div class="form-group">
+                                <label for="vhigh_off">V High (OFF)</label>
+                                <input type="text" id="vhigh_off" placeholder="e.g., 3.00">
+                            </div>
+                        </div>
+
+                        <h4>Gate Control</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="vhigh_gc">V High GC</label>
+                                <input type="text" id="vhigh_gc" placeholder="e.g., 2.07">
+                            </div>
+                            <div class="form-group">
+                                <label for="vlow_gc">V Low GC</label>
+                                <input type="text" id="vlow_gc" placeholder="e.g., -2.07">
+                            </div>
+                        </div>
+
+                        <h4>Monitor Parameters</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="monitor_param">Parameter</label>
+                                <input type="text" id="monitor_param" placeholder="e.g., vth">
+                            </div>
+                            <div class="form-group">
+                                <label for="monitor_vgt">VGT</label>
+                                <input type="text" id="monitor_vgt" placeholder="e.g., 0.0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multi-Branch -->
+                    <div class="form-section hidden" id="multiBranchSection">
+                        <h3>Multi-Branch Rules</h3>
+                        <p class="section-note">Multiple voltage checks for different pin combinations</p>
+                        <div id="branchList"></div>
+                        <button type="button" class="btn btn-secondary btn-small" id="addBranchBtn">+ Add Branch</button>
+                        
                         <div class="form-group">
-                            <label for="device">Device Type *</label>
-                            <select id="device" required>
-                                <option value="">Select device...</option>
+                            <label for="connections">Connections</label>
+                            <input type="text" id="connections" placeholder="e.g., (g b g s g d s b d b d s)">
+                            <small>Pin connection order for multi-branch</small>
+                        </div>
+                    </div>
+
+                    <!-- Current with Heating -->
+                    <div class="form-section hidden" id="currentHeatingSection">
+                        <h3>Current with Self-Heating</h3>
+                        <p class="section-note">DC, peak, and RMS current limits with thermal effects</p>
+                        <div id="currentConstraintsList"></div>
+                        <button type="button" class="btn btn-secondary btn-small" id="addCurrentConstraintBtn">+ Add Constraint</button>
+                        
+                        <h4>Self-Heating Parameters</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="dtmax">DT Max</label>
+                                <input type="text" id="dtmax" placeholder="e.g., dtmax_rm">
+                            </div>
+                            <div class="form-group">
+                                <label for="theat">T Heat</label>
+                                <input type="text" id="theat" placeholder="e.g., theat">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aging Check -->
+                    <div class="form-section hidden" id="agingCheckSection">
+                        <h3>Aging Check (HCI/TDDB)</h3>
+                        <div class="form-group">
+                            <label for="aging_type">Aging Type</label>
+                            <select id="aging_type">
+                                <option value="">None</option>
+                                <option value="hci_tddb">HCI/TDDB</option>
                             </select>
                         </div>
-
                         <div class="form-group">
-                            <label for="severity">Severity *</label>
-                            <select id="severity" required>
-                                <option value="">Select severity...</option>
-                            </select>
+                            <label for="aging_variant">Variant</label>
+                            <input type="text" id="aging_variant" placeholder="e.g., atype">
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="parameter">Parameter *</label>
-                            <input type="text" id="parameter" placeholder="e.g., v[d,s]" required>
-                            <small>Examples: v[d,s], i[device], T, $w</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="ruleType">Rule Type *</label>
-                            <select id="ruleType" required>
-                                <option value="">Select type...</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" rows="2" placeholder="Describe the rule purpose..."></textarea>
-                    </div>
-
-                    <h3>Constraints</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="vhigh">V High</label>
-                            <input type="text" id="vhigh" placeholder="e.g., 1.65 or expression">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="vlow">V Low</label>
-                            <input type="text" id="vlow" placeholder="e.g., -1.65 or expression">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="ihigh">I High</label>
-                            <input type="text" id="ihigh" placeholder="e.g., $w * 4.05e-3">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="ilow">I Low</label>
-                            <input type="text" id="ilow" placeholder="e.g., -0.1">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="condition">Condition (optional)</label>
-                        <input type="text" id="condition" placeholder="e.g., enable_soa == 1">
+                    <!-- Branches (for oxide risk, etc.) -->
+                    <div class="form-section hidden" id="branchesSection">
+                        <h3>Voltage Branches</h3>
+                        <p class="section-note">Multiple voltage checks with custom messages</p>
+                        <div id="voltBranchList"></div>
+                        <button type="button" class="btn btn-secondary btn-small" id="addVoltBranchBtn">+ Add Voltage Branch</button>
                     </div>
 
                     <div class="button-group">

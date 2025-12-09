@@ -37,6 +37,13 @@ header p {
     opacity: 0.9;
 }
 
+header .header-note {
+    font-size: 0.9em;
+    opacity: 0.8;
+    font-style: italic;
+    margin-top: 10px;
+}
+
 /* Main Content */
 .main-content {
     display: grid;
@@ -56,9 +63,95 @@ header p {
     color: #333;
 }
 
+.help-box {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 12px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.help-box strong {
+    color: #1976d2;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    color: #667eea;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+}
+
+.form-section h4 {
+    color: #555;
+    margin: 15px 0 10px 0;
+    font-size: 0.95em;
+}
+
+.section-note {
+    font-size: 0.85em;
+    color: #666;
+    font-style: italic;
+    margin-bottom: 15px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* Dynamic Lists */
+.dynamic-item {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.dynamic-item .remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.dynamic-item .remove-btn:hover {
+    background: #cc0000;
+}
+
 /* Form Elements */
 .form-group {
     margin-bottom: 20px;
+}
+
+.constraint-note {
+    font-size: 0.9em;
+    color: #666;
+    font-style: italic;
+    margin-bottom: 15px;
 }
 
 .form-group label {

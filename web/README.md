@@ -258,15 +258,39 @@ python3 -m http.server 8081
 - No API endpoints
 - Easy to understand
 
+## Supported Rule Types
+
+The web interface currently supports **simple rules** only:
+
+### ✅ Supported
+- **Simple voltage constraints** (vhigh, vlow)
+- **Simple current constraints** (ihigh, ilow)
+- **Range constraints** (vlow + vhigh)
+- **Temperature-dependent expressions**
+- **Device parameter expressions** ($w, $l, $np)
+- **Mathematical functions** (min, max, abs, sqrt)
+- **Conditional expressions** (if-then-else)
+
+### ❌ Not Supported (Use CLI)
+- **Multi-level rules** (tmaxfrac)
+- **State-dependent rules** (ON/OFF states)
+- **Multi-branch rules** (multiple voltage checks)
+- **Current with self-heating** (DC/peak/RMS)
+- **Aging checks** (HCI/TDDB)
+- **Complex gate control** (gate_control, gate_bulk, junction)
+- **Monitor parameters**
+- **Device-specific parameters**
+
 ## Limitations
 
 ### Client-Side Only
 - Basic validation (not as thorough as CLI validator)
 - No integration with existing Python validator
 - Cannot parse existing YAML files for editing
+- **Simple rules only** - complex rules require CLI
 
-### Workaround
-For full validation, download the YAML and use CLI:
+### For Complex Rules
+Use the CLI tool which supports all rule types:
 ```bash
 # Linux/Mac
 ./soa-dsl validate soa_rules.yaml
