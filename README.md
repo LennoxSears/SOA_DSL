@@ -284,6 +284,29 @@ SOA_DSL/
 - Performance benchmarking
 - User training
 
+## Two Ways to Use SOA DSL
+
+### 1. 🌐 Web Interface (Recommended for SR Teams)
+**Easy-to-use graphical interface** - No command line needed!
+
+Create SOA rules through a web browser with:
+- Form-based rule creation
+- Real-time validation
+- Live YAML preview
+- One-click download
+
+[See Web Interface Guide →](web/README.md)
+
+### 2. 💻 Command Line Interface
+**For automation and advanced users**
+
+Direct command-line access for:
+- Scripting and automation
+- CI/CD integration
+- Batch processing
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -322,7 +345,29 @@ pip install pyyaml
 
 **See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for detailed Windows instructions.**
 
-### Quick Start
+### Quick Start - Web Interface
+
+#### Start the Web Server
+
+```bash
+cd SOA_DSL/web
+python run.py
+```
+
+Then open your browser to: [http://localhost:5000](http://localhost:5000)
+
+**Features:**
+- ✅ Create rules with a form (no YAML knowledge needed)
+- ✅ Real-time validation
+- ✅ Live YAML preview
+- ✅ Download generated YAML
+- ✅ Works on Windows, Mac, and Linux
+
+[Full Web Interface Documentation →](web/README.md)
+
+---
+
+### Quick Start - Command Line
 
 #### 1. Validate a DSL File
 

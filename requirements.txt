@@ -3,6 +3,9 @@
 # Core dependency - YAML only
 pyyaml>=6.0
 
+# Web interface
+flask>=2.3.0
+
 # Optional dependencies for Excel parsing (future)
 # openpyxl>=3.0.0
 
