@@ -333,7 +333,7 @@ pip install pyyaml
 
 **Windows:**
 ```cmd
-python src\soa_dsl\cli.py validate examples\soa_rules.yaml
+python soa_dsl_cli.py validate examples\soa_rules.yaml
 ```
 
 Output:
@@ -352,7 +352,7 @@ Validating examples/soa_rules.yaml...
 
 **Windows:**
 ```cmd
-python src\soa_dsl\cli.py compile examples\soa_rules.yaml -o output\soachecks_top.scs
+python soa_dsl_cli.py compile examples\soa_rules.yaml -o output\soachecks_top.scs
 ```
 
 Output:

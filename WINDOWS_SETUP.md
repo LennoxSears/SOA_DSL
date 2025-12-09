@@ -33,7 +33,7 @@ pip install -r requirements.txt
 
 ### Step 4: Verify Installation
 ```cmd
-python src\soa_dsl\cli.py --help
+python soa_dsl_cli.py --help
 ```
 
 ---
@@ -52,19 +52,19 @@ REM Generate
 soa-dsl.bat compile examples\soa_rules.yaml -o output\soachecks_top.scs
 ```
 
-### Method 2: Direct Python Invocation
+### Method 2: Direct Python Invocation (Recommended)
 
-Run the CLI module directly:
+Run the CLI script directly:
 
 ```cmd
 REM Validate
-python src\soa_dsl\cli.py validate examples\soa_rules.yaml
+python soa_dsl_cli.py validate examples\soa_rules.yaml
 
 REM Generate
-python src\soa_dsl\cli.py generate examples\soa_rules.yaml -o output\soachecks_top.scs
+python soa_dsl_cli.py generate examples\soa_rules.yaml -o output\soachecks_top.scs
 
 REM Compile (validate + generate)
-python src\soa_dsl\cli.py compile examples\soa_rules.yaml -o output\soachecks_top.scs
+python soa_dsl_cli.py compile examples\soa_rules.yaml -o output\soachecks_top.scs
 ```
 
 ### Method 3: Python API
@@ -106,22 +106,22 @@ python my_soa_script.py
 
 ### Validate a YAML file
 ```cmd
-python src\soa_dsl\cli.py validate examples\soa_rules.yaml
+python soa_dsl_cli.py validate examples\soa_rules.yaml
 ```
 
 ### Generate Spectre code
 ```cmd
-python src\soa_dsl\cli.py generate examples\soa_rules.yaml -o output\soachecks.scs
+python soa_dsl_cli.py generate examples\soa_rules.yaml -o output\soachecks.scs
 ```
 
 ### Compile (validate + generate)
 ```cmd
-python src\soa_dsl\cli.py compile examples\soa_rules.yaml -o output\soachecks.scs
+python soa_dsl_cli.py compile examples\soa_rules.yaml -o output\soachecks.scs
 ```
 
 ### Strict validation (warnings as errors)
 ```cmd
-python src\soa_dsl\cli.py validate examples\soa_rules.yaml --strict
+python soa_dsl_cli.py validate examples\soa_rules.yaml --strict
 ```
 
 ---
@@ -146,7 +146,7 @@ pip install pyyaml
 **Solution**: Run from project root directory
 ```cmd
 cd E:\SOA_DSL
-python src\soa_dsl\cli.py --help
+python soa_dsl_cli.py --help
 ```
 
 ### Path Issues
@@ -170,7 +170,7 @@ However, Python accepts both, so forward slashes also work.
 ### Option 2: Create Alias (PowerShell)
 Add to your PowerShell profile:
 ```powershell
-function soa-dsl { python E:\SOA_DSL\src\soa_dsl\cli.py $args }
+function soa-dsl { python E:\SOA_DSL\soa_dsl_cli.py $args }
 ```
 
 ### Option 3: Install as Package
@@ -193,10 +193,10 @@ REM Navigate to project
 cd E:\SOA_DSL
 
 REM Validate your rules
-python src\soa_dsl\cli.py validate examples\soa_rules.yaml
+python soa_dsl_cli.py validate examples\soa_rules.yaml
 
 REM Generate Spectre code
-python src\soa_dsl\cli.py compile examples\soa_rules.yaml -o output\my_soachecks.scs
+python soa_dsl_cli.py compile examples\soa_rules.yaml -o output\my_soachecks.scs
 
 REM Check the output
 type output\my_soachecks.scs
@@ -210,12 +210,12 @@ Both work, but syntax differs slightly:
 
 ### Command Prompt (cmd.exe)
 ```cmd
-python src\soa_dsl\cli.py validate examples\soa_rules.yaml
+python soa_dsl_cli.py validate examples\soa_rules.yaml
 ```
 
 ### PowerShell
 ```powershell
-python src\soa_dsl\cli.py validate examples\soa_rules.yaml
+python soa_dsl_cli.py validate examples\soa_rules.yaml
 ```
 
 Both are equivalent for this tool.
@@ -255,11 +255,11 @@ deactivate
 
 | Task | Command |
 |------|---------|
-| Validate | `python src\soa_dsl\cli.py validate examples\soa_rules.yaml` |
-| Generate | `python src\soa_dsl\cli.py generate examples\soa_rules.yaml -o output\out.scs` |
-| Compile | `python src\soa_dsl\cli.py compile examples\soa_rules.yaml -o output\out.scs` |
-| Help | `python src\soa_dsl\cli.py --help` |
-| Version | `python src\soa_dsl\cli.py validate --help` |
+| Validate | `python soa_dsl_cli.py validate examples\soa_rules.yaml` |
+| Generate | `python soa_dsl_cli.py generate examples\soa_rules.yaml -o output\out.scs` |
+| Compile | `python soa_dsl_cli.py compile examples\soa_rules.yaml -o output\out.scs` |
+| Help | `python soa_dsl_cli.py --help` |
+| Version | `python soa_dsl_cli.py validate --help` |
 
 ---
 
