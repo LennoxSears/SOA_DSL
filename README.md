@@ -292,24 +292,48 @@ SOA_DSL/
 
 ### Installation
 
+#### Linux/Mac
 ```bash
 # Clone the repository
 git clone https://github.com/LennoxSears/SOA_DSL.git
 cd SOA_DSL
 
-# Create virtual environment
+# Create virtual environment (optional)
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install pyyaml
 ```
+
+#### Windows
+```cmd
+# Clone the repository
+git clone https://github.com/LennoxSears/SOA_DSL.git
+cd SOA_DSL
+
+# Create virtual environment (optional)
+python -m venv venv
+venv\Scripts\activate
+
+# Install dependencies
+pip install pyyaml
+```
+
+**See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for detailed Windows instructions.**
 
 ### Quick Start
 
 #### 1. Validate a DSL File
+
+**Linux/Mac:**
 ```bash
 ./soa-dsl validate examples/soa_rules.yaml
+```
+
+**Windows:**
+```cmd
+python src\soa_dsl\cli.py validate examples\soa_rules.yaml
 ```
 
 Output:
@@ -320,8 +344,15 @@ Validating examples/soa_rules.yaml...
 ```
 
 #### 2. Generate Spectre Code
+
+**Linux/Mac:**
 ```bash
 ./soa-dsl compile examples/soa_rules.yaml -o output/soachecks_top.scs
+```
+
+**Windows:**
+```cmd
+python src\soa_dsl\cli.py compile examples\soa_rules.yaml -o output\soachecks_top.scs
 ```
 
 Output:
@@ -332,13 +363,15 @@ Compiling examples/soa_rules.yaml...
 ```
 
 #### 3. View Generated Code
+
+**Linux/Mac:**
 ```bash
 head -30 output/soachecks_top.scs
 ```
 
-#### 4. Run Complete Test
-```bash
-./test_workflow.sh
+**Windows:**
+```cmd
+type output\soachecks_top.scs | more
 ```
 
 ### Python API Usage
