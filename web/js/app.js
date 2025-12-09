@@ -62,19 +62,25 @@ function setupEventListeners() {
         }
     });
     
-    // Dynamic list buttons (will be added dynamically)
-    if (document.getElementById('addTmaxfracBtn')) {
-        document.getElementById('addTmaxfracBtn').addEventListener('click', addTmaxfracLevel);
-    }
-    if (document.getElementById('addBranchBtn')) {
-        document.getElementById('addBranchBtn').addEventListener('click', addBranch);
-    }
-    if (document.getElementById('addVoltBranchBtn')) {
-        document.getElementById('addVoltBranchBtn').addEventListener('click', addVoltBranch);
-    }
-    if (document.getElementById('addCurrentConstraintBtn')) {
-        document.getElementById('addCurrentConstraintBtn').addEventListener('click', addCurrentConstraint);
-    }
+    // Dynamic list buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'addTmaxfracBtn') addTmaxfracLevel();
+        if (e.target.id === 'addBranchBtn') addBranch();
+        if (e.target.id === 'addVoltBranchBtn') addVoltBranch();
+        if (e.target.id === 'addCurrentConstraintBtn') addCurrentConstraint();
+        
+        // Remove buttons with event delegation
+        if (e.target.classList.contains('remove-btn')) {
+            const index = parseInt(e.target.dataset.index);
+            const type = e.target.dataset.type;
+            if (!isNaN(index)) {
+                if (type === 'tmaxfrac') removeTmaxfracLevel(index);
+                else if (type === 'branch') removeBranch(index);
+                else if (type === 'voltbranch') removeVoltBranch(index);
+                else if (type === 'current') removeCurrentConstraint(index);
+            }
+        }
+    });
 }
 
 function populateDropdowns() {
@@ -135,7 +141,7 @@ function addTmaxfracLevel() {
     const item = document.createElement('div');
     item.className = 'dynamic-item';
     item.innerHTML = `
-        <button type="button" class="remove-btn" onclick="removeTmaxfracLevel(${index})">Remove</button>
+        <button type="button" class="remove-btn" data-index="${index}" data-type="tmaxfrac">Remove</button>
         <div class="form-row">
             <div class="form-group">
                 <label>Level</label>
@@ -173,7 +179,7 @@ function addBranch() {
     const item = document.createElement('div');
     item.className = 'dynamic-item';
     item.innerHTML = `
-        <button type="button" class="remove-btn" onclick="removeBranch(${index})">Remove</button>
+        <button type="button" class="remove-btn" data-index="${index}" data-type="branch">Remove</button>
         <div class="form-group">
             <label>Branch</label>
             <input type="text" class="branch-name" placeholder='e.g., V(g,b)'>
@@ -210,7 +216,7 @@ function addVoltBranch() {
     const item = document.createElement('div');
     item.className = 'dynamic-item';
     item.innerHTML = `
-        <button type="button" class="remove-btn" onclick="removeVoltBranch(${index})">Remove</button>
+        <button type="button" class="remove-btn" data-index="${index}" data-type="voltbranch">Remove</button>
         <div class="form-group">
             <label>Branch</label>
             <input type="text" class="voltbranch-name" placeholder='e.g., V(g,b)'>
@@ -251,7 +257,7 @@ function addCurrentConstraint() {
     const item = document.createElement('div');
     item.className = 'dynamic-item';
     item.innerHTML = `
-        <button type="button" class="remove-btn" onclick="removeCurrentConstraint(${index})">Remove</button>
+        <button type="button" class="remove-btn" data-index="${index}" data-type="current">Remove</button>
         <div class="form-row">
             <div class="form-group">
                 <label>Name</label>
