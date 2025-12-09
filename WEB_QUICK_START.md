@@ -104,14 +104,24 @@ After downloading `soa_rules.yaml`, use it with the CLI:
 
 **Linux/Mac:**
 ```bash
+# Using shell script
 ./soa-dsl validate soa_rules.yaml
 ./soa-dsl compile soa_rules.yaml -o output/soachecks_top.scs
+
+# Or using Python directly
+python3 soa_dsl_cli.py validate soa_rules.yaml
+python3 soa_dsl_cli.py compile soa_rules.yaml -o output/soachecks_top.scs
 ```
 
 **Windows:**
 ```cmd
+# Using batch file
 soa-dsl.bat validate soa_rules.yaml
 soa-dsl.bat compile soa_rules.yaml -o output\soachecks_top.scs
+
+# Or using Python directly
+python soa_dsl_cli.py validate soa_rules.yaml
+python soa_dsl_cli.py compile soa_rules.yaml -o output\soachecks_top.scs
 ```
 
 ---

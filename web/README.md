@@ -96,14 +96,24 @@ The downloaded YAML file can be used with the CLI tool:
 
 **Linux/Mac:**
 ```bash
+# Using shell script
 ./soa-dsl validate soa_rules.yaml
 ./soa-dsl compile soa_rules.yaml -o output/soachecks_top.scs
+
+# Or using Python directly
+python3 soa_dsl_cli.py validate soa_rules.yaml
+python3 soa_dsl_cli.py compile soa_rules.yaml -o output/soachecks_top.scs
 ```
 
 **Windows:**
 ```cmd
+# Using batch file
 soa-dsl.bat validate soa_rules.yaml
 soa-dsl.bat compile soa_rules.yaml -o output\soachecks_top.scs
+
+# Or using Python directly
+python soa_dsl_cli.py validate soa_rules.yaml
+python soa_dsl_cli.py compile soa_rules.yaml -o output\soachecks_top.scs
 ```
 
 ## Examples
@@ -258,7 +268,14 @@ python3 -m http.server 8081
 ### Workaround
 For full validation, download the YAML and use CLI:
 ```bash
+# Linux/Mac
 ./soa-dsl validate soa_rules.yaml
+
+# Windows
+soa-dsl.bat validate soa_rules.yaml
+
+# Or use Python directly
+python soa_dsl_cli.py validate soa_rules.yaml
 ```
 
 ## Future Enhancements

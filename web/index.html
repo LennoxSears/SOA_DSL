@@ -222,6 +222,12 @@
             background: #cc0000;
         }
 
+        .rule-card .rule-description {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+
         .empty-state {
             text-align: center;
             color: #999;
@@ -318,6 +324,75 @@
             .main-content {
                 grid-template-columns: 1fr;
             }
+            
+            .rules-list,
+            .yaml-preview {
+                max-height: 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            header h1 {
+                font-size: 2em;
+            }
+
+            header p {
+                font-size: 1em;
+            }
+
+            .panel {
+                padding: 20px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .rule-card .rule-details {
+                grid-template-columns: 1fr;
+            }
+
+            .notification {
+                right: 10px;
+                left: 10px;
+                top: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.5em;
+            }
+
+            .panel {
+                padding: 15px;
+                border-radius: 8px;
+            }
+
+            .btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+
+            .tab-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .rules-list,
+            .yaml-preview {
+                max-height: 300px;
+            }
+
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                font-size: 16px;
+            }
         }
     </style>
 </head>
@@ -406,7 +481,7 @@
                     </div>
 
                     <div class="button-group">
-                        <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
+                        <button type="button" class="btn btn-secondary" id="clearFormBtn">Clear</button>
                         <button type="submit" class="btn btn-primary">Add Rule</button>
                     </div>
                 </form>
@@ -415,8 +490,8 @@
             <!-- Right Panel: Rules List & YAML Preview -->
             <div class="panel preview-panel">
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="showTab('rules')">Rules (<span id="ruleCount">0</span>)</button>
-                    <button class="tab-btn" onclick="showTab('yaml')">YAML Preview</button>
+                    <button class="tab-btn active" data-tab="rules">Rules (<span id="ruleCount">0</span>)</button>
+                    <button class="tab-btn" data-tab="yaml">YAML Preview</button>
                 </div>
 
                 <!-- Rules Tab -->
@@ -436,8 +511,8 @@
                 <!-- YAML Tab -->
                 <div id="yamlTab" class="tab-content">
                     <div class="yaml-actions">
-                        <button class="btn btn-secondary" onclick="validateYAML()">Validate</button>
-                        <button class="btn btn-primary" onclick="downloadYAML()">Download YAML</button>
+                        <button class="btn btn-secondary" id="validateBtn">Validate</button>
+                        <button class="btn btn-primary" id="downloadBtn">Download YAML</button>
                     </div>
                     <pre id="yamlPreview" class="yaml-preview">No rules to preview</pre>
                     <div id="validationResult" class="validation-result"></div>
@@ -474,6 +549,31 @@
         document.addEventListener('DOMContentLoaded', function() {
             populateDropdowns();
             document.getElementById('ruleForm').addEventListener('submit', handleAddRule);
+            document.getElementById('clearFormBtn').addEventListener('click', clearForm);
+            document.getElementById('validateBtn').addEventListener('click', validateYAML);
+            document.getElementById('downloadBtn').addEventListener('click', downloadYAML);
+            
+            // Tab switching with event delegation
+            document.querySelector('.tabs').addEventListener('click', function(e) {
+                if (e.target.classList.contains('tab-btn') || e.target.closest('.tab-btn')) {
+                    const btn = e.target.classList.contains('tab-btn') ? e.target : e.target.closest('.tab-btn');
+                    const tabName = btn.dataset.tab;
+                    if (tabName) {
+                        showTab(tabName, btn);
+                    }
+                }
+            });
+            
+            // Rule deletion with event delegation
+            document.getElementById('rulesList').addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-btn')) {
+                    const index = parseInt(e.target.dataset.index);
+                    if (!isNaN(index)) {
+                        deleteRule(index);
+                    }
+                }
+            });
+            
             updateRulesList();
         });
 
@@ -508,41 +608,46 @@
         function handleAddRule(e) {
             e.preventDefault();
             
-            const rule = {
-                name: document.getElementById('ruleName').value,
-                device: document.getElementById('device').value,
-                parameter: document.getElementById('parameter').value,
-                type: document.getElementById('ruleType').value,
-                severity: document.getElementById('severity').value,
-                description: document.getElementById('description').value || '',
-                constraint: {}
-            };
-            
-            // Add constraints
-            const vhigh = document.getElementById('vhigh').value;
-            const vlow = document.getElementById('vlow').value;
-            const ihigh = document.getElementById('ihigh').value;
-            const ilow = document.getElementById('ilow').value;
-            
-            if (vhigh) rule.constraint.vhigh = parseValue(vhigh);
-            if (vlow) rule.constraint.vlow = parseValue(vlow);
-            if (ihigh) rule.constraint.ihigh = parseValue(ihigh);
-            if (ilow) rule.constraint.ilow = parseValue(ilow);
-            
-            // Add condition if specified
-            const condition = document.getElementById('condition').value;
-            if (condition) rule.condition = condition;
-            
-            // Validate rule
-            const validation = validateRule(rule);
-            if (validation.valid) {
-                rules.push(rule);
-                updateRulesList();
-                updateYAMLPreview();
-                clearForm();
-                showNotification('Rule added successfully!', 'success');
-            } else {
-                showNotification('Validation errors: ' + validation.errors.join(', '), 'error');
+            try {
+                const rule = {
+                    name: document.getElementById('ruleName').value,
+                    device: document.getElementById('device').value,
+                    parameter: document.getElementById('parameter').value,
+                    type: document.getElementById('ruleType').value,
+                    severity: document.getElementById('severity').value,
+                    description: document.getElementById('description').value || '',
+                    constraint: {}
+                };
+                
+                // Add constraints
+                const vhigh = document.getElementById('vhigh').value;
+                const vlow = document.getElementById('vlow').value;
+                const ihigh = document.getElementById('ihigh').value;
+                const ilow = document.getElementById('ilow').value;
+                
+                if (vhigh) rule.constraint.vhigh = parseValue(vhigh);
+                if (vlow) rule.constraint.vlow = parseValue(vlow);
+                if (ihigh) rule.constraint.ihigh = parseValue(ihigh);
+                if (ilow) rule.constraint.ilow = parseValue(ilow);
+                
+                // Add condition if specified
+                const condition = document.getElementById('condition').value;
+                if (condition) rule.condition = condition;
+                
+                // Validate rule
+                const validation = validateRule(rule);
+                if (validation.valid) {
+                    rules.push(rule);
+                    updateRulesList();
+                    updateYAMLPreview();
+                    clearForm();
+                    showNotification('Rule added successfully!', 'success');
+                } else {
+                    showNotification('Validation errors: ' + validation.errors.join(', '), 'error');
+                }
+            } catch (error) {
+                console.error('Error adding rule:', error);
+                showNotification('Error adding rule: ' + error.message, 'error');
             }
         }
 
@@ -577,47 +682,52 @@
 
         // Update rules list display
         function updateRulesList() {
-            const rulesList = document.getElementById('rulesList');
-            const ruleCount = document.getElementById('ruleCount');
-            
-            ruleCount.textContent = rules.length;
-            
-            if (rules.length === 0) {
-                rulesList.innerHTML = '<p class="empty-state">No rules added yet. Create your first rule!</p>';
-                return;
-            }
-            
-            rulesList.innerHTML = rules.map((rule, index) => {
-                const details = [];
-                details.push(`<div class="rule-detail"><strong>Device:</strong> ${escapeHtml(rule.device)}</div>`);
-                details.push(`<div class="rule-detail"><strong>Type:</strong> ${escapeHtml(rule.type)}</div>`);
-                details.push(`<div class="rule-detail"><strong>Parameter:</strong> ${escapeHtml(rule.parameter)}</div>`);
-                details.push(`<div class="rule-detail"><strong>Severity:</strong> ${escapeHtml(rule.severity)}</div>`);
+            try {
+                const rulesList = document.getElementById('rulesList');
+                const ruleCount = document.getElementById('ruleCount');
                 
-                if (rule.constraint.vhigh !== undefined) {
-                    details.push(`<div class="rule-detail"><strong>V High:</strong> ${escapeHtml(String(rule.constraint.vhigh))}</div>`);
-                }
-                if (rule.constraint.vlow !== undefined) {
-                    details.push(`<div class="rule-detail"><strong>V Low:</strong> ${escapeHtml(String(rule.constraint.vlow))}</div>`);
-                }
-                if (rule.constraint.ihigh !== undefined) {
-                    details.push(`<div class="rule-detail"><strong>I High:</strong> ${escapeHtml(String(rule.constraint.ihigh))}</div>`);
-                }
-                if (rule.constraint.ilow !== undefined) {
-                    details.push(`<div class="rule-detail"><strong>I Low:</strong> ${escapeHtml(String(rule.constraint.ilow))}</div>`);
+                ruleCount.textContent = rules.length;
+                
+                if (rules.length === 0) {
+                    rulesList.innerHTML = '<p class="empty-state">No rules added yet. Create your first rule!</p>';
+                    return;
                 }
                 
-                return `
-                    <div class="rule-card">
-                        <button class="delete-btn" onclick="deleteRule(${index})">Delete</button>
-                        <h4>${escapeHtml(rule.name)}</h4>
-                        <div class="rule-details">
-                            ${details.join('')}
+                rulesList.innerHTML = rules.map((rule, index) => {
+                    const details = [];
+                    details.push(`<div class="rule-detail"><strong>Device:</strong> ${escapeHtml(rule.device)}</div>`);
+                    details.push(`<div class="rule-detail"><strong>Type:</strong> ${escapeHtml(rule.type)}</div>`);
+                    details.push(`<div class="rule-detail"><strong>Parameter:</strong> ${escapeHtml(rule.parameter)}</div>`);
+                    details.push(`<div class="rule-detail"><strong>Severity:</strong> ${escapeHtml(rule.severity)}</div>`);
+                    
+                    if (rule.constraint.vhigh !== undefined) {
+                        details.push(`<div class="rule-detail"><strong>V High:</strong> ${escapeHtml(String(rule.constraint.vhigh))}</div>`);
+                    }
+                    if (rule.constraint.vlow !== undefined) {
+                        details.push(`<div class="rule-detail"><strong>V Low:</strong> ${escapeHtml(String(rule.constraint.vlow))}</div>`);
+                    }
+                    if (rule.constraint.ihigh !== undefined) {
+                        details.push(`<div class="rule-detail"><strong>I High:</strong> ${escapeHtml(String(rule.constraint.ihigh))}</div>`);
+                    }
+                    if (rule.constraint.ilow !== undefined) {
+                        details.push(`<div class="rule-detail"><strong>I Low:</strong> ${escapeHtml(String(rule.constraint.ilow))}</div>`);
+                    }
+                    
+                    return `
+                        <div class="rule-card">
+                            <button class="delete-btn" data-index="${index}">Delete</button>
+                            <h4>${escapeHtml(rule.name)}</h4>
+                            <div class="rule-details">
+                                ${details.join('')}
+                            </div>
+                            ${rule.description ? `<p class="rule-description">${escapeHtml(rule.description)}</p>` : ''}
                         </div>
-                        ${rule.description ? `<p style="margin-top: 10px; font-size: 13px; color: #666;">${escapeHtml(rule.description)}</p>` : ''}
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error updating rules list:', error);
+                showNotification('Error displaying rules: ' + error.message, 'error');
+            }
         }
 
         // Escape HTML to prevent XSS
@@ -629,19 +739,55 @@
 
         // Delete rule
         function deleteRule(index) {
-            if (confirm('Are you sure you want to delete this rule?')) {
-                rules.splice(index, 1);
-                updateRulesList();
-                updateYAMLPreview();
-                showNotification('Rule deleted', 'success');
+            try {
+                if (confirm('Are you sure you want to delete this rule?')) {
+                    rules.splice(index, 1);
+                    updateRulesList();
+                    updateYAMLPreview();
+                    showNotification('Rule deleted', 'success');
+                }
+            } catch (error) {
+                console.error('Error deleting rule:', error);
+                showNotification('Error deleting rule: ' + error.message, 'error');
             }
         }
 
         // Update YAML preview
         function updateYAMLPreview() {
-            const processName = document.getElementById('processName').value || 'CUSTOM';
-            currentYAML = generateYAML(processName, rules);
-            document.getElementById('yamlPreview').textContent = currentYAML;
+            try {
+                const processName = document.getElementById('processName').value || 'CUSTOM';
+                currentYAML = generateYAML(processName, rules);
+                document.getElementById('yamlPreview').textContent = currentYAML;
+            } catch (error) {
+                console.error('Error updating YAML preview:', error);
+                document.getElementById('yamlPreview').textContent = `Error generating YAML: ${error.message}`;
+            }
+        }
+
+        // Escape YAML string
+        function escapeYamlString(str) {
+            if (typeof str !== 'string') {
+                return str;
+            }
+            
+            // Check if string needs escaping
+            const needsEscaping = str.includes('"') || str.includes('\\') || 
+                                 str.includes('\n') || str.includes('\r') ||
+                                 str.includes('\t') || str.startsWith(' ') || 
+                                 str.endsWith(' ');
+            
+            if (needsEscaping) {
+                // Escape special characters
+                const escaped = str
+                    .replace(/\\/g, '\\\\')
+                    .replace(/"/g, '\\"')
+                    .replace(/\n/g, '\\n')
+                    .replace(/\r/g, '\\r')
+                    .replace(/\t/g, '\\t');
+                return `"${escaped}"`;
+            }
+            
+            return `"${str}"`;
         }
 
         // Generate YAML
@@ -650,65 +796,70 @@
                 return 'No rules to preview';
             }
 
-            const date = new Date().toISOString().split('T')[0];
-            
-            let yaml = `version: '1.0'\n`;
-            yaml += `process: ${process}\n`;
-            yaml += `date: ${date}\n\n`;
-            
-            yaml += `global:\n`;
-            yaml += `  timing:\n`;
-            yaml += `    tmin: 0\n`;
-            yaml += `    tdelay: 0\n`;
-            yaml += `    vballmsg: 1.0\n`;
-            yaml += `    stop: 0\n`;
-            yaml += `  temperature:\n`;
-            yaml += `    tcelsius0: 273.15\n`;
-            yaml += `    tref_soa: 25\n`;
-            yaml += `  tmaxfrac:\n`;
-            yaml += `    level0: 0\n`;
-            yaml += `    level1: 0.01\n`;
-            yaml += `    level2: 0.10\n`;
-            yaml += `    level3: -1\n`;
-            yaml += `  limits:\n`;
-            yaml += `    ap_fwd_ref: 0.9943\n`;
-            yaml += `    ap_fwd_T: -0.0006\n`;
-            yaml += `    ap_no_check: 999.00\n`;
-            yaml += `    ap_gc_lv: 1.65\n`;
-            yaml += `    ap_gc_hv: 5.5\n\n`;
-            
-            yaml += `rules:\n`;
-            rules.forEach(rule => {
-                yaml += `  - name: "${rule.name}"\n`;
-                yaml += `    device: ${rule.device}\n`;
-                yaml += `    parameter: "${rule.parameter}"\n`;
-                yaml += `    type: ${rule.type}\n`;
-                yaml += `    severity: ${rule.severity}\n`;
+            try {
+                const date = new Date().toISOString().split('T')[0];
                 
-                if (rule.description) {
-                    yaml += `    description: "${rule.description}"\n`;
-                }
+                let yaml = `version: '1.0'\n`;
+                yaml += `process: ${escapeYamlString(process)}\n`;
+                yaml += `date: ${date}\n\n`;
                 
-                yaml += `    constraint:\n`;
-                if (rule.constraint.vhigh !== undefined) {
-                    yaml += `      vhigh: ${formatValue(rule.constraint.vhigh)}\n`;
-                }
-                if (rule.constraint.vlow !== undefined) {
-                    yaml += `      vlow: ${formatValue(rule.constraint.vlow)}\n`;
-                }
-                if (rule.constraint.ihigh !== undefined) {
-                    yaml += `      ihigh: ${formatValue(rule.constraint.ihigh)}\n`;
-                }
-                if (rule.constraint.ilow !== undefined) {
-                    yaml += `      ilow: ${formatValue(rule.constraint.ilow)}\n`;
-                }
+                yaml += `global:\n`;
+                yaml += `  timing:\n`;
+                yaml += `    tmin: 0\n`;
+                yaml += `    tdelay: 0\n`;
+                yaml += `    vballmsg: 1.0\n`;
+                yaml += `    stop: 0\n`;
+                yaml += `  temperature:\n`;
+                yaml += `    tcelsius0: 273.15\n`;
+                yaml += `    tref_soa: 25\n`;
+                yaml += `  tmaxfrac:\n`;
+                yaml += `    level0: 0\n`;
+                yaml += `    level1: 0.01\n`;
+                yaml += `    level2: 0.10\n`;
+                yaml += `    level3: -1\n`;
+                yaml += `  limits:\n`;
+                yaml += `    ap_fwd_ref: 0.9943\n`;
+                yaml += `    ap_fwd_T: -0.0006\n`;
+                yaml += `    ap_no_check: 999.00\n`;
+                yaml += `    ap_gc_lv: 1.65\n`;
+                yaml += `    ap_gc_hv: 5.5\n\n`;
                 
-                if (rule.condition) {
-                    yaml += `    condition: "${rule.condition}"\n`;
-                }
-            });
-            
-            return yaml;
+                yaml += `rules:\n`;
+                rules.forEach(rule => {
+                    yaml += `  - name: ${escapeYamlString(rule.name)}\n`;
+                    yaml += `    device: ${rule.device}\n`;
+                    yaml += `    parameter: ${escapeYamlString(rule.parameter)}\n`;
+                    yaml += `    type: ${rule.type}\n`;
+                    yaml += `    severity: ${rule.severity}\n`;
+                    
+                    if (rule.description) {
+                        yaml += `    description: ${escapeYamlString(rule.description)}\n`;
+                    }
+                    
+                    yaml += `    constraint:\n`;
+                    if (rule.constraint.vhigh !== undefined) {
+                        yaml += `      vhigh: ${formatValue(rule.constraint.vhigh)}\n`;
+                    }
+                    if (rule.constraint.vlow !== undefined) {
+                        yaml += `      vlow: ${formatValue(rule.constraint.vlow)}\n`;
+                    }
+                    if (rule.constraint.ihigh !== undefined) {
+                        yaml += `      ihigh: ${formatValue(rule.constraint.ihigh)}\n`;
+                    }
+                    if (rule.constraint.ilow !== undefined) {
+                        yaml += `      ilow: ${formatValue(rule.constraint.ilow)}\n`;
+                    }
+                    
+                    if (rule.condition) {
+                        yaml += `    condition: ${escapeYamlString(rule.condition)}\n`;
+                    }
+                });
+                
+                return yaml;
+            } catch (error) {
+                console.error('Error generating YAML:', error);
+                return `Error generating YAML: ${error.message}`;
+            }
         }
 
         // Format value for YAML
@@ -716,81 +867,92 @@
             if (typeof value === 'number') {
                 return value;
             }
-            return `"${value}"`;
+            // For string expressions, escape them
+            return escapeYamlString(value);
         }
 
         // Validate YAML
         function validateYAML() {
-            if (!currentYAML || currentYAML === 'No rules to preview') {
-                showNotification('No YAML to validate', 'error');
-                return;
-            }
-            
-            const resultDiv = document.getElementById('validationResult');
-            const errors = [];
-            const warnings = [];
-            
-            // Basic validation
-            if (rules.length === 0) {
-                errors.push('No rules defined');
-            }
-            
-            // Validate each rule
-            rules.forEach((rule, index) => {
-                if (!rule.name) errors.push(`Rule ${index + 1}: Missing name`);
-                if (!rule.device) errors.push(`Rule ${index + 1}: Missing device`);
-                if (!rule.parameter) errors.push(`Rule ${index + 1}: Missing parameter`);
-                if (!rule.type) errors.push(`Rule ${index + 1}: Missing type`);
-                if (!rule.severity) errors.push(`Rule ${index + 1}: Missing severity`);
-                
-                const hasConstraint = rule.constraint.vhigh !== undefined ||
-                                    rule.constraint.vlow !== undefined ||
-                                    rule.constraint.ihigh !== undefined ||
-                                    rule.constraint.ilow !== undefined;
-                
-                if (!hasConstraint) {
-                    errors.push(`Rule ${index + 1}: No constraints defined`);
+            try {
+                if (!currentYAML || currentYAML === 'No rules to preview') {
+                    showNotification('No YAML to validate', 'error');
+                    return;
                 }
-            });
-            
-            if (errors.length === 0) {
-                resultDiv.className = 'validation-result success';
-                resultDiv.innerHTML = `
-                    <h4>✅ Validation Passed</h4>
-                    <p>Successfully validated ${rules.length} rule(s)</p>
-                    ${warnings.length > 0 ? `
-                        <p><strong>Warnings:</strong></p>
-                        <ul>${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>
-                    ` : ''}
-                `;
-            } else {
-                resultDiv.className = 'validation-result error';
-                resultDiv.innerHTML = `
-                    <h4>❌ Validation Failed</h4>
-                    <p><strong>Errors:</strong></p>
-                    <ul>${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>
-                `;
+                
+                const resultDiv = document.getElementById('validationResult');
+                const errors = [];
+                const warnings = [];
+                
+                // Basic validation
+                if (rules.length === 0) {
+                    errors.push('No rules defined');
+                }
+                
+                // Validate each rule
+                rules.forEach((rule, index) => {
+                    if (!rule.name) errors.push(`Rule ${index + 1}: Missing name`);
+                    if (!rule.device) errors.push(`Rule ${index + 1}: Missing device`);
+                    if (!rule.parameter) errors.push(`Rule ${index + 1}: Missing parameter`);
+                    if (!rule.type) errors.push(`Rule ${index + 1}: Missing type`);
+                    if (!rule.severity) errors.push(`Rule ${index + 1}: Missing severity`);
+                    
+                    const hasConstraint = rule.constraint.vhigh !== undefined ||
+                                        rule.constraint.vlow !== undefined ||
+                                        rule.constraint.ihigh !== undefined ||
+                                        rule.constraint.ilow !== undefined;
+                    
+                    if (!hasConstraint) {
+                        errors.push(`Rule ${index + 1}: No constraints defined`);
+                    }
+                });
+                
+                if (errors.length === 0) {
+                    resultDiv.className = 'validation-result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ Validation Passed</h4>
+                        <p>Successfully validated ${rules.length} rule(s)</p>
+                        ${warnings.length > 0 ? `
+                            <p><strong>Warnings:</strong></p>
+                            <ul>${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>
+                        ` : ''}
+                    `;
+                } else {
+                    resultDiv.className = 'validation-result error';
+                    resultDiv.innerHTML = `
+                        <h4>❌ Validation Failed</h4>
+                        <p><strong>Errors:</strong></p>
+                        <ul>${errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error validating YAML:', error);
+                showNotification('Error validating YAML: ' + error.message, 'error');
             }
         }
 
         // Download YAML
         function downloadYAML() {
-            if (!currentYAML || currentYAML === 'No rules to preview') {
-                showNotification('No YAML to download', 'error');
-                return;
+            try {
+                if (!currentYAML || currentYAML === 'No rules to preview') {
+                    showNotification('No YAML to download', 'error');
+                    return;
+                }
+                
+                const blob = new Blob([currentYAML], {type: 'text/yaml'});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'soa_rules.yaml';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showNotification('YAML downloaded successfully!', 'success');
+            } catch (error) {
+                console.error('Error downloading YAML:', error);
+                showNotification('Error downloading YAML: ' + error.message, 'error');
             }
-            
-            const blob = new Blob([currentYAML], {type: 'text/yaml'});
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'soa_rules.yaml';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            
-            showNotification('YAML downloaded successfully!', 'success');
         }
 
         // Clear form
@@ -799,12 +961,14 @@
         }
 
         // Show tab
-        function showTab(tabName) {
+        function showTab(tabName, clickedButton) {
             // Update tab buttons
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+            }
             
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
