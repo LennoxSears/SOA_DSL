@@ -1,0 +1,14 @@
+# SOA DSL Requirements
+
+# Core dependency - YAML only
+pyyaml>=6.0
+
+# Optional dependencies for Excel parsing (future)
+# openpyxl>=3.0.0
+
+# Development dependencies (optional)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.0.0
