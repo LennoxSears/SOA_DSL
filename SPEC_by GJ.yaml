@@ -1,0 +1,53 @@
+---
+global:
+  # This section may contain 'global' values/definitions. Need to decide
+  # how to use them. E.g. define spectre parameters with value? Equations?
+  # But possibly also verilog-A include statements, verbatim spectre code, ...?
+  parameter1: value1
+  parameter2: value2
+
+rules:
+  # This section would list all SOA rules, one by one
+  
+  # What to do with tmin, tdelay, vballmsg, stop, soadebug? Refer to
+  #  global parameter by default, with optional override per rule?
+  
+  
+  - name: simple Vgs_max rule for GO1 nmos
+    subckt: [nch_mac, nch_lvt_mac, nch_hvt_mac]  # allowing multiple device names helps A LOT to keep things concise
+    monitor: ovcheck  # script determines to use ovcheck or ovcheck6?
+    signal: V(g1,s)  # node names must match actual connection; what other signals may be allowed here (current, parameter, ...)?
+    branch: V(g,s)   # optional, if different from signal; 
+    max: 5.0
+    min: -5.0
+    message: You are violating an important rule!
+  
+  - name: simple Vds_max rule for GO1 nmos
+    subckt: [nch_mac, nch_lvt_mac, nch_hvt_mac]
+    monitor: ovcheck
+    signal: V(d,s)
+    max:
+        tmaxfrac0: 7.0      # the keys (tmaxfrac...) may refer to parameter defined elsewhere
+        tmaxfrac0p01: 6.3   # does YAML allow for numerical-valued keys??
+        tmaxfrac0p1: 5.2
+    min:
+        tmaxfrac0: -7.0
+        tmaxfrac0p01: -6.3
+        tmaxfrac0p1: -5.2
+    message: You are violating an important rule!
+  
+
+# One-sided limits by just leaving out a value (i.e., only specify max, not min)?
+# Use text-valued limits to refer to parameters?
+# Allow some verbatim spectre-code to be inserted to define (extra) parameter values or equations?
+# How to deal with conditional checks and model switches (other than enable_soa)?
+  
+# Full specification requires several model-specific details
+# - exact node-names
+# - in case of subckt-hierarchy: at which level should the SOA-checks be inserted
+# - names of (instance-)parameters, if limits depend on them
+# Should these be part of this spec document? If not, then where/how should it be specified?
+
+# How to deal with other monitor types (on/off, PWL, ...). Those have very specific
+# parameter sets. And some are covering checks on multiple branches, how to organize that
+# in this spec?
