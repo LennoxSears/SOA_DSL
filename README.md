@@ -1,478 +1,265 @@
-# SOA DSL - Safe Operating Area Domain-Specific Language
-
-**Status:** ✅ Production Ready | [Project Status](PROJECT_STATUS.md)
+# SOA DSL - Monitor-Based Specification
 
 ## Overview
 
-This project implements a Domain-Specific Language (DSL) for describing Safe Operating Area (SOA) rules for semiconductor devices. The DSL enables automated generation of Spectre netlist code with Verilog-A monitor instantiations, replacing manual, error-prone workflows.
-
-**Based on the proposal by Zhendong Ge (Sep 2025)**
-
-## Problem Statement
-
-Current SOA rule processing is:
-- **Time-Intensive**: 3+ weeks for full QA of SMOS10HV rules
-- **Error-Prone**: High error rates in manual copy-paste workflows
-- **Inconsistent**: Rule descriptions vary across departments
-- **Maintenance-Heavy**: Updates require significant effort and risk new errors
-
-## Solution
-
-A unified DSL with automated toolchain that:
-- ✅ **Reduces manual effort by 95%**
-- ✅ **Eliminates copy-paste errors**
-- ✅ **Provides human-readable, machine-parsable specifications**
-- ✅ **Enables automated test generation**
-- ✅ **Vendor & simulator agnostic**
-- ✅ **Can be learned in 30 minutes**
+SOA DSL provides a YAML-based specification language that directly maps to Verilog-A monitors used in Spectre circuit simulation for Safe Operating Area (SOA) checking. The tool generates Spectre netlist code from YAML specifications, providing a maintainable and type-safe way to define SOA monitors.
 
 ## Key Features
 
-### Unified Grammar
-One syntax to express ANY electrical/thermal SOA limit:
+- **Direct Monitor Mapping**: YAML specifications map 1:1 to Verilog-A monitor implementations
+- **6 Monitor Types**: Support for all monitors used in production
+- **Type-Safe**: Validates monitor parameters against actual Verilog-A implementations
+- **Production-Ready**: Generates Spectre code matching existing production format
 
-**Variables:**
-- `v[pin1,pin2]` or `v[pin]` - Voltage
-- `i[pin]` or `i[device]` - Current
-- `T` or `temp` - Temperature
-- `$param` - Device parameters ($w, $l, $np)
+## Supported Monitor Types
 
-**Operators:**
-- Arithmetic: `+`, `-`, `*`, `/`, `^`, `(`, `)`
-- Comparison: `<`, `<=`, `>`, `>=`, `==`, `!=`
-- Boolean: `&&`, `||`, `!`
-- Functions: `min`, `max`, `abs`, `sqrt`, `exp`, `log`
+Based on `/spectre/soachecks_top.scs` (196 monitors):
 
-**Constraint Types:**
-- Simple: `v[g,s] < 2.5`
-- Range: `0.8 < v[g,s] < 1.2`
-- Equation: `v[d,s] - v[s,b] < 3.3`
-- Conditional: `if T > 80 then v[g,s] < 2.5 else v[g,s] < 5.5`
-- Multi-level: Time-based transient limits (tmaxfrac)
+| Monitor Type | Count | Purpose |
+|-------------|-------|---------|
+| `ovcheck6` | 105 | Multi-branch voltage check (up to 6 branches) |
+| `ovcheck` | 57 | Single branch voltage check |
+| `ovcheckva_pwl` | 18 | Piecewise linear voltage check |
+| `ovcheckva_mos2` | 12 | MOS state-dependent check |
+| `parcheckva3` | 3 | Parameter checking |
+| `ovcheckva_ldmos_hci_tddb` | 1 | HCI/TDDB aging check |
 
-## DSL Format: YAML Only
+## Installation
 
-The SOA DSL uses **YAML exclusively** for its superior human-readability, comments support, and minimal syntax.
+```bash
+git clone https://github.com/LennoxSears/SOA_DSL.git
+cd SOA_DSL
 
-### Why YAML Only?
-- ✅ **Most human-readable** format
-- ✅ **Comments supported** (essential for documenting complex rules)
-- ✅ **Minimal syntax** (less typing, fewer errors)
-- ✅ **Industry standard** (Kubernetes, Docker, CI/CD)
-- ✅ **Simpler codebase** (one parser, easier maintenance)
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
 
-See [WHY_YAML_ONLY.md](WHY_YAML_ONLY.md) for detailed rationale.
+# Install dependencies
+pip install pyyaml
+```
 
-### YAML Syntax Example
+## Quick Start
+
+### Command Line
+
+```bash
+# Validate a YAML specification
+python soa_dsl_cli.py examples/soa_monitors.yaml -v
+
+# Generate Spectre code
+python soa_dsl_cli.py examples/soa_monitors.yaml -o output/soachecks.scs
+```
+
+### Web Interface
+
+Open `web/index.html` in your browser for a graphical interface to create monitor specifications.
+
+## YAML Specification Format
+
+### Basic Structure
 
 ```yaml
-name: "NMOS Core VDS Limit"
-device: nmos_core
-parameter: "v[d,s]"
-type: vhigh
-severity: high
-constraint:
-  vhigh: 1.65
-description: "Drain-source voltage limit"
+version: "1.0"
+process: "SMOS10HV"
+date: "2024-12-16"
+
+global:
+  timing:
+    tmin: 0
+    tdelay: 0
+    vballmsg: 1.0
+    stop: 0
+  tmaxfrac:
+    level0: 0      # Never exceed
+    level1: 0.01   # 1% of time
+    level2: 0.10   # 10% of time
+    level3: -1     # Review only
+
+parameters:
+  global_tmin: 0
+  global_tdelay: 0
+  global_vballmsg: 1.0
+  global_stop: 0
+  tmaxfrac0: 0
+  tmaxfrac1: 0.01
+  tmaxfrac2: 0.10
+  tmaxfrac3: -1
+
+monitors:
+  - name: "Monitor Name"
+    monitor_type: ovcheck
+    model_name: ovcheck_model
+    section: soacheck_section
+    device_pattern: "device_pattern"
+    parameters:
+      # Monitor-specific parameters
 ```
 
-## Rule Complexity Examples
+### Monitor Examples
 
-### Simple Numeric
+#### Single Branch Voltage Check (`ovcheck`)
+
 ```yaml
-constraint:
-  vhigh: 1.65
+- name: "Cap Low Oxide Risk"
+  monitor_type: ovcheck
+  model_name: ovcheck_cap_low_oxrisk
+  section: soacheck_cap_low_oxrisk_shared
+  device_pattern: "cap_low"
+  parameters:
+    tmin: global_tmin
+    tdelay: global_tdelay
+    vballmsg: global_vballmsg
+    stop: global_stop
+    tmaxfrac: tmaxfrac3
+    vlow: -1.32
+    vhigh: 1.32
+    branch1: "V(t,nw)"
+    message1: "Vtnw_OXrisk"
 ```
 
-### Temperature Dependent
+#### Multi-Branch Voltage Check (`ovcheck6`)
+
 ```yaml
-constraint:
-  vhigh: "0.9943 - 0.0006*(T - 25)"
+- name: "NMOS Core Oxide Risk"
+  monitor_type: ovcheck6
+  model_name: ovcheck_mos_core_oxrisk
+  section: soacheck_mos_core_oxrisk_shared
+  device_pattern: "nmos_core"
+  parameters:
+    tmin: global_tmin
+    tdelay: global_tdelay
+    vballmsg: global_vballmsg
+    stop: global_stop
+    tmaxfrac: tmaxfrac3
+    vlow1: -1.32
+    vhigh1: 1.32
+    branch1: "V(g,b)"
+    message1: "Vgb_OXrisk"
+    vlow2: -1.32
+    vhigh2: 1.32
+    branch2: "V(g,s)"
+    message2: "Vgs_OXrisk"
 ```
 
-### Multi-Pin with Functions
+#### MOS State-Dependent Check (`ovcheckva_mos2`)
+
 ```yaml
-constraint:
-  vlow: "min(90, 90 + v[p] - v[sub])"
+- name: "NMOS Core State Dependent"
+  monitor_type: ovcheckva_mos2
+  model_name: ovcheck_nmos_core_state
+  section: soacheck_nmos_core_state_shared
+  device_pattern: "nmos_core"
+  parameters:
+    tmin: global_tmin
+    tdelay: global_tdelay
+    vballmsg: global_vballmsg
+    stop: global_stop
+    tmaxfrac: tmaxfrac0
+    vhigh_on: 1.84
+    vhigh_off: 3.0
+    vhigh_gc: 2.07
+    vlow_gc: -2.07
+    param: "vth"
+    vgt: 0.0
 ```
 
-### Current with Device Parameters
+#### Piecewise Linear Check (`ovcheckva_pwl`)
+
 ```yaml
-constraint:
-  ihigh: "$w * $np * 2.12e-4"
+- name: "Diode Temperature Dependent"
+  monitor_type: ovcheckva_pwl
+  model_name: ovcheck_dz5_temp
+  section: soacheck_dz5_temp
+  device_pattern: "dz5"
+  parameters:
+    tmin: global_tmin
+    tdelay: global_tdelay
+    vballmsg: global_vballmsg
+    stop: global_stop
+    tmaxfrac: tmaxfrac0
+    vlow: "-ap_fwd_ref - ap_fwd_T * (T - 25)"
+    vhigh: "ap_fwd_ref + ap_fwd_T * (T - 25)"
+    branch1: "V(p,n)"
+    message1: "Vpn_temp"
 ```
 
-### Conditional Logic
-```yaml
-constraint:
-  vhigh: "if T > 85 then 10.0 else 12.0"
+## Generated Spectre Code
+
+```spectre
+simulator lang=spectre
+// Generated from SOA DSL
+// Process: SMOS10HV
+// Date: 2024-12-16
+
+section base
+
+ahdl_include "./veriloga/ovcheck_mos_alt.va"
+ahdl_include "./veriloga/ovcheck_pwl_alt.va"
+ahdl_include "./veriloga/ovcheck_ldmos_hci_tddb_alt.va"
+ahdl_include "./veriloga/parcheck3.va"
+ahdl_include "./veriloga/selfheating_monitor_nofeedback.va"
+
+parameters
++ global_tmin = 0
++ global_tdelay = 0
++ global_vballmsg = 1.0
++ global_stop = 0
+
+endsection base
+
+section soacheck_cap_low_oxrisk_shared
+model ovcheck_cap_low_oxrisk ovcheck
++ tmin=global_tmin tdelay=global_tdelay vballmsg=global_vballmsg stop=global_stop
++ tmaxfrac=tmaxfrac3
++ vlow=-1.32 vhigh=1.32 branch1="V(t,nw)" message1="Vtnw_OXrisk"
+endsection soacheck_cap_low_oxrisk_shared
 ```
-
-### Multi-Level (tmaxfrac)
-```yaml
-constraint:
-  vhigh: 1.65
-tmaxfrac:
-  0.0: 1.65    # Never exceed
-  0.01: 1.84   # 1% time allowed
-  0.1: 1.71    # 10% time allowed
-```
-
-## Automated Toolchain
-
-```
-┌─────────────────┐
-│  Excel Rules    │
-│  or Manual DSL  │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  DSL Generator  │  ◄── SR Team
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   SOA-DSL File  │  (YAML)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   DSL Parser    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Rule Validator  │  ◄── Automated validation
-└────────┬────────┘
-         │
-         ├─────────────────┬─────────────────┬──────────────────┐
-         ▼                 ▼                 ▼                  ▼
-┌─────────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Code Generator  │ │ Test Gen     │ │ Doc Gen      │ │ CAD Tool     │
-└────────┬────────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
-         │                 │                │                │
-         ▼                 ▼                ▼                ▼
-┌─────────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│soachecks_top.scs│ │ Test Cases   │ │ Documentation│ │ CAD Configs  │
-└─────────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
-```
-
-## Core Components
-
-### 1. SOA Rule Creator (DSL Generator)
-- Excel parser for existing SOA rules
-- Interactive rule builder
-- Template library
-- Export to DSL format
-
-### 2. DSL Parser
-- Lexical analysis
-- Syntax parsing
-- AST construction
-- Error reporting
-
-### 3. Rule Validator
-- Syntax validation
-- Semantic validation
-- Device parameter checking
-- Expression evaluation
-
-### 4. Code Generator
-- Spectre netlist generation
-- Verilog-A monitor instantiation
-- Section organization
-- Conditional compilation
-
-### 5. Test Case Generator
-- Boundary tests
-- Violation tests
-- Temperature sweeps
-- Corner cases
-
-### 6. Documentation Generator
-- HTML/PDF output
-- Cross-reference tables
-- Coverage reports
-
-## Benefits & ROI
-
-### Quantitative Benefits
-- **95% manual effort reduction**
-- **90% reduction** in rule extraction
-- **90% reduction** in validation
-- **90% reduction** in test generation
-- **60% reduction** in error debugging
-- **30% reduction** in cross-department alignment
-
-### Time Savings
-- Current: 3+ weeks for SMOS10HV QA
-- With DSL: ~1 day for generation + review
-- **Annual AOP savings** across projects
-
-### ROI
-- **Development**: 0.6-0.8 AOP
-- **Payback**: 1.5-2.0 AOP
-- **5-Year Impact**: 2+ AOP reduction annually
 
 ## Project Structure
 
 ```
 SOA_DSL/
-├── src/soa_dsl/                       # Core implementation (1,463 lines)
-│   ├── __init__.py                    # Package initialization
-│   ├── parser.py                      # YAML parser (220 lines)
-│   ├── validator.py                   # Comprehensive validator (380 lines)
-│   ├── expression.py                  # Expression evaluator (270 lines)
-│   ├── generator.py                   # Spectre code generator (180 lines)
-│   ├── ast_nodes.py                   # AST data structures (280 lines)
-│   └── cli.py                         # Command-line interface (120 lines)
+├── src/soa_dsl/
+│   ├── __init__.py           # Package initialization
+│   ├── parser.py             # YAML parser for monitor specs
+│   └── generator.py          # Spectre code generator
 ├── examples/
-│   └── soa_rules.yaml                 # YAML examples (11 KB, 26 rules)
-├── output/                            # Generated files
-│   └── yaml_only_test.scs             # Generated Spectre code
-├── spectre/                           # Production semiconductor models
-│   ├── soachecks_top.scs              # Manual SOA checks (2,646 lines)
-│   └── veriloga/                      # Verilog-A monitors
-│       ├── ovcheck_mos_alt.va         # MOS overvoltage checking
-│       ├── ovcheck_pwl_alt.va         # Piecewise-linear checking
-│       ├── parcheck3.va               # Parameter checking
-│       └── ...
-├── README.md                          # This file
-├── WHY_YAML_ONLY.md                   # Format decision rationale
-├── DSL_DESIGN.md                      # Detailed design specification
-├── FINAL_IMPLEMENTATION.md            # Implementation status
-├── soa-dsl                            # CLI entry point
-├── setup.py                           # Package setup
-├── requirements.txt                   # Dependencies (PyYAML only)
-└── test_workflow.sh                   # Complete test script
+│   └── soa_monitors.yaml     # Example monitor specifications
+├── web/
+│   ├── index.html            # Web interface
+│   ├── css/style.css         # Styles
+│   └── js/app.js             # JavaScript application
+├── spectre/
+│   ├── soachecks_top.scs     # Reference production file
+│   └── veriloga/             # Verilog-A monitor implementations
+├── output/                   # Generated Spectre files
+├── soa_dsl_cli.py           # Command-line interface
+├── requirements.txt          # Python dependencies
+└── README.md                # This file
 ```
 
-## Implementation Plan
-
-### Phase 1: Core Infrastructure (Weeks 1-3)
-- Define formal DSL grammar
-- Implement lexer/parser
-- Build AST data structures
-- Create validator
-
-### Phase 2: Code Generation (Weeks 4-6)
-- Design code generation templates
-- Implement Spectre section generators
-- Parameter resolution
-- Monitor type selection
-
-### Phase 3: Excel Integration (Weeks 7-8)
-- Excel parser
-- Rule extraction
-- DSL generation
-- Batch conversion
-
-### Phase 4: Test Generation (Weeks 9-10)
-- Test case templates
-- Boundary/violation tests
-- Temperature sweeps
-- Test suite organization
-
-### Phase 5: Documentation & Tooling (Weeks 11-12)
-- Documentation generator
-- CLI tool
-- Syntax highlighting
-- Integration scripts
-
-### Phase 6: Validation & Deployment (Weeks 13-16)
-- Test on SMOS10HV
-- Compare generated vs. manual
-- Performance benchmarking
-- User training
-
-## Two Ways to Use SOA DSL
-
-### 1. 🌐 Web Interface (Recommended for SR Teams)
-**Easy-to-use graphical interface** - No installation needed!
-
-Create SOA rules through a web browser with:
-- Form-based rule creation
-- Real-time validation
-- Live YAML preview
-- One-click download
-- **Pure frontend** - Just open the HTML file!
-
-[See Web Interface Guide →](web/README.md)
-
-### 2. 💻 Command Line Interface
-**For automation and advanced users**
-
-Direct command-line access for:
-- Scripting and automation
-- CI/CD integration
-- Batch processing
-
----
-
-## Getting Started
-
-### Prerequisites
-- Python 3.8 or higher
-- pip (Python package manager)
-
-### Installation
-
-#### Linux/Mac
-```bash
-# Clone the repository
-git clone https://github.com/LennoxSears/SOA_DSL.git
-cd SOA_DSL
-
-# Create virtual environment (optional)
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install pyyaml
-```
-
-#### Windows
-```cmd
-# Clone the repository
-git clone https://github.com/LennoxSears/SOA_DSL.git
-cd SOA_DSL
-
-# Create virtual environment (optional)
-python -m venv venv
-venv\Scripts\activate
-
-# Install dependencies
-pip install pyyaml
-```
-
-**See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for detailed Windows instructions.**
-
-### Quick Start - Web Interface
-
-#### Just Open the File!
-
-**Double-click** `web/index.html` to open it in your browser.
-
-No installation, no dependencies, no server needed!
-
-**Features:**
-- ✅ Create rules with a form (no YAML knowledge needed)
-- ✅ Real-time validation
-- ✅ Live YAML preview
-- ✅ Download generated YAML
-- ✅ Works on Windows, Mac, and Linux
-- ✅ Pure frontend - works offline
-
-[Full Web Interface Documentation →](web/README.md)
-
----
-
-### Quick Start - Command Line
-
-#### 1. Validate a DSL File
-
-**Linux/Mac:**
-```bash
-./soa-dsl validate examples/soa_rules.yaml
-```
-
-**Windows:**
-```cmd
-python soa_dsl_cli.py validate examples\soa_rules.yaml
-```
-
-Output:
-```
-Validating examples/soa_rules.yaml...
-✅ Parsed successfully (26 rules)
-✅ Validation passed
-```
-
-#### 2. Generate Spectre Code
-
-**Linux/Mac:**
-```bash
-./soa-dsl compile examples/soa_rules.yaml -o output/soachecks_top.scs
-```
-
-**Windows:**
-```cmd
-python soa_dsl_cli.py compile examples\soa_rules.yaml -o output\soachecks_top.scs
-```
-
-Output:
-```
-Compiling examples/soa_rules.yaml...
-✅ Parsed successfully (26 rules)
-✅ Successfully compiled to output/soachecks_top.scs
-```
-
-#### 3. View Generated Code
-
-**Linux/Mac:**
-```bash
-head -30 output/soachecks_top.scs
-```
-
-**Windows:**
-```cmd
-type output\soachecks_top.scs | more
-```
-
-### Python API Usage
+## Python API
 
 ```python
-from soa_dsl.parser import parse_file
-from soa_dsl.validator import SOAValidator
-from soa_dsl.generator import SpectreGenerator
+from soa_dsl import parse_file, generate_code
+from pathlib import Path
 
-# Parse DSL file
-document = parse_file('examples/soa_rules.yaml')
+# Parse YAML specification
+doc = parse_file(Path('examples/soa_monitors.yaml'))
 
-# Validate
-validator = SOAValidator()
-if validator.validate(document):
-    # Generate Spectre code
-    generator = SpectreGenerator()
-    generator.generate(document, 'output/soachecks_top.scs')
-    print("✅ Generated successfully!")
+# Generate Spectre code
+with open('output/soachecks.scs', 'w') as f:
+    generate_code(doc, f)
 ```
 
-## Documentation
+## Benefits
 
-- **[README.md](README.md)** - This file (project overview)
-- **[WHY_YAML_ONLY.md](WHY_YAML_ONLY.md)** - Format decision rationale
-- **[DSL_DESIGN.md](DSL_DESIGN.md)** - Complete design specification
-- **[CODE_GENERATION_EXAMPLES.md](CODE_GENERATION_EXAMPLES.md)** - Generation examples
-- **[FINAL_IMPLEMENTATION.md](FINAL_IMPLEMENTATION.md)** - Implementation status
-- **[examples/](examples/)** - Example YAML DSL file
-
-## Current Status
-
-✅ **PRODUCTION READY:**
-- Complete DSL implementation (1,463 lines Python)
-- YAML parser with comprehensive validation
-- Spectre code generator
-- CLI tool (validate, generate, compile)
-- 26 example rules covering all complexity levels
-- Comprehensive documentation
-- Tested and working
-
-✅ **Ready For:**
-- Pilot deployment with SMOS10HV rules
-- Integration into existing workflows
-- User training and adoption
-- Production use
-
-## Contributing
-
-This project aims to transform SOA rule processing across the semiconductor industry. Contributions are welcome in:
-- DSL syntax refinement
-- Parser implementation
-- Code generator development
-- Test case generation
-- Documentation
+- **Direct Mapping**: No abstraction layer between YAML and Spectre
+- **Type Safety**: Validates against actual Verilog-A monitor parameters
+- **Production Match**: Generated code matches existing production format
+- **Maintainable**: Clear correspondence to underlying implementation
+- **Extensible**: Easy to add new monitor types as they're developed
 
 ## License
 
@@ -481,7 +268,3 @@ This project aims to transform SOA rule processing across the semiconductor indu
 ## Contact
 
 For questions or contributions, please contact the project team.
-
----
-
-**"One tiny language for every SOA check"** - Learnable in 30 minutes, saves weeks of manual work.
