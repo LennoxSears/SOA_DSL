@@ -1,0 +1,190 @@
+# SOA Monitors - Monitor-Based Specification
+# Based on actual Verilog-A monitors in /spectre/soachecks_top.scs
+
+version: "1.0"
+process: "SMOS10HV"
+date: "2024-12-16"
+
+# Global parameters (shared by all monitors)
+global:
+  timing:
+    tmin: 0
+    tdelay: 0
+    vballmsg: 1.0
+    stop: 0
+  tmaxfrac:
+    level0: 0      # Never exceed
+    level1: 0.01   # 1% of time
+    level2: 0.10   # 10% of time
+    level3: -1     # Review only
+
+# Spectre parameters (written to base section)
+parameters:
+  global_tmin: 0
+  global_tdelay: 0
+  global_vballmsg: 1.0
+  global_stop: 0
+  tmaxfrac0: 0
+  tmaxfrac1: 0.01
+  tmaxfrac2: 0.10
+  tmaxfrac3: -1
+  dtmax_rm: 5
+  theat: 1e-7
+  atype: 1
+
+# Monitor definitions
+monitors:
+  # Example 1: Simple voltage check (ovcheck)
+  - name: "Cap Low Oxide Risk"
+    monitor_type: ovcheck
+    model_name: ovcheck_cap_low_oxrisk
+    section: soacheck_cap_low_oxrisk_shared
+    device_pattern: "cap_low"
+    parameters:
+      tmin: global_tmin
+      tdelay: global_tdelay
+      vballmsg: global_vballmsg
+      stop: global_stop
+      tmaxfrac: tmaxfrac3
+      vlow: -1.32
+      vhigh: 1.32
+      branch1: "V(t,nw)"
+      message1: "Vtnw_OXrisk"
+
+  # Example 2: Multi-branch voltage check (ovcheck6)
+  - name: "NMOS Core Oxide Risk"
+    monitor_type: ovcheck6
+    model_name: ovcheck_mos_core_oxrisk
+    section: soacheck_mos_core_oxrisk_shared
+    device_pattern: "nmos_core"
+    parameters:
+      tmin: global_tmin
+      tdelay: global_tdelay
+      vballmsg: global_vballmsg
+      stop: global_stop
+      tmaxfrac: tmaxfrac3
+      branches:
+        - vlow: -1.32
+          vhigh: 1.32
+          branch: "V(g,b)"
+          message: "Vgb_OXrisk"
+        - vlow: -1.32
+          vhigh: 1.32
+          branch: "V(g,s)"
+          message: "Vgs_OXrisk"
+        - vlow: -1.32
+          vhigh: 1.32
+          branch: "V(g,d)"
+          message: "Vgd_OXrisk"
+
+  # Example 3: MOS-specific monitor (ovcheckva_mos2)
+  - name: "NMOS Core State Dependent"
+    monitor_type: ovcheckva_mos2
+    model_name: ovcheck_nmos_core_state
+    section: soacheck_nmos_core_state_shared
+    device_pattern: "nmos_core"
+    parameters:
+      tmin: global_tmin
+      tdelay: global_tdelay
+      vballmsg: global_vballmsg
+      stop: global_stop
+      tmaxfrac: tmaxfrac0
+      vhigh_on: 1.84
+      vhigh_off: 3.00
+      gate_control:
+        vhigh_gc: 2.07
+        vlow_gc: -2.07
+      monitor_params:
+        param: "vth"
+        vgt: 0.0
+
+  # Example 4: Self-heating monitor
+  - name: "Metal-1 Resistor Self-Heating"
+    monitor_type: ovcheck
+    model_name: ish_rm1
+    section: soacheck_rm1_heating
+    device_pattern: "rm1_10hv"
+    self_heating:
+      dtmax: dtmax_rm
+      theat: theat
+      monitor: temperature
+    parameters:
+      tmin: global_tmin
+      tdelay: global_tdelay
+      vballmsg: global_vballmsg
+      stop: global_stop
+      constraints:
+        - name: "DC Current"
+          type: idc
+          model: idc_rm1
+          ihigh: "$w * 4.05e-3"
+        - name: "Peak Current"
+          type: ipeak
+          model: ipeak_rm1
+          ihigh: "$w * 4.05e-1"
+        - name: "RMS Current"
+          type: irms
+          model: irms_rm1
+          ihigh: "1.0e-3 * sqrt(367.8 * $w * ($w + 0.53))"
+
+  # Example 5: HCI/TDDB aging check
+  - name: "PMOS 90V HCI/TDDB"
+    monitor_type: ovcheckva_ldmos_hci_tddb
+    model_name: hcitddb_pmos90_10hv
+    section: soacheck_pmos90_hci_tddb
+    device_pattern: "pmos90_10hv"
+    parameters:
+      tmin: global_tmin
+      tdelay: global_tdelay
+      vballmsg: global_vballmsg
+      stop: global_stop
+      atype: atype
+      hci_tddb_params:
+        soa_hcitddb_a: 24
+        soa_hcitddb_b: 0.38
+        soa_hcitddb_c: 0.0
+        soa_hcitddb_d: 0.0
+        soa_hcitddb_e: 0.0
+        soa_hcitddb_f: 0.0
+        soa_hcitddb_g: 0.0
+        soa_hcitddb_h: 0.0
+        soa_hcitddb_i: 0.0
+        soa_hcitddb_j: 0.0
+        soa_hcitddb_k: 0.0
+        soa_hcitddb_l: 0.0
+        soa_hcitddb_m: 0.0
+        soa_hcitddb_n: 0.0
+
+  # Example 6: Parameter check (parcheckva3)
+  - name: "NMOS Core VTH Check"
+    monitor_type: parcheckva3
+    model_name: parcheck_nmos_core_vth
+    section: soacheck_nmos_core_vth
+    device_pattern: "nmos_core"
+    parameters:
+      tmin: global_tmin
+      tdelay: global_tdelay
+      vballmsg: global_vballmsg
+      stop: global_stop
+      tmaxfrac: tmaxfrac0
+      param: "vth"
+      vgt: 0.0
+      vlow: 0.3
+      vhigh: 0.7
+
+  # Example 7: PWL voltage check (ovcheckva_pwl)
+  - name: "Diode Temperature Dependent"
+    monitor_type: ovcheckva_pwl
+    model_name: ovcheck_dz5_temp
+    section: soacheck_dz5_temp
+    device_pattern: "dz5"
+    parameters:
+      tmin: global_tmin
+      tdelay: global_tdelay
+      vballmsg: global_vballmsg
+      stop: global_stop
+      tmaxfrac: tmaxfrac0
+      vlow: "-ap_fwd_ref - ap_fwd_T * (T - 25)"
+      vhigh: "ap_fwd_ref + ap_fwd_T * (T - 25)"
+      branch1: "V(p,n)"
+      message1: "Vpn_temp"

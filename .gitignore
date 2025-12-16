@@ -36,16 +36,10 @@ env/
 .DS_Store
 Thumbs.db
 
-# Test outputs (keep one example)
-output/*
-!output/soachecks_generated.scs
-
-# Spectre simulation data
-spectre/spectreData_*
-spectre/*.log
+# Generated outputs
+output/*.scs
+!output/.gitkeep
 
 # Temporary files
 *.tmp
 *.bak
-archive/
-reference_materials/

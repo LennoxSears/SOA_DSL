@@ -1,24 +1,21 @@
 """
 SOA DSL - Safe Operating Area Domain-Specific Language
 
-A comprehensive toolchain for parsing, validating, and generating
-Spectre netlist code from SOA rule specifications.
+Monitor-based specification for Spectre SOA checking.
+Direct mapping to Verilog-A monitor implementations.
 """
 
 __version__ = "1.0.0"
 __author__ = "SOA DSL Team"
 
-from .parser import SOAParser, parse_file
-from .validator import SOAValidator
-from .generator import SpectreGenerator
-from .ast_nodes import SOARule, GlobalConfig, Constraint
+from .parser import parse_file, SOADocument, Monitor, ParseError
+from .generator import generate_code, CodeGenerator
 
 __all__ = [
-    "SOAParser",
     "parse_file",
-    "SOAValidator",
-    "SpectreGenerator",
-    "SOARule",
-    "GlobalConfig",
-    "Constraint",
+    "generate_code",
+    "SOADocument",
+    "Monitor",
+    "ParseError",
+    "CodeGenerator",
 ]

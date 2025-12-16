@@ -1,4 +1,4 @@
-/* SOA Rule Creator - Styles */
+/* SOA Monitor Creator - Styles */
 
 /* Reset */
 * {
@@ -393,6 +393,79 @@ header .header-note {
 
 .rules-header .process-name-input {
     width: 200px;
+}
+
+/* Monitor List */
+.list-panel {
+    margin-top: 20px;
+}
+
+.monitor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.monitor-item {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.monitor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.monitor-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.monitor-details {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #667eea;
+    color: white;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.detail {
+    font-size: 13px;
+    color: #666;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.empty-state {
+    text-align: center;
+    color: #999;
+    padding: 40px;
+    font-style: italic;
 }
 
 /* Notifications */
