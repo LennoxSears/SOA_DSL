@@ -1,0 +1,239 @@
+# Universal SOA Specification - Model/Monitor Agnostic
+# User-facing format that describes WHAT to check, not HOW
+version: "1.0"
+process: "SMOS10HV"
+date: "2024-12-16"
+
+# ============================================================================
+# Global Definitions
+# ============================================================================
+globals:
+  timing:
+    tmin: 0
+    tdelay: 0
+    vballmsg: 1.0
+    stop: 0
+  
+  time_limits:
+    steady: 0           # Never exceed (tmaxfrac0)
+    transient_1pct: 0.01   # 1% of time (tmaxfrac1)
+    transient_10pct: 0.10  # 10% of time (tmaxfrac2)
+    review: -1          # Review only (tmaxfrac3)
+  
+  parameters:
+    dtmax_rm: 5
+    theat: 1e-7
+    atype: 1
+
+# ============================================================================
+# SOA Rules - Device-Centric, Physics-Based
+# ============================================================================
+rules:
+  # ==========================================================================
+  # Example 1: Simple Voltage Limit (Single Branch)
+  # ==========================================================================
+  - name: "Cap Low Oxide Risk"
+    description: "Oxide breakdown protection for low-voltage capacitors"
+    
+    applies_to:
+      devices: [cap_low]
+      
+    check:
+      type: voltage
+      measure: V(t,nw)
+      
+    limits:
+      steady:
+        min: -1.32
+        max: 1.32
+      time_limit: review
+      
+    message: "Vtnw_OXrisk"
+
+  # ==========================================================================
+  # Example 2: Multi-Branch Voltage Check
+  # ==========================================================================
+  - name: "NMOS Core Oxide Risk"
+    description: "Gate oxide protection for core NMOS - checks multiple terminal voltages"
+    
+    applies_to:
+      devices: [nmos_core]
+      
+    check:
+      type: voltage
+      measure:
+        - signal: V(g,b)
+          message: "Vgb_OXrisk"
+        - signal: V(g,s)
+          message: "Vgs_OXrisk"
+        - signal: V(g,d)
+          message: "Vgd_OXrisk"
+          
+    limits:
+      steady:
+        min: -1.32
+        max: 1.32
+      time_limit: review
+
+  # ==========================================================================
+  # Example 3: State-Dependent Voltage Check
+  # ==========================================================================
+  - name: "NMOS Core State Dependent VDS"
+    description: "Drain-source voltage limits depend on transistor state (on/off)"
+    
+    applies_to:
+      devices: [nmos_core]
+      
+    check:
+      type: voltage
+      measure: V(d,s)
+      state_dependent: true
+      
+    limits:
+      when_on:
+        max: 1.84
+      when_off:
+        max: 3.0
+      gate_control:
+        max: 2.07
+        min: -2.07
+      time_limit: steady
+        
+    state_detection:
+      parameter: vth
+      threshold: 0.0
+
+  # ==========================================================================
+  # Example 4: Temperature-Dependent Voltage Limit
+  # ==========================================================================
+  - name: "Diode Forward Voltage Temperature"
+    description: "Forward voltage varies linearly with temperature"
+    
+    applies_to:
+      devices: [diode_zener]
+      
+    check:
+      type: voltage
+      measure: V(p,n)
+      temperature_dependent: true
+      
+    limits:
+      temperature_dependent:
+        reference_temp: 25
+        reference_value: 0.9943
+        temp_coefficient: -0.0006
+        # Will generate expression: "0.9943 - 0.0006 * (T - 25)"
+      time_limit: steady
+      
+    message: "Vpn_temp"
+
+  # ==========================================================================
+  # Example 5: Self-Heating Current Limits
+  # ==========================================================================
+  - name: "Metal-1 Resistor Self-Heating"
+    description: "Current limits based on resistor width to prevent overheating"
+    
+    applies_to:
+      devices: [rm1]
+      
+    check:
+      type: self_heating
+      measure: temperature
+      
+    limits:
+      max_temp_rise: 5  # degrees C
+      thermal_time_constant: 1e-7  # seconds
+      
+      current_limits:
+        dc_max:
+          formula: "linear"
+          parameters: [w]
+          coefficients: [4.05e-3]
+          # Generates: "$w * 4.05e-3"
+          
+        peak_max:
+          formula: "linear"
+          parameters: [w]
+          coefficients: [4.05e-1]
+          # Generates: "$w * 4.05e-1"
+          
+        rms_max:
+          expression: "1.0e-3 * sqrt(367.8 * $w * ($w + 0.53))"
+          # Direct expression for complex formula
+
+  # ==========================================================================
+  # Example 6: Aging Check (HCI/TDDB)
+  # ==========================================================================
+  - name: "PMOS 90V HCI/TDDB"
+    description: "Hot carrier injection and time-dependent dielectric breakdown aging"
+    
+    applies_to:
+      devices: [pmos90]
+      
+    check:
+      type: aging
+      aging_mechanism: hci_tddb
+      
+    limits:
+      aging_parameters:
+        a: 24
+        b: 0.38
+        c: 0.0
+        d: 0.0
+        e: 0.0
+        f: 0.0
+        g: 0.0
+        h: 0.0
+        i: 0.0
+        j: 0.0
+        k: 0.0
+        l: 0.0
+        m: 0.0
+        n: 0.0
+      time_limit: steady
+
+  # ==========================================================================
+  # Example 7: Parameter Check
+  # ==========================================================================
+  - name: "NMOS Core Threshold Voltage"
+    description: "Ensure threshold voltage stays within acceptable bounds"
+    
+    applies_to:
+      devices: [nmos_core]
+      
+    check:
+      type: parameter
+      parameter: vth
+      
+    limits:
+      steady:
+        min: 0.3
+        max: 0.7
+      gate_threshold: 0.0
+      time_limit: steady
+
+  # ==========================================================================
+  # Example 8: Multi-Level Time Limits
+  # ==========================================================================
+  - name: "NMOS 5V Gate-Source Voltage"
+    description: "Different limits for steady-state vs transient conditions"
+    
+    applies_to:
+      devices: [nmos_5v]
+      
+    check:
+      type: voltage
+      measure: V(g,s)
+      
+    limits:
+      steady:
+        min: -5.0
+        max: 5.0
+      transient_1pct:
+        min: -6.3
+        max: 6.3
+      transient_10pct:
+        min: -5.2
+        max: 5.2
+        
+    message: "Vgs violation"

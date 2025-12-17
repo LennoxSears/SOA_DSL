@@ -1,0 +1,309 @@
+# Monitor Library - Verilog-A Monitor Definitions
+# Defines available monitors and their capabilities
+version: "1.0"
+
+monitors:
+  # ==========================================================================
+  # ovcheck - Single Branch Voltage/Current Check
+  # ==========================================================================
+  ovcheck:
+    description: "Single branch voltage or current check"
+    verilog_a_file: "ovcheck_mos_alt.va"
+    
+    capabilities:
+      - voltage_check
+      - current_check
+      - single_branch
+      - time_limits
+      - self_heating
+      
+    required_parameters:
+      - tmin
+      - tdelay
+      - vballmsg
+      - stop
+      
+    optional_parameters:
+      - tmaxfrac
+      - vlow
+      - vhigh
+      - ilow
+      - ihigh
+      - branch1
+      - message1
+      # Self-heating parameters
+      - dtmax
+      - theat
+      - monitor
+      - idc_high
+      - ipeak_high
+      - irms_high
+      
+    branch_limit: 1
+    
+    parameter_patterns:
+      voltage:
+        min: vlow
+        max: vhigh
+        branch: branch1
+        message: message1
+      current:
+        min: ilow
+        max: ihigh
+        branch: branch1
+        message: message1
+      self_heating:
+        max_temp_rise: dtmax
+        time_constant: theat
+        monitor_type: monitor
+        dc_max: idc_high
+        peak_max: ipeak_high
+        rms_max: irms_high
+
+  # ==========================================================================
+  # ovcheck6 - Multi-Branch Voltage/Current Check (up to 6 branches)
+  # ==========================================================================
+  ovcheck6:
+    description: "Multi-branch voltage or current check (up to 6 branches)"
+    verilog_a_file: "ovcheck_mos_alt.va"
+    
+    capabilities:
+      - voltage_check
+      - current_check
+      - multi_branch
+      - time_limits
+      
+    required_parameters:
+      - tmin
+      - tdelay
+      - vballmsg
+      - stop
+      
+    optional_parameters:
+      - tmaxfrac
+      # Branch 1
+      - vlow1
+      - vhigh1
+      - branch1
+      - message1
+      # Branch 2
+      - vlow2
+      - vhigh2
+      - branch2
+      - message2
+      # Branch 3
+      - vlow3
+      - vhigh3
+      - branch3
+      - message3
+      # Branch 4
+      - vlow4
+      - vhigh4
+      - branch4
+      - message4
+      # Branch 5
+      - vlow5
+      - vhigh5
+      - branch5
+      - message5
+      # Branch 6
+      - vlow6
+      - vhigh6
+      - branch6
+      - message6
+      
+    branch_limit: 6
+    
+    parameter_patterns:
+      voltage:
+        min: "vlow{N}"
+        max: "vhigh{N}"
+        branch: "branch{N}"
+        message: "message{N}"
+
+  # ==========================================================================
+  # ovcheckva_mos2 - MOS State-Dependent Voltage Check
+  # ==========================================================================
+  ovcheckva_mos2:
+    description: "MOS transistor state-dependent voltage check (on/off states)"
+    verilog_a_file: "ovcheck_mos_alt.va"
+    
+    capabilities:
+      - voltage_check
+      - state_dependent
+      - gate_control
+      
+    required_parameters:
+      - tmin
+      - tdelay
+      - vballmsg
+      - stop
+      - param   # state detection parameter (e.g., vth)
+      - vgt     # gate threshold
+      
+    optional_parameters:
+      - tmaxfrac
+      - vhigh_on   # max voltage when transistor is ON
+      - vhigh_off  # max voltage when transistor is OFF
+      - vhigh_gc   # max gate control voltage
+      - vlow_gc    # min gate control voltage
+      
+    parameter_patterns:
+      state_dependent:
+        on_max: vhigh_on
+        off_max: vhigh_off
+        gate_max: vhigh_gc
+        gate_min: vlow_gc
+        state_param: param
+        threshold: vgt
+
+  # ==========================================================================
+  # ovcheckva_pwl - Piecewise Linear Voltage Check (Temperature-Dependent)
+  # ==========================================================================
+  ovcheckva_pwl:
+    description: "Piecewise linear voltage check with temperature dependence"
+    verilog_a_file: "ovcheck_pwl_alt.va"
+    
+    capabilities:
+      - voltage_check
+      - temperature_dependent
+      - expression_limits
+      
+    required_parameters:
+      - tmin
+      - tdelay
+      - vballmsg
+      - stop
+      - branch1
+      - message1
+      
+    optional_parameters:
+      - tmaxfrac
+      - vlow   # can be expression like "-ap_fwd_ref - ap_fwd_T * (T - 25)"
+      - vhigh  # can be expression like "ap_fwd_ref + ap_fwd_T * (T - 25)"
+      
+    parameter_patterns:
+      temperature_dependent:
+        min_expr: vlow
+        max_expr: vhigh
+        branch: branch1
+        message: message1
+
+  # ==========================================================================
+  # ovcheckva_ldmos_hci_tddb - HCI/TDDB Aging Check for LDMOS
+  # ==========================================================================
+  ovcheckva_ldmos_hci_tddb:
+    description: "Hot carrier injection and time-dependent dielectric breakdown aging check"
+    verilog_a_file: "ovcheck_ldmos_hci_tddb_alt.va"
+    
+    capabilities:
+      - aging_check
+      - hci_tddb
+      
+    required_parameters:
+      - tmin
+      - tdelay
+      - vballmsg
+      - stop
+      - atype  # aging type parameter
+      
+    optional_parameters:
+      - soa_hcitddb_a
+      - soa_hcitddb_b
+      - soa_hcitddb_c
+      - soa_hcitddb_d
+      - soa_hcitddb_e
+      - soa_hcitddb_f
+      - soa_hcitddb_g
+      - soa_hcitddb_h
+      - soa_hcitddb_i
+      - soa_hcitddb_j
+      - soa_hcitddb_k
+      - soa_hcitddb_l
+      - soa_hcitddb_m
+      - soa_hcitddb_n
+      
+    parameter_patterns:
+      aging:
+        type: atype
+        coeff_a: soa_hcitddb_a
+        coeff_b: soa_hcitddb_b
+        coeff_c: soa_hcitddb_c
+        coeff_d: soa_hcitddb_d
+        coeff_e: soa_hcitddb_e
+        coeff_f: soa_hcitddb_f
+        coeff_g: soa_hcitddb_g
+        coeff_h: soa_hcitddb_h
+        coeff_i: soa_hcitddb_i
+        coeff_j: soa_hcitddb_j
+        coeff_k: soa_hcitddb_k
+        coeff_l: soa_hcitddb_l
+        coeff_m: soa_hcitddb_m
+        coeff_n: soa_hcitddb_n
+
+  # ==========================================================================
+  # parcheckva3 - Parameter Value Check
+  # ==========================================================================
+  parcheckva3:
+    description: "Device parameter value check (e.g., threshold voltage)"
+    verilog_a_file: "parcheck3.va"
+    
+    capabilities:
+      - parameter_check
+      
+    required_parameters:
+      - tmin
+      - tdelay
+      - vballmsg
+      - stop
+      - param  # parameter name to check (e.g., "vth")
+      
+    optional_parameters:
+      - tmaxfrac
+      - vlow   # minimum parameter value
+      - vhigh  # maximum parameter value
+      - vgt    # gate threshold
+      
+    parameter_patterns:
+      parameter:
+        name: param
+        min: vlow
+        max: vhigh
+        threshold: vgt
+
+# ==========================================================================
+# Monitor Selection Rules
+# ==========================================================================
+selection_rules:
+  # Voltage checks
+  voltage_check:
+    single_branch: ovcheck
+    multi_branch: ovcheck6
+    state_dependent: ovcheckva_mos2
+    temperature_dependent: ovcheckva_pwl
+    
+  # Current checks
+  current_check:
+    single_branch: ovcheck
+    multi_branch: ovcheck6
+    
+  # Self-heating checks
+  self_heating:
+    default: ovcheck
+    
+  # Parameter checks
+  parameter_check:
+    default: parcheckva3
+    
+  # Aging checks
+  aging_check:
+    hci_tddb: ovcheckva_ldmos_hci_tddb
+
+# ==========================================================================
+# Time Limit Mappings
+# ==========================================================================
+time_limit_mapping:
+  steady: tmaxfrac0
+  transient_1pct: tmaxfrac1
+  transient_10pct: tmaxfrac2
+  review: tmaxfrac3
