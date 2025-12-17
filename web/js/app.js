@@ -181,78 +181,249 @@ function onCheckTypeChange() {
 function updateCheckConfig(monitorType, config) {
     checkConfigContent.innerHTML = '';
     
+    // Voltage check (ovcheck, ovcheck6)
     if (config.capabilities.includes('voltage_check')) {
+        if (config.capabilities.includes('multi_branch')) {
+            // Multi-branch voltage check
+            checkConfigContent.innerHTML = `
+                <div class="form-group">
+                    <label>Number of Branches</label>
+                    <select id="numBranches" onchange="updateBranchFields()">
+                        <option value="1">1 Branch</option>
+                        <option value="2">2 Branches</option>
+                        <option value="3" selected>3 Branches</option>
+                        <option value="4">4 Branches</option>
+                        <option value="5">5 Branches</option>
+                        <option value="6">6 Branches</option>
+                    </select>
+                </div>
+                <div id="branchFields"></div>
+            `;
+            setTimeout(() => updateBranchFields(), 0);
+        } else {
+            // Single branch voltage check
+            checkConfigContent.innerHTML = `
+                <div class="form-group">
+                    <label for="signalMeasure">Signal to Measure *</label>
+                    <input type="text" id="signalMeasure" placeholder="e.g., V(g,s)" required>
+                    <small>Example: V(g,s), V(d,s), V(t,nw)</small>
+                </div>
+                <div class="form-group">
+                    <label for="signalMessage">Message</label>
+                    <input type="text" id="signalMessage" placeholder="e.g., Vgs_OXrisk">
+                </div>
+            `;
+        }
+    }
+    // State-dependent check (ovcheckva_mos2)
+    else if (config.capabilities.includes('state_dependent')) {
         checkConfigContent.innerHTML = `
             <div class="form-group">
                 <label for="signalMeasure">Signal to Measure *</label>
-                <input type="text" id="signalMeasure" placeholder="e.g., V(g,s)" required>
-                <small>Available nodes will be shown based on selected devices</small>
+                <input type="text" id="signalMeasure" placeholder="e.g., V(d,s)" required>
+                <small>Typically drain-source voltage V(d,s)</small>
+            </div>
+            <div class="form-group">
+                <label for="stateParameter">State Detection Parameter *</label>
+                <input type="text" id="stateParameter" value="vth" required>
+                <small>Parameter used to detect transistor state (usually vth)</small>
+            </div>
+            <div class="form-group">
+                <label for="stateThreshold">State Threshold</label>
+                <input type="number" id="stateThreshold" value="0.0" step="any">
+                <small>Threshold for state detection (usually 0.0)</small>
+            </div>
+        `;
+    }
+    // Temperature-dependent check (ovcheckva_pwl)
+    else if (config.capabilities.includes('temperature_dependent')) {
+        checkConfigContent.innerHTML = `
+            <div class="form-group">
+                <label for="signalMeasure">Signal to Measure *</label>
+                <input type="text" id="signalMeasure" placeholder="e.g., V(p,n)" required>
+                <small>Typically diode voltage V(p,n)</small>
             </div>
             <div class="form-group">
                 <label for="signalMessage">Message</label>
-                <input type="text" id="signalMessage" placeholder="e.g., Vgs_OXrisk">
+                <input type="text" id="signalMessage" placeholder="e.g., Vpn_temp">
+            </div>
+            <div class="form-group">
+                <label for="refTemp">Reference Temperature (°C)</label>
+                <input type="number" id="refTemp" value="25" step="any">
+            </div>
+            <div class="form-group">
+                <label for="refValue">Reference Value</label>
+                <input type="number" id="refValue" placeholder="e.g., 0.9943" step="any">
+            </div>
+            <div class="form-group">
+                <label for="tempCoeff">Temperature Coefficient</label>
+                <input type="number" id="tempCoeff" placeholder="e.g., -0.0006" step="any">
+                <small>Generates: refValue + tempCoeff * (T - refTemp)</small>
             </div>
         `;
-    } else if (config.capabilities.includes('parameter_check')) {
+    }
+    // Parameter check (parcheckva3)
+    else if (config.capabilities.includes('parameter_check')) {
         checkConfigContent.innerHTML = `
             <div class="form-group">
                 <label for="parameterName">Parameter Name *</label>
                 <input type="text" id="parameterName" placeholder="e.g., vth" required>
-                <small>Available parameters will be shown based on selected devices</small>
+                <small>Device parameter to check (e.g., vth, w, l)</small>
+            </div>
+            <div class="form-group">
+                <label for="gateThreshold">Gate Threshold</label>
+                <input type="number" id="gateThreshold" value="0.0" step="any">
             </div>
         `;
-    } else if (config.capabilities.includes('aging_check')) {
+    }
+    // Aging check (ovcheckva_ldmos_hci_tddb)
+    else if (config.capabilities.includes('aging_check')) {
         checkConfigContent.innerHTML = `
             <div class="form-group">
                 <label>Aging Mechanism</label>
                 <select id="agingMechanism">
-                    <option value="hci_tddb">HCI/TDDB</option>
+                    <option value="hci_tddb">HCI/TDDB (Hot Carrier Injection / Time-Dependent Dielectric Breakdown)</option>
                 </select>
+            </div>
+            <div class="form-group">
+                <label for="agingCoeffA">Coefficient A</label>
+                <input type="number" id="agingCoeffA" placeholder="e.g., 24" step="any">
+            </div>
+            <div class="form-group">
+                <label for="agingCoeffB">Coefficient B</label>
+                <input type="number" id="agingCoeffB" placeholder="e.g., 0.38" step="any">
+            </div>
+            <small>Additional coefficients (c-n) can be added if needed</small>
+        `;
+    }
+    // Self-heating check
+    else if (config.capabilities.includes('self_heating')) {
+        checkConfigContent.innerHTML = `
+            <div class="form-group">
+                <label for="maxTempRise">Max Temperature Rise (°C)</label>
+                <input type="number" id="maxTempRise" value="5" step="any">
+            </div>
+            <div class="form-group">
+                <label for="thermalTimeConst">Thermal Time Constant (s)</label>
+                <input type="number" id="thermalTimeConst" value="1e-7" step="any">
+            </div>
+            <div class="form-group">
+                <label for="dcCurrentMax">DC Current Max (expression)</label>
+                <input type="text" id="dcCurrentMax" placeholder="e.g., $w * 4.05e-3">
+                <small>Use $w, $l for device parameters</small>
             </div>
         `;
     }
+}
+
+// Update branch fields for multi-branch checks
+function updateBranchFields() {
+    const numBranches = parseInt(document.getElementById('numBranches').value);
+    const branchFields = document.getElementById('branchFields');
+    
+    let html = '';
+    for (let i = 1; i <= numBranches; i++) {
+        html += `
+            <div class="branch-group">
+                <h4>Branch ${i}</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="branch${i}Signal">Signal *</label>
+                        <input type="text" id="branch${i}Signal" placeholder="e.g., V(g,${i === 1 ? 'b' : i === 2 ? 's' : 'd'})" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="branch${i}Message">Message</label>
+                        <input type="text" id="branch${i}Message" placeholder="e.g., Vg${i === 1 ? 'b' : i === 2 ? 's' : 'd'}_OXrisk">
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    branchFields.innerHTML = html;
 }
 
 // Update limits configuration UI
 function updateLimitsConfig(monitorType, config) {
     limitsConfig.innerHTML = '';
     
+    // Voltage/Current checks - simple min/max
     if (config.capabilities.includes('voltage_check') || config.capabilities.includes('current_check')) {
+        if (!config.capabilities.includes('state_dependent') && !config.capabilities.includes('temperature_dependent')) {
+            limitsConfig.innerHTML = `
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="limitMin">Minimum</label>
+                        <input type="number" id="limitMin" step="any" placeholder="e.g., -1.32">
+                    </div>
+                    <div class="form-group">
+                        <label for="limitMax">Maximum *</label>
+                        <input type="number" id="limitMax" step="any" placeholder="e.g., 1.32" required>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // State-dependent checks
+    if (config.capabilities.includes('state_dependent')) {
         limitsConfig.innerHTML = `
+            <div class="form-group">
+                <label for="limitOnMax">Maximum (ON state) *</label>
+                <input type="number" id="limitOnMax" step="any" placeholder="e.g., 1.84" required>
+                <small>Voltage limit when transistor is ON (Vgs > Vth)</small>
+            </div>
+            <div class="form-group">
+                <label for="limitOffMax">Maximum (OFF state) *</label>
+                <input type="number" id="limitOffMax" step="any" placeholder="e.g., 3.0" required>
+                <small>Voltage limit when transistor is OFF (Vgs < Vth)</small>
+            </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="limitMin">Minimum</label>
-                    <input type="number" id="limitMin" step="any" placeholder="e.g., -1.32">
+                    <label for="limitGateMax">Gate Control Max</label>
+                    <input type="number" id="limitGateMax" step="any" placeholder="e.g., 2.07">
                 </div>
                 <div class="form-group">
-                    <label for="limitMax">Maximum</label>
-                    <input type="number" id="limitMax" step="any" placeholder="e.g., 1.32">
+                    <label for="limitGateMin">Gate Control Min</label>
+                    <input type="number" id="limitGateMin" step="any" placeholder="e.g., -2.07">
                 </div>
             </div>
         `;
-    } else if (config.capabilities.includes('state_dependent')) {
+    }
+    
+    // Temperature-dependent checks (limits already in check config)
+    if (config.capabilities.includes('temperature_dependent')) {
         limitsConfig.innerHTML = `
-            <div class="form-group">
-                <label for="limitOnMax">Maximum (ON state)</label>
-                <input type="number" id="limitOnMax" step="any" placeholder="e.g., 1.84">
-            </div>
-            <div class="form-group">
-                <label for="limitOffMax">Maximum (OFF state)</label>
-                <input type="number" id="limitOffMax" step="any" placeholder="e.g., 3.0">
-            </div>
+            <p><em>Limits are temperature-dependent (configured above)</em></p>
         `;
-    } else if (config.capabilities.includes('parameter_check')) {
+    }
+    
+    // Parameter checks
+    if (config.capabilities.includes('parameter_check')) {
         limitsConfig.innerHTML = `
             <div class="form-row">
                 <div class="form-group">
-                    <label for="paramMin">Minimum</label>
-                    <input type="number" id="paramMin" step="any" placeholder="e.g., 0.3">
+                    <label for="paramMin">Minimum *</label>
+                    <input type="number" id="paramMin" step="any" placeholder="e.g., 0.3" required>
                 </div>
                 <div class="form-group">
-                    <label for="paramMax">Maximum</label>
-                    <input type="number" id="paramMax" step="any" placeholder="e.g., 0.7">
+                    <label for="paramMax">Maximum *</label>
+                    <input type="number" id="paramMax" step="any" placeholder="e.g., 0.7" required>
                 </div>
             </div>
+        `;
+    }
+    
+    // Aging checks (no limits, uses coefficients)
+    if (config.capabilities.includes('aging_check')) {
+        limitsConfig.innerHTML = `
+            <p><em>Aging limits are determined by coefficients (configured above)</em></p>
+        `;
+    }
+    
+    // Self-heating checks (no limits, uses current expressions)
+    if (config.capabilities.includes('self_heating')) {
+        limitsConfig.innerHTML = `
+            <p><em>Current limits are configured above</em></p>
         `;
     }
 }
