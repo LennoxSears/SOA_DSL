@@ -1,328 +1,205 @@
-# SOA DSL Architecture - Three-Layer Design
+# SOA DSL Architecture
 
 ## Overview
 
-The SOA DSL uses a three-layer architecture that separates concerns between user-facing specifications, monitor implementations, and final code generation.
+SOA DSL separates device-specific details from monitor-specific details, allowing users to create universal SOA rules without needing to know about Verilog-A monitor implementations.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 1: Universal Specification (User Input)             │
-│  ─────────────────────────────────────────────────────────  │
-│  Model/Monitor Agnostic - Describes WHAT to check          │
-│  - Device types (nmos_core, cap_low, etc.)                 │
-│  - Check types (voltage, current, temperature, aging)      │
-│  - Limits (min/max, steady/transient)                      │
-│  - Conditions (state-dependent, temp-dependent)            │
-│                                                             │
-│  File: examples/soa_rules_universal.yaml                   │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Middleware: Converter                                      │
-│  ─────────────────────────────────────────────────────────  │
-│  Uses:                                                      │
-│  - config/device_library.yaml (device characteristics)     │
-│  - config/monitor_library.yaml (monitor capabilities)      │
-│                                                             │
-│  Logic:                                                     │
-│  - Selects appropriate monitor type                        │
-│  - Maps universal parameters to monitor parameters         │
-│  - Generates monitor-specific expressions                  │
-│                                                             │
-│  Tool: src/soa_dsl/converter.py                            │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 2: Monitor Specification (Intermediate)             │
-│  ─────────────────────────────────────────────────────────  │
-│  Monitor/Model Aware - Describes HOW to check              │
-│  - Monitor types (ovcheck, ovcheck6, ovcheckva_mos2, etc.) │
-│  - Model names and sections                                │
-│  - Monitor-specific parameters                             │
-│  - Branch expressions                                       │
-│                                                             │
-│  File: output/monitors_generated.yaml                      │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Generator                                                  │
-│  ─────────────────────────────────────────────────────────  │
-│  Generates Spectre netlist code                            │
-│  - Verilog-A includes                                      │
-│  - Parameter definitions                                    │
-│  - Monitor instantiations                                   │
-│                                                             │
-│  Tool: src/soa_dsl/generator.py                            │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 3: Spectre Code (Final Output)                      │
-│  ─────────────────────────────────────────────────────────  │
-│  Executable Spectre netlist                                 │
-│  - simulator lang=spectre                                   │
-│  - section base with includes                               │
-│  - model definitions                                        │
-│                                                             │
-│  File: output/soachecks.scs                                │
-└─────────────────────────────────────────────────────────────┘
+## Three Key Components
+
+### 1. Device Library (`config/device_library.yaml`)
+
+**Purpose:** Model-specific details
+
+Defines:
+- **Subcircuits**: Actual model names (e.g., `nch_mac`, `pch_lvt_mac`, `cap_low_model`)
+- **Node names**: Terminal names for each device (e.g., `[g, d, s, b]` for MOSFET)
+- **Parameters**: Available instance parameters (e.g., `[w, l, m, vth]`)
+- **Hierarchy level**: Where SOA checks are inserted (transistor, device, etc.)
+
+Grouping:
+- **Level 1 Groups**: Direct grouping of subcircuits (e.g., `nmos_core_variants: [nch_mac, nch_lvt_mac, nch_hvt_mac]`)
+- **Level 2 Groups**: Groups of level 1 groups (e.g., `all_nmos: [nmos_core_variants, nmos_5v_variants]`)
+
+**Example:**
+```yaml
+subcircuits:
+  nch_mac:
+    type: nmos
+    nodes: [g, d, s, b]
+    parameters: [w, l, m, vth]
+    hierarchy_level: transistor
+
+level1_groups:
+  nmos_core_variants:
+    subcircuits: [nch_mac, nch_lvt_mac, nch_hvt_mac]
+
+level2_groups:
+  all_nmos:
+    level1_groups: [nmos_core_variants, nmos_5v_variants]
 ```
 
-## Layer 1: Universal Specification
+### 2. Monitor Library (`config/monitor_library.yaml`)
 
-### Purpose
-User-facing format that describes SOA rules in terms of physics and electrical constraints, without knowledge of specific monitor implementations.
+**Purpose:** Monitor-specific details
 
-### Key Features
-- **Device-centric**: Rules apply to device types (nmos_core, cap_low)
-- **Physics-based**: Describes voltage, current, temperature, aging
-- **Declarative**: No expressions to parse, structured data only
-- **Portable**: Can target different monitor sets or simulators
+Defines:
+- **Monitor types**: Available Verilog-A monitors (e.g., `ovcheck`, `ovcheck6`, `ovcheckva_mos2`)
+- **Capabilities**: What each monitor can check (voltage, current, state-dependent, etc.)
+- **Parameters**: Required and optional parameters for each monitor
+- **Descriptions**: User-friendly descriptions
 
-### Example
+**Example:**
+```yaml
+monitors:
+  ovcheck:
+    description: "Single branch voltage or current check"
+    capabilities:
+      - voltage_check
+      - current_check
+      - single_branch
+    required_parameters:
+      - tmin
+      - tdelay
+      - vballmsg
+      - stop
+```
+
+### 3. Web Interface (`web/index.html`)
+
+**Purpose:** Generate universal SOA YAML
+
+Workflow:
+1. **Load libraries** on page load
+2. **User selects check type** (from monitor library)
+3. **User selects devices** (from device library - direct subcircuits or groups)
+4. **User configures check** (form adapts based on monitor type)
+5. **User sets limits** (min/max values, time limits)
+6. **Generate universal YAML** (ready to use with CLI)
+
+**Output:** `examples/soa_rules_universal.yaml` format
+
+## Data Flow
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Device Library                Monitor Library          │
+│  (model details)               (monitor details)        │
+└────────────┬──────────────────────────┬─────────────────┘
+             │                          │
+             └──────────┬───────────────┘
+                        ↓
+             ┌──────────────────────┐
+             │   Web Interface      │
+             │   (combines both)    │
+             └──────────┬───────────┘
+                        ↓
+             ┌──────────────────────┐
+             │  Universal SOA YAML  │
+             │  (user-friendly)     │
+             └──────────┬───────────┘
+                        ↓
+             ┌──────────────────────┐
+             │   CLI Converter      │
+             │   (middleware)       │
+             └──────────┬───────────┘
+                        ↓
+             ┌──────────────────────┐
+             │  Monitor YAML        │
+             │  (monitor-aware)     │
+             └──────────┬───────────┘
+                        ↓
+             ┌──────────────────────┐
+             │  Spectre Generator   │
+             └──────────┬───────────┘
+                        ↓
+             ┌──────────────────────┐
+             │  Spectre .scs file   │
+             │  (final output)      │
+             └──────────────────────┘
+```
+
+## Key Design Principles
+
+### Separation of Concerns
+- **Device library**: Knows about models, nodes, parameters
+- **Monitor library**: Knows about Verilog-A monitors, capabilities
+- **Universal YAML**: Knows about physics (voltage, current, limits)
+- **User**: Doesn't need to know about monitors or model details
+
+### User Experience
+Users write:
 ```yaml
 rules:
   - name: "NMOS Core Oxide Risk"
     applies_to:
-      devices: [nmos_core]
+      subcircuits: [nch_mac, nch_lvt_mac, nch_hvt_mac]
     check:
       type: voltage
-      measure:
-        - signal: V(g,b)
-          message: "Vgb_OXrisk"
-        - signal: V(g,s)
-          message: "Vgs_OXrisk"
+      measure: V(g,s)
     limits:
       steady:
-        min: -1.32
         max: 1.32
 ```
 
-## Configuration Files
-
-### device_library.yaml
-Defines device characteristics and node mappings.
-
-```yaml
-devices:
-  nmos_core:
-    type: mosfet
-    polarity: n
-    nodes: [g, d, s, b]
-    subcircuit: [nch_mac, nch_lvt_mac, nch_hvt_mac]
-    has_states: true
-    state_parameter: vth
-```
-
-### monitor_library.yaml
-Defines monitor capabilities and parameter mappings.
-
+Not:
 ```yaml
 monitors:
-  ovcheck6:
-    description: "Multi-branch voltage check (up to 6 branches)"
-    capabilities:
-      - voltage_check
-      - multi_branch
-    branch_limit: 6
-    parameter_patterns:
-      voltage:
-        min: "vlow{N}"
-        max: "vhigh{N}"
-```
-
-## Middleware: Converter
-
-### Monitor Selection Logic
-
-The converter automatically selects the appropriate monitor type based on rule characteristics:
-
-| Rule Characteristic | Monitor Type |
-|-------------------|--------------|
-| Single voltage/current signal | `ovcheck` |
-| Multiple voltage/current signals | `ovcheck6` |
-| State-dependent (on/off) | `ovcheckva_mos2` |
-| Temperature-dependent | `ovcheckva_pwl` |
-| Aging (HCI/TDDB) | `ovcheckva_ldmos_hci_tddb` |
-| Parameter check | `parcheckva3` |
-| Self-heating | `ovcheck` (with thermal params) |
-
-### Parameter Mapping
-
-Universal parameters are mapped to monitor-specific parameters:
-
-```
-Universal                    Monitor (ovcheck6)
-─────────────────────────   ──────────────────────
-steady.min: -1.32      →    vlow1: -1.32
-steady.max: 1.32       →    vhigh1: 1.32
-measure[0].signal      →    branch1: "V(g,b)"
-measure[0].message     →    message1: "Vgb_OXrisk"
-time_limit: review     →    tmaxfrac: tmaxfrac3
-```
-
-### Expression Generation
-
-For temperature-dependent limits:
-```yaml
-# Universal
-temperature_dependent:
-  reference_temp: 25
-  reference_value: 0.9943
-  temp_coefficient: -0.0006
-
-# Generated
-vhigh: "0.9943 - 0.0006 * (T - 25)"
-```
-
-## Layer 2: Monitor Specification
-
-### Purpose
-Intermediate format that directly maps to Verilog-A monitor implementations. Can be:
-- Generated by converter (from universal spec)
-- Written manually (for advanced users)
-- Used for debugging/inspection
-
-### Example
-```yaml
-monitors:
-  - name: "NMOS Core Oxide Risk"
-    monitor_type: ovcheck6
-    model_name: ovcheck6_nmos_core_nmos_core_oxide_risk
-    section: soacheck_nmos_core_nmos_core_oxide_risk_shared
-    device_pattern: nmos_core
+  - monitor_type: ovcheck6
+    model_name: ovcheck_mos_core_oxrisk
+    section: soacheck_nmos_core_oxrisk_shared
     parameters:
-      tmin: global_tmin
-      tdelay: global_tdelay
-      vballmsg: global_vballmsg
-      stop: global_stop
-      tmaxfrac: tmaxfrac3
-      vlow1: -1.32
       vhigh1: 1.32
-      branch1: "V(g,b)"
-      message1: "Vgb_OXrisk"
+      branch1: "V(g,s)"
 ```
 
-## Layer 3: Spectre Code
+### Flexibility
+- Add new devices → update device library only
+- Add new monitors → update monitor library only
+- Change monitor selection logic → update converter only
+- User specifications remain unchanged
 
-### Purpose
-Final executable Spectre netlist code with Verilog-A monitor instantiations.
+## Benefits
 
-### Example
-```spectre
-simulator lang=spectre
+1. **Simple for users**: Write physics-based rules, not monitor code
+2. **Maintainable**: Model and monitor details in separate files
+3. **Extensible**: Easy to add new devices or monitors
+4. **Portable**: Universal YAML can target different monitor sets
+5. **Web-friendly**: Libraries are YAML, easy to load in browser
 
-section base
-ahdl_include "./veriloga/ovcheck_mos_alt.va"
-parameters
-+ global_tmin = 0
-+ tmaxfrac3 = -1
-endsection base
-
-section soacheck_nmos_core_nmos_core_oxide_risk_shared
-model ovcheck6_nmos_core_nmos_core_oxide_risk ovcheck6
-+ tmin=global_tmin tmaxfrac=tmaxfrac3
-+ vlow1=-1.32 vhigh1=1.32 branch1="V(g,b)" message1="Vgb_OXrisk"
-endsection soacheck_nmos_core_nmos_core_oxide_risk_shared
-```
-
-## CLI Commands
-
-### Convert: Universal → Monitor
-```bash
-python soa_dsl_cli.py convert \
-  examples/soa_rules_universal.yaml \
-  -o output/monitors.yaml
-```
-
-### Generate: Monitor → Spectre
-```bash
-python soa_dsl_cli.py generate \
-  output/monitors.yaml \
-  -o output/soachecks.scs
-```
-
-### Compile: Universal → Spectre (One-Step)
-```bash
-python soa_dsl_cli.py compile \
-  examples/soa_rules_universal.yaml \
-  -o output/soachecks.scs
-```
-
-### Validate: Check Monitor Spec
-```bash
-python soa_dsl_cli.py validate \
-  examples/soa_monitors.yaml
-```
-
-## File Organization
+## Files
 
 ```
 SOA_DSL/
 ├── config/
-│   ├── device_library.yaml      # Device definitions
-│   └── monitor_library.yaml     # Monitor capabilities
+│   ├── device_library.yaml      # Model-specific details
+│   └── monitor_library.yaml     # Monitor-specific details
 ├── examples/
-│   ├── soa_rules_universal.yaml # Layer 1 (user input)
-│   └── soa_monitors.yaml        # Layer 2 (monitor spec)
-├── output/
-│   ├── monitors_generated.yaml  # Layer 2 (generated)
-│   └── soachecks.scs           # Layer 3 (final output)
+│   ├── soa_rules_universal.yaml # User-facing format
+│   └── soa_monitors.yaml        # Monitor-aware format
+├── web/
+│   ├── index.html               # Web interface
+│   ├── js/app.js                # Loads libraries, generates YAML
+│   └── css/style.css            # Styling
 ├── src/soa_dsl/
-│   ├── converter.py            # Universal → Monitor
-│   ├── parser.py               # Parse monitor YAML
-│   └── generator.py            # Monitor → Spectre
-└── soa_dsl_cli.py              # Command-line interface
+│   ├── converter.py             # Universal → Monitor
+│   ├── parser.py                # Parse monitor YAML
+│   └── generator.py             # Monitor → Spectre
+└── soa_dsl_cli.py               # CLI tool
 ```
 
-## Benefits of Three-Layer Architecture
+## Usage
 
-### Separation of Concerns
-- **Layer 1**: User focuses on physics/electrical constraints
-- **Layer 2**: Middleware handles monitor selection and mapping
-- **Layer 3**: Generator produces correct Spectre syntax
+### Web Interface
+1. Open `web/index.html` in browser
+2. Select check type (from monitor library)
+3. Select devices (from device library)
+4. Configure check and limits
+5. Download universal YAML
 
-### Flexibility
-- Can support multiple monitor sets (Spectre, HSPICE, custom)
-- Can add new monitor types without changing user-facing format
-- Can optimize monitor selection independently
+### Command Line
+```bash
+# Generate Spectre from universal YAML
+python soa_dsl_cli.py compile examples/soa_rules_universal.yaml -o output/soachecks.scs
+```
 
-### Debuggability
-- Layer 2 (monitor spec) can be inspected/modified
-- Each layer can be tested independently
-- Clear transformation at each step
-
-### Maintainability
-- Device library can be updated independently
-- Monitor library tracks available monitors
-- Conversion logic is centralized
-
-### Extensibility
-- New device types: add to device_library.yaml
-- New monitor types: add to monitor_library.yaml
-- New check patterns: extend converter logic
-
-## Design Principles
-
-### No AST Processing
-- Universal spec uses structured data (dicts, lists)
-- No expression parsing required
-- Patterns are recognized, not parsed
-
-### Declarative Over Imperative
-- Users declare what to check, not how
-- Middleware decides implementation details
-- Templates for common patterns
-
-### Configuration Over Code
-- Device and monitor characteristics in YAML
-- Easy to update without code changes
-- Process-specific configurations possible
-
-### Fail Fast
-- Validation at each layer
-- Clear error messages
-- Type checking with dataclasses
+That's it! Simple separation of concerns makes the system flexible and maintainable.
