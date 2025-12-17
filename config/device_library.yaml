@@ -1,254 +1,345 @@
 # Device Library - SMOS10HV Process
-# Maps logical device names to physical implementations
+# Provides model-specific details for subcircuits
 version: "1.0"
 process: "SMOS10HV"
 
-devices:
-  # ============================================================================
+# ============================================================================
+# Subcircuit Definitions (Model-Specific Details)
+# Answers GJ's questions:
+# - Exact node names
+# - Subcircuit hierarchy level (where to insert SOA checks)
+# - Instance parameter names (for parameter-dependent limits)
+# ============================================================================
+subcircuits:
+  # ==========================================================================
+  # NMOS Transistors
+  # ==========================================================================
+  nch_mac:
+    type: nmos
+    nodes: [g, d, s, b]           # gate, drain, source, bulk
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]    # width, length, multiplier, threshold voltage
+    description: "Core NMOS standard Vt"
+    
+  nch_lvt_mac:
+    type: nmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "Core NMOS low Vt"
+    
+  nch_hvt_mac:
+    type: nmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "Core NMOS high Vt"
+    
+  nch_5v_mac:
+    type: nmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "5V NMOS"
+    
+  nch_hv_mac:
+    type: nmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "High voltage NMOS"
+    
+  nch_90v_mac:
+    type: nmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "90V NMOS"
+
+  # ==========================================================================
+  # PMOS Transistors
+  # ==========================================================================
+  pch_mac:
+    type: pmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "Core PMOS standard Vt"
+    
+  pch_lvt_mac:
+    type: pmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "Core PMOS low Vt"
+    
+  pch_hvt_mac:
+    type: pmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "Core PMOS high Vt"
+    
+  pch_5v_mac:
+    type: pmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "5V PMOS"
+    
+  pch_hv_mac:
+    type: pmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "High voltage PMOS"
+    
+  pch_90v_mac:
+    type: pmos
+    nodes: [g, d, s, b]
+    hierarchy_level: transistor
+    parameters: [w, l, m, vth]
+    description: "90V PMOS"
+
+  # ==========================================================================
   # Capacitors
-  # ============================================================================
-  cap_low:
+  # ==========================================================================
+  cap_low_model:
     type: capacitor
-    category: passive
-    nodes: [t, nw]  # top, n-well
-    subcircuit: [cap_low_model]
-    voltage_rating: low
+    nodes: [t, nw]                # top, n-well
+    hierarchy_level: device
+    parameters: [w, l, m]
     description: "Low voltage capacitor"
     
-  cap_mid:
+  cap_mid_model:
     type: capacitor
-    category: passive
     nodes: [t, nw]
-    subcircuit: [cap_mid_model]
-    voltage_rating: medium
+    hierarchy_level: device
+    parameters: [w, l, m]
     description: "Medium voltage capacitor"
     
-  cap_high:
+  cap_high_model:
     type: capacitor
-    category: passive
     nodes: [t, nw]
-    subcircuit: [cap_high_model]
-    voltage_rating: high
+    hierarchy_level: device
+    parameters: [w, l, m]
     description: "High voltage capacitor"
     
-  cap_90:
+  cap_90_model:
     type: capacitor
-    category: passive
     nodes: [t, nw]
-    subcircuit: [cap_90_model]
-    voltage_rating: 90v
+    hierarchy_level: device
+    parameters: [w, l, m]
     description: "90V capacitor"
     
-  cap_45:
+  cap_45_model:
     type: capacitor
-    category: passive
     nodes: [t, nw]
-    subcircuit: [cap_45_model]
-    voltage_rating: 45v
+    hierarchy_level: device
+    parameters: [w, l, m]
     description: "45V capacitor"
 
-  # ============================================================================
-  # NMOS Transistors
-  # ============================================================================
-  nmos_core:
-    type: mosfet
-    category: active
-    polarity: n
-    nodes: [g, d, s, b]  # gate, drain, source, bulk
-    subcircuit: [nch_mac, nch_lvt_mac, nch_hvt_mac]
-    voltage_rating: core
-    has_states: true
-    state_parameter: vth
-    description: "Core NMOS transistor"
-    
-  nmos_5v:
-    type: mosfet
-    category: active
-    polarity: n
-    nodes: [g, d, s, b]
-    subcircuit: [nch_5v_mac]
-    voltage_rating: 5v
-    has_states: true
-    state_parameter: vth
-    description: "5V NMOS transistor"
-    
-  nmos_hv:
-    type: mosfet
-    category: active
-    polarity: n
-    nodes: [g, d, s, b]
-    subcircuit: [nch_hv_mac, nch_90v_mac]
-    voltage_rating: high
-    has_states: true
-    state_parameter: vth
-    description: "High voltage NMOS transistor"
-
-  # ============================================================================
-  # PMOS Transistors
-  # ============================================================================
-  pmos_core:
-    type: mosfet
-    category: active
-    polarity: p
-    nodes: [g, d, s, b]
-    subcircuit: [pch_mac, pch_lvt_mac, pch_hvt_mac]
-    voltage_rating: core
-    has_states: true
-    state_parameter: vth
-    description: "Core PMOS transistor"
-    
-  pmos_5v:
-    type: mosfet
-    category: active
-    polarity: p
-    nodes: [g, d, s, b]
-    subcircuit: [pch_5v_mac]
-    voltage_rating: 5v
-    has_states: true
-    state_parameter: vth
-    description: "5V PMOS transistor"
-    
-  pmos_hv:
-    type: mosfet
-    category: active
-    polarity: p
-    nodes: [g, d, s, b]
-    subcircuit: [pch_hv_mac]
-    voltage_rating: high
-    has_states: true
-    state_parameter: vth
-    description: "High voltage PMOS transistor"
-    
-  pmos90:
-    type: mosfet
-    category: active
-    polarity: p
-    nodes: [g, d, s, b]
-    subcircuit: [pch_90v_mac]
-    voltage_rating: 90v
-    has_states: true
-    state_parameter: vth
-    supports_aging: true
-    description: "90V PMOS with HCI/TDDB aging"
-
-  # ============================================================================
+  # ==========================================================================
   # Diodes
-  # ============================================================================
-  diode_zener:
+  # ==========================================================================
+  dz5:
     type: diode
-    category: passive
-    nodes: [p, n]  # positive (anode), negative (cathode)
-    subcircuit: [dz5, diode_zener_5v]
-    voltage_rating: 5v
-    temperature_dependent: true
-    description: "Zener diode with temperature dependence"
+    nodes: [p, n]                 # positive (anode), negative (cathode)
+    hierarchy_level: device
+    parameters: [area, pj]
+    description: "5V Zener diode"
     
-  diode_sub_n:
+  diode_zener_5v:
     type: diode
-    category: passive
+    nodes: [p, n]
+    hierarchy_level: device
+    parameters: [area, pj]
+    description: "5V Zener diode variant"
+    
+  diode_n_sub:
+    type: diode
     nodes: [p, sub]
-    subcircuit: [diode_n_sub]
+    hierarchy_level: device
+    parameters: [area, pj]
     description: "N-type substrate diode"
     
-  diode_sub_p:
+  diode_p_sub:
     type: diode
-    category: passive
     nodes: [p, sub]
-    subcircuit: [diode_p_sub]
+    hierarchy_level: device
+    parameters: [area, pj]
     description: "P-type substrate diode"
 
-  # ============================================================================
+  # ==========================================================================
   # Resistors
-  # ============================================================================
-  rm1:
+  # ==========================================================================
+  res_metal1:
     type: resistor
-    category: passive
-    nodes: [p, n]
-    subcircuit: [res_metal1]
-    has_self_heating: true
-    thermal_params:
-      max_temp_rise: 5
-      time_constant: 1e-7
-    description: "Metal-1 resistor with self-heating"
+    nodes: [p, n]                 # positive, negative
+    hierarchy_level: device
+    parameters: [w, l, m]
+    description: "Metal-1 resistor"
     
-  rm2:
+  res_metal2:
     type: resistor
-    category: passive
     nodes: [p, n]
-    subcircuit: [res_metal2]
-    has_self_heating: true
-    thermal_params:
-      max_temp_rise: 5
-      time_constant: 1e-7
-    description: "Metal-2 resistor with self-heating"
+    hierarchy_level: device
+    parameters: [w, l, m]
+    description: "Metal-2 resistor"
 
-  # ============================================================================
+  # ==========================================================================
   # LDMOS (Lateral DMOS)
-  # ============================================================================
-  nldmos:
+  # ==========================================================================
+  nldmos_mac:
     type: ldmos
-    category: active
-    polarity: n
     nodes: [g, d, s, b]
-    subcircuit: [nldmos_mac]
-    voltage_rating: high
+    hierarchy_level: transistor
+    parameters: [w, l, m]
     description: "N-type LDMOS"
     
-  pldmos:
+  pldmos_mac:
     type: ldmos
-    category: active
-    polarity: p
     nodes: [g, d, s, b]
-    subcircuit: [pldmos_mac]
-    voltage_rating: high
+    hierarchy_level: transistor
+    parameters: [w, l, m]
     description: "P-type LDMOS"
 
 # ============================================================================
-# Device Groups (for convenience)
+# Level 1 Groups (Direct Subcircuit Grouping)
+# Groups actual subcircuit names for convenience
 # ============================================================================
-device_groups:
-  all_nmos:
-    - nmos_core
-    - nmos_5v
-    - nmos_hv
-    
-  all_pmos:
-    - pmos_core
-    - pmos_5v
-    - pmos_hv
-    - pmos90
-    
-  all_mosfets:
-    - nmos_core
-    - nmos_5v
-    - nmos_hv
-    - pmos_core
-    - pmos_5v
-    - pmos_hv
-    - pmos90
-    
-  all_capacitors:
-    - cap_low
-    - cap_mid
-    - cap_high
-    - cap_90
-    - cap_45
-    
-  all_diodes:
-    - diode_zener
-    - diode_sub_n
-    - diode_sub_p
-    
-  all_resistors:
-    - rm1
-    - rm2
-    
-  all_ldmos:
-    - nldmos
-    - pldmos
+level1_groups:
+  nmos_core_variants:
+    description: "Core NMOS with different threshold voltages"
+    subcircuits:
+      - nch_mac
+      - nch_lvt_mac
+      - nch_hvt_mac
+  
+  nmos_5v_variants:
+    description: "5V NMOS variants"
+    subcircuits:
+      - nch_5v_mac
+  
+  nmos_hv_variants:
+    description: "High voltage NMOS variants"
+    subcircuits:
+      - nch_hv_mac
+      - nch_90v_mac
+  
+  pmos_core_variants:
+    description: "Core PMOS with different threshold voltages"
+    subcircuits:
+      - pch_mac
+      - pch_lvt_mac
+      - pch_hvt_mac
+  
+  pmos_5v_variants:
+    description: "5V PMOS variants"
+    subcircuits:
+      - pch_5v_mac
+  
+  pmos_hv_variants:
+    description: "High voltage PMOS variants"
+    subcircuits:
+      - pch_hv_mac
+      - pch_90v_mac
+  
+  capacitor_low_variants:
+    description: "Low voltage capacitors"
+    subcircuits:
+      - cap_low_model
+  
+  capacitor_mid_variants:
+    description: "Medium voltage capacitors"
+    subcircuits:
+      - cap_mid_model
+  
+  capacitor_high_variants:
+    description: "High voltage capacitors"
+    subcircuits:
+      - cap_high_model
+      - cap_90_model
+      - cap_45_model
+  
+  diode_zener_variants:
+    description: "Zener diodes"
+    subcircuits:
+      - dz5
+      - diode_zener_5v
+  
+  diode_substrate_variants:
+    description: "Substrate diodes"
+    subcircuits:
+      - diode_n_sub
+      - diode_p_sub
+  
+  resistor_metal_variants:
+    description: "Metal resistors"
+    subcircuits:
+      - res_metal1
+      - res_metal2
+  
+  ldmos_variants:
+    description: "LDMOS transistors"
+    subcircuits:
+      - nldmos_mac
+      - pldmos_mac
 
 # ============================================================================
-# Node Name Aliases (standard names)
+# Level 2 Groups (Groups of Level 1 Groups)
+# Higher-level categorization
+# ============================================================================
+level2_groups:
+  all_nmos:
+    description: "All NMOS transistors"
+    level1_groups:
+      - nmos_core_variants
+      - nmos_5v_variants
+      - nmos_hv_variants
+  
+  all_pmos:
+    description: "All PMOS transistors"
+    level1_groups:
+      - pmos_core_variants
+      - pmos_5v_variants
+      - pmos_hv_variants
+  
+  all_mosfets:
+    description: "All MOSFET transistors (NMOS + PMOS)"
+    level1_groups:
+      - nmos_core_variants
+      - nmos_5v_variants
+      - nmos_hv_variants
+      - pmos_core_variants
+      - pmos_5v_variants
+      - pmos_hv_variants
+  
+  all_capacitors:
+    description: "All capacitors"
+    level1_groups:
+      - capacitor_low_variants
+      - capacitor_mid_variants
+      - capacitor_high_variants
+  
+  all_diodes:
+    description: "All diodes"
+    level1_groups:
+      - diode_zener_variants
+      - diode_substrate_variants
+  
+  all_resistors:
+    description: "All resistors"
+    level1_groups:
+      - resistor_metal_variants
+  
+  all_ldmos:
+    description: "All LDMOS transistors"
+    level1_groups:
+      - ldmos_variants
+
+# ============================================================================
+# Node Name Aliases (for reference)
 # ============================================================================
 node_aliases:
   gate: g

@@ -1,5 +1,6 @@
 # Universal SOA Specification - Model/Monitor Agnostic
-# User-facing format that describes WHAT to check, not HOW
+# User-facing format: describes WHAT to check, not HOW
+# Users write actual subcircuit names or reference device groups
 version: "1.0"
 process: "SMOS10HV"
 date: "2024-12-16"
@@ -27,16 +28,17 @@ globals:
 
 # ============================================================================
 # SOA Rules - Device-Centric, Physics-Based
+# Users specify actual subcircuit names (or use device groups)
 # ============================================================================
 rules:
   # ==========================================================================
-  # Example 1: Simple Voltage Limit (Single Branch)
+  # Example 1: Simple Voltage Limit (Direct Subcircuit Names)
   # ==========================================================================
   - name: "Cap Low Oxide Risk"
     description: "Oxide breakdown protection for low-voltage capacitors"
     
     applies_to:
-      devices: [cap_low]
+      subcircuits: [cap_low_model]  # Direct subcircuit name
       
     check:
       type: voltage
@@ -51,13 +53,13 @@ rules:
     message: "Vtnw_OXrisk"
 
   # ==========================================================================
-  # Example 2: Multi-Branch Voltage Check
+  # Example 2: Multi-Branch Voltage Check (Multiple Subcircuits)
   # ==========================================================================
   - name: "NMOS Core Oxide Risk"
     description: "Gate oxide protection for core NMOS - checks multiple terminal voltages"
     
     applies_to:
-      devices: [nmos_core]
+      subcircuits: [nch_mac, nch_lvt_mac, nch_hvt_mac]  # Multiple subcircuits
       
     check:
       type: voltage
@@ -76,13 +78,36 @@ rules:
       time_limit: review
 
   # ==========================================================================
-  # Example 3: State-Dependent Voltage Check
+  # Example 3: Using Level 1 Group
+  # ==========================================================================
+  - name: "PMOS Core Oxide Risk"
+    description: "Gate oxide protection using device group"
+    
+    applies_to:
+      level1_group: pmos_core_variants  # References device_library.yaml
+      
+    check:
+      type: voltage
+      measure:
+        - signal: V(g,b)
+          message: "Vgb_OXrisk"
+        - signal: V(g,s)
+          message: "Vgs_OXrisk"
+          
+    limits:
+      steady:
+        min: -1.32
+        max: 1.32
+      time_limit: review
+
+  # ==========================================================================
+  # Example 4: State-Dependent Check
   # ==========================================================================
   - name: "NMOS Core State Dependent VDS"
     description: "Drain-source voltage limits depend on transistor state (on/off)"
     
     applies_to:
-      devices: [nmos_core]
+      subcircuits: [nch_mac, nch_lvt_mac, nch_hvt_mac]
       
     check:
       type: voltage
@@ -104,13 +129,13 @@ rules:
       threshold: 0.0
 
   # ==========================================================================
-  # Example 4: Temperature-Dependent Voltage Limit
+  # Example 5: Temperature-Dependent Limit
   # ==========================================================================
   - name: "Diode Forward Voltage Temperature"
     description: "Forward voltage varies linearly with temperature"
     
     applies_to:
-      devices: [diode_zener]
+      subcircuits: [dz5, diode_zener_5v]
       
     check:
       type: voltage
@@ -128,13 +153,13 @@ rules:
     message: "Vpn_temp"
 
   # ==========================================================================
-  # Example 5: Self-Heating Current Limits
+  # Example 6: Self-Heating Current Limits
   # ==========================================================================
   - name: "Metal-1 Resistor Self-Heating"
     description: "Current limits based on resistor width to prevent overheating"
     
     applies_to:
-      devices: [rm1]
+      subcircuits: [res_metal1]
       
     check:
       type: self_heating
@@ -162,13 +187,13 @@ rules:
           # Direct expression for complex formula
 
   # ==========================================================================
-  # Example 6: Aging Check (HCI/TDDB)
+  # Example 7: Aging Check (HCI/TDDB)
   # ==========================================================================
   - name: "PMOS 90V HCI/TDDB"
     description: "Hot carrier injection and time-dependent dielectric breakdown aging"
     
     applies_to:
-      devices: [pmos90]
+      subcircuits: [pch_90v_mac]
       
     check:
       type: aging
@@ -193,13 +218,13 @@ rules:
       time_limit: steady
 
   # ==========================================================================
-  # Example 7: Parameter Check
+  # Example 8: Parameter Check
   # ==========================================================================
   - name: "NMOS Core Threshold Voltage"
     description: "Ensure threshold voltage stays within acceptable bounds"
     
     applies_to:
-      devices: [nmos_core]
+      subcircuits: [nch_mac, nch_lvt_mac, nch_hvt_mac]
       
     check:
       type: parameter
@@ -213,13 +238,13 @@ rules:
       time_limit: steady
 
   # ==========================================================================
-  # Example 8: Multi-Level Time Limits
+  # Example 9: Using Level 2 Group
   # ==========================================================================
-  - name: "NMOS 5V Gate-Source Voltage"
-    description: "Different limits for steady-state vs transient conditions"
+  - name: "All NMOS Gate-Source Voltage"
+    description: "Apply to all NMOS variants using level 2 group"
     
     applies_to:
-      devices: [nmos_5v]
+      level2_group: all_nmos  # Expands to all NMOS subcircuits
       
     check:
       type: voltage
