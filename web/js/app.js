@@ -329,7 +329,8 @@ function updateBranchFields() {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="branch${i}Signal">Signal *</label>
-                        <input type="text" id="branch${i}Signal" placeholder="e.g., V(g,${i === 1 ? 'b' : i === 2 ? 's' : 'd'})" required>
+                        <input type="text" id="branch${i}Signal" class="signal-input" placeholder="e.g., V(g,${i === 1 ? 'b' : i === 2 ? 's' : 'd'})" required>
+                        <small class="node-hint"></small>
                     </div>
                     <div class="form-group">
                         <label for="branch${i}Message">Message</label>
@@ -340,6 +341,51 @@ function updateBranchFields() {
         `;
     }
     branchFields.innerHTML = html;
+}
+
+// Update node hints in signal input fields
+function updateNodeHints(commonNodes, exampleNodes) {
+    const hints = document.querySelectorAll('.node-hint');
+    const hintText = commonNodes.length > 0 
+        ? `Available nodes: ${commonNodes.join(', ')}`
+        : `Example nodes: ${exampleNodes.join(', ')} (may vary by device)`;
+    
+    hints.forEach(hint => {
+        hint.textContent = hintText;
+    });
+    
+    // Update signal measure field if it exists
+    const signalMeasure = document.getElementById('signalMeasure');
+    if (signalMeasure) {
+        const small = signalMeasure.nextElementSibling;
+        if (small && small.tagName === 'SMALL') {
+            small.textContent = hintText;
+        }
+    }
+}
+
+// Update parameter hints in parameter input fields
+function updateParameterHints(commonParams, exampleParams) {
+    const parameterName = document.getElementById('parameterName');
+    if (parameterName) {
+        const small = parameterName.nextElementSibling;
+        if (small && small.tagName === 'SMALL') {
+            const hintText = commonParams.length > 0
+                ? `Available parameters: ${commonParams.join(', ')}`
+                : `Example parameters: ${exampleParams.join(', ')} (may vary by device)`;
+            small.textContent = hintText;
+        }
+    }
+    
+    // Update self-heating current expression hints
+    const dcCurrentMax = document.getElementById('dcCurrentMax');
+    if (dcCurrentMax) {
+        const small = dcCurrentMax.nextElementSibling;
+        if (small && small.tagName === 'SMALL') {
+            const paramList = commonParams.length > 0 ? commonParams : exampleParams;
+            small.textContent = `Available parameters: ${paramList.map(p => '$' + p).join(', ')}`;
+        }
+    }
 }
 
 // Update limits configuration UI
@@ -467,6 +513,74 @@ function updateSelectedDevices() {
     }
     
     selectedDevicesDisplay.textContent = selected.length > 0 ? selected.join(', ') : 'None';
+    
+    // Update available nodes and parameters display
+    updateAvailableNodesAndParams(selected);
+}
+
+// Update available nodes and parameters based on selected devices
+function updateAvailableNodesAndParams(selectedDevices) {
+    const deviceInfoPanel = document.getElementById('deviceInfo');
+    const deviceInfoContent = document.getElementById('deviceInfoContent');
+    
+    if (selectedDevices.length === 0) {
+        deviceInfoPanel.style.display = 'none';
+        return;
+    }
+    
+    // Get device info for selected devices
+    const deviceInfos = selectedDevices.map(name => ({
+        name,
+        info: deviceLibrary.subcircuits[name]
+    })).filter(d => d.info);
+    
+    if (deviceInfos.length === 0) {
+        deviceInfoPanel.style.display = 'none';
+        return;
+    }
+    
+    // Find common nodes (intersection)
+    const allNodes = deviceInfos.map(d => d.info.nodes);
+    const commonNodes = allNodes.reduce((acc, nodes) => 
+        acc.filter(node => nodes.includes(node))
+    );
+    
+    // Find common parameters (intersection)
+    const allParams = deviceInfos.map(d => d.info.parameters || []);
+    const commonParams = allParams.reduce((acc, params) => 
+        acc.filter(param => params.includes(param))
+    );
+    
+    // Get device types
+    const deviceTypes = [...new Set(deviceInfos.map(d => d.info.type))];
+    
+    // Display device info
+    deviceInfoPanel.style.display = 'block';
+    deviceInfoContent.innerHTML = `
+        <div class="info-row">
+            <strong>Device Type:</strong> ${deviceTypes.join(', ')}
+        </div>
+        <div class="info-row">
+            <strong>Common Nodes:</strong> 
+            <span class="badge-list">${commonNodes.length > 0 ? commonNodes.map(n => `<span class="info-badge">${n}</span>`).join('') : 'Varies by device'}</span>
+        </div>
+        <div class="info-row">
+            <strong>Common Parameters:</strong> 
+            <span class="badge-list">${commonParams.length > 0 ? commonParams.map(p => `<span class="info-badge">$${p}</span>`).join('') : 'Varies by device'}</span>
+        </div>
+        ${deviceInfos.length === 1 ? `
+        <div class="info-row">
+            <strong>All Nodes:</strong> ${deviceInfos[0].info.nodes.join(', ')}
+        </div>
+        <div class="info-row">
+            <strong>All Parameters:</strong> ${(deviceInfos[0].info.parameters || []).join(', ')}
+        </div>
+        ` : ''}
+    `;
+    
+    // Update help text in form fields
+    updateNodeHints(commonNodes, deviceInfos[0].info.nodes);
+    updateParameterHints(commonParams, deviceInfos[0].info.parameters || []);
 }
 
 // Handle form submission
