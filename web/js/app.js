@@ -1,296 +1,445 @@
-// SOA Monitor Creator - JavaScript
+// SOA Rule Creator - JavaScript
+// Loads device and monitor libraries, generates universal YAML
 
 // State
-let monitors = [];
-let globalConfig = {
-    version: "1.0",
-    process: "SMOS10HV",
-    date: new Date().toISOString().split('T')[0],
-    global: {
-        timing: {
-            tmin: 0,
-            tdelay: 0,
-            vballmsg: 1.0,
-            stop: 0
-        },
-        tmaxfrac: {
-            level0: 0,
-            level1: 0.01,
-            level2: 0.10,
-            level3: -1
-        }
-    },
-    parameters: {
-        global_tmin: 0,
-        global_tdelay: 0,
-        global_vballmsg: 1.0,
-        global_stop: 0,
-        tmaxfrac0: 0,
-        tmaxfrac1: 0.01,
-        tmaxfrac2: 0.10,
-        tmaxfrac3: -1
-    }
-};
-
-// Monitor type configurations
-const monitorConfigs = {
-    ovcheck: {
-        name: "Single Branch Voltage Check",
-        params: [
-            { id: "vlow", label: "vlow", type: "text", placeholder: "-1.32" },
-            { id: "vhigh", label: "vhigh", type: "text", placeholder: "1.32" },
-            { id: "branch1", label: "branch1", type: "text", placeholder: 'V(t,nw)' },
-            { id: "message1", label: "message1", type: "text", placeholder: "Vtnw_OXrisk" }
-        ]
-    },
-    ovcheck6: {
-        name: "Multi-Branch Voltage Check",
-        params: [
-            { id: "vlow1", label: "vlow1", type: "text", placeholder: "-1.32" },
-            { id: "vhigh1", label: "vhigh1", type: "text", placeholder: "1.32" },
-            { id: "branch1", label: "branch1", type: "text", placeholder: 'V(g,b)' },
-            { id: "message1", label: "message1", type: "text", placeholder: "Vgb_OXrisk" },
-            { id: "vlow2", label: "vlow2", type: "text", placeholder: "-1.32" },
-            { id: "vhigh2", label: "vhigh2", type: "text", placeholder: "1.32" },
-            { id: "branch2", label: "branch2", type: "text", placeholder: 'V(g,s)' },
-            { id: "message2", label: "message2", type: "text", placeholder: "Vgs_OXrisk" },
-            { id: "vlow3", label: "vlow3", type: "text", placeholder: "-1.32" },
-            { id: "vhigh3", label: "vhigh3", type: "text", placeholder: "1.32" },
-            { id: "branch3", label: "branch3", type: "text", placeholder: 'V(g,d)' },
-            { id: "message3", label: "message3", type: "text", placeholder: "Vgd_OXrisk" }
-        ]
-    },
-    ovcheckva_mos2: {
-        name: "MOS State-Dependent Check",
-        params: [
-            { id: "vhigh_on", label: "vhigh_on", type: "text", placeholder: "1.84" },
-            { id: "vhigh_off", label: "vhigh_off", type: "text", placeholder: "3.0" },
-            { id: "vhigh_gc", label: "vhigh_gc", type: "text", placeholder: "2.07" },
-            { id: "vlow_gc", label: "vlow_gc", type: "text", placeholder: "-2.07" },
-            { id: "param", label: "param", type: "text", placeholder: "vth" },
-            { id: "vgt", label: "vgt", type: "text", placeholder: "0.0" }
-        ]
-    },
-    ovcheckva_pwl: {
-        name: "Piecewise Linear Check",
-        params: [
-            { id: "vlow", label: "vlow", type: "text", placeholder: '"-ap_fwd_ref - ap_fwd_T * (T - 25)"' },
-            { id: "vhigh", label: "vhigh", type: "text", placeholder: '"ap_fwd_ref + ap_fwd_T * (T - 25)"' },
-            { id: "branch1", label: "branch1", type: "text", placeholder: 'V(p,n)' },
-            { id: "message1", label: "message1", type: "text", placeholder: "Vpn_temp" }
-        ]
-    },
-    ovcheckva_ldmos_hci_tddb: {
-        name: "HCI/TDDB Aging Check",
-        params: [
-            { id: "atype", label: "atype", type: "text", placeholder: "atype" },
-            { id: "soa_hcitddb_a", label: "soa_hcitddb_a", type: "text", placeholder: "24" },
-            { id: "soa_hcitddb_b", label: "soa_hcitddb_b", type: "text", placeholder: "0.38" }
-        ]
-    },
-    parcheckva3: {
-        name: "Parameter Check",
-        params: [
-            { id: "param", label: "param", type: "text", placeholder: "vth" },
-            { id: "vgt", label: "vgt", type: "text", placeholder: "0.0" },
-            { id: "vlow", label: "vlow", type: "text", placeholder: "0.3" },
-            { id: "vhigh", label: "vhigh", type: "text", placeholder: "0.7" }
-        ]
-    }
-};
+let deviceLibrary = null;
+let monitorLibrary = null;
+let rules = [];
 
 // DOM Elements
-const monitorForm = document.getElementById('monitorForm');
-const monitorTypeSelect = document.getElementById('monitorType');
-const specificParamsDiv = document.getElementById('specificParams');
-const specificParamsContent = document.getElementById('specificParamsContent');
+const loading = document.getElementById('loading');
+const mainContent = document.getElementById('mainContent');
+const ruleForm = document.getElementById('ruleForm');
+const checkTypeSelect = document.getElementById('checkType');
+const checkTypeHelp = document.getElementById('checkTypeHelp');
+const deviceMethodRadios = document.getElementsByName('deviceMethod');
+const directSubcircuits = document.getElementById('directSubcircuits');
+const level1Groups = document.getElementById('level1Groups');
+const level2Groups = document.getElementById('level2Groups');
+const subcircuitList = document.getElementById('subcircuitList');
+const level1GroupSelect = document.getElementById('level1GroupSelect');
+const level2GroupSelect = document.getElementById('level2GroupSelect');
+const selectedDevicesDisplay = document.getElementById('selectedDevicesDisplay');
+const checkConfigContent = document.getElementById('checkConfigContent');
+const limitsConfig = document.getElementById('limitsConfig');
 const yamlPreview = document.getElementById('yamlPreview');
-const monitorList = document.getElementById('monitorList');
-const monitorCount = document.getElementById('monitorCount');
+const ruleListPanel = document.getElementById('ruleListPanel');
+const ruleList = document.getElementById('ruleList');
+const ruleCount = document.getElementById('ruleCount');
 
-// Event Listeners
-monitorTypeSelect.addEventListener('change', updateSpecificParams);
-monitorForm.addEventListener('submit', handleSubmit);
-document.getElementById('clearForm').addEventListener('click', clearForm);
-document.getElementById('copyYaml').addEventListener('click', copyYaml);
-document.getElementById('downloadYaml').addEventListener('click', downloadYaml);
+// Load libraries on page load
+window.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await loadLibraries();
+        initializeForm();
+        loading.style.display = 'none';
+        mainContent.style.display = 'grid';
+    } catch (error) {
+        loading.innerHTML = `<p style="color: red;">Error loading libraries: ${error.message}</p>`;
+    }
+});
 
-// Update specific parameters based on monitor type
-function updateSpecificParams() {
-    const monitorType = monitorTypeSelect.value;
+// Load device and monitor libraries
+async function loadLibraries() {
+    try {
+        // Load device library
+        const deviceResponse = await fetch('../config/device_library.yaml');
+        const deviceYaml = await deviceResponse.text();
+        deviceLibrary = jsyaml.load(deviceYaml);
+        
+        // Load monitor library
+        const monitorResponse = await fetch('../config/monitor_library.yaml');
+        const monitorYaml = await monitorResponse.text();
+        monitorLibrary = jsyaml.load(monitorYaml);
+        
+        console.log('Libraries loaded successfully');
+    } catch (error) {
+        throw new Error(`Failed to load libraries: ${error.message}`);
+    }
+}
+
+// Initialize form with library data
+function initializeForm() {
+    populateCheckTypes();
+    populateSubcircuits();
+    populateGroups();
+    setupEventListeners();
+}
+
+// Populate check types from monitor library
+function populateCheckTypes() {
+    const monitors = monitorLibrary.monitors;
     
-    if (!monitorType) {
-        specificParamsDiv.style.display = 'none';
-        return;
+    for (const [monitorType, config] of Object.entries(monitors)) {
+        const option = document.createElement('option');
+        option.value = monitorType;
+        option.textContent = `${monitorType} - ${config.description}`;
+        option.dataset.capabilities = JSON.stringify(config.capabilities);
+        checkTypeSelect.appendChild(option);
+    }
+}
+
+// Populate subcircuits list
+function populateSubcircuits() {
+    const subcircuits = deviceLibrary.subcircuits;
+    
+    // Group by type
+    const grouped = {};
+    for (const [name, info] of Object.entries(subcircuits)) {
+        const type = info.type;
+        if (!grouped[type]) grouped[type] = [];
+        grouped[type].push({ name, info });
     }
     
-    const config = monitorConfigs[monitorType];
-    if (!config) return;
+    // Create checkboxes grouped by type
+    for (const [type, items] of Object.entries(grouped)) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'checkbox-group';
+        
+        const groupLabel = document.createElement('div');
+        groupLabel.className = 'group-label';
+        groupLabel.textContent = type.toUpperCase();
+        groupDiv.appendChild(groupLabel);
+        
+        items.forEach(({ name, info }) => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = name;
+            checkbox.dataset.nodes = JSON.stringify(info.nodes);
+            checkbox.dataset.parameters = JSON.stringify(info.parameters);
+            
+            const span = document.createElement('span');
+            span.textContent = `${name} - ${info.description}`;
+            
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            groupDiv.appendChild(label);
+        });
+        
+        subcircuitList.appendChild(groupDiv);
+    }
+}
+
+// Populate group selects
+function populateGroups() {
+    // Level 1 groups
+    const level1 = deviceLibrary.level1_groups;
+    for (const [name, info] of Object.entries(level1)) {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = `${name} - ${info.description}`;
+        option.dataset.subcircuits = JSON.stringify(info.subcircuits);
+        level1GroupSelect.appendChild(option);
+    }
     
-    specificParamsDiv.style.display = 'block';
-    specificParamsContent.innerHTML = '';
+    // Level 2 groups
+    const level2 = deviceLibrary.level2_groups;
+    for (const [name, info] of Object.entries(level2)) {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = `${name} - ${info.description}`;
+        option.dataset.level1Groups = JSON.stringify(info.level1_groups);
+        level2GroupSelect.appendChild(option);
+    }
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    checkTypeSelect.addEventListener('change', onCheckTypeChange);
     
-    config.params.forEach(param => {
-        const formGroup = document.createElement('div');
-        formGroup.className = 'form-group';
-        
-        const label = document.createElement('label');
-        label.setAttribute('for', param.id);
-        label.textContent = param.label;
-        
-        const input = document.createElement('input');
-        input.type = param.type;
-        input.id = param.id;
-        input.placeholder = param.placeholder;
-        
-        formGroup.appendChild(label);
-        formGroup.appendChild(input);
-        specificParamsContent.appendChild(formGroup);
+    deviceMethodRadios.forEach(radio => {
+        radio.addEventListener('change', onDeviceMethodChange);
     });
+    
+    subcircuitList.addEventListener('change', updateSelectedDevices);
+    level1GroupSelect.addEventListener('change', updateSelectedDevices);
+    level2GroupSelect.addEventListener('change', updateSelectedDevices);
+    
+    ruleForm.addEventListener('submit', handleSubmit);
+    document.getElementById('clearForm').addEventListener('click', clearForm);
+    document.getElementById('copyYaml').addEventListener('click', copyYaml);
+    document.getElementById('downloadYaml').addEventListener('click', downloadYaml);
+}
+
+// Handle check type change
+function onCheckTypeChange() {
+    const monitorType = checkTypeSelect.value;
+    if (!monitorType) return;
+    
+    const config = monitorLibrary.monitors[monitorType];
+    checkTypeHelp.textContent = config.description;
+    
+    // Update check config based on type
+    updateCheckConfig(monitorType, config);
+    updateLimitsConfig(monitorType, config);
+}
+
+// Update check configuration UI
+function updateCheckConfig(monitorType, config) {
+    checkConfigContent.innerHTML = '';
+    
+    if (config.capabilities.includes('voltage_check')) {
+        checkConfigContent.innerHTML = `
+            <div class="form-group">
+                <label for="signalMeasure">Signal to Measure *</label>
+                <input type="text" id="signalMeasure" placeholder="e.g., V(g,s)" required>
+                <small>Available nodes will be shown based on selected devices</small>
+            </div>
+            <div class="form-group">
+                <label for="signalMessage">Message</label>
+                <input type="text" id="signalMessage" placeholder="e.g., Vgs_OXrisk">
+            </div>
+        `;
+    } else if (config.capabilities.includes('parameter_check')) {
+        checkConfigContent.innerHTML = `
+            <div class="form-group">
+                <label for="parameterName">Parameter Name *</label>
+                <input type="text" id="parameterName" placeholder="e.g., vth" required>
+                <small>Available parameters will be shown based on selected devices</small>
+            </div>
+        `;
+    } else if (config.capabilities.includes('aging_check')) {
+        checkConfigContent.innerHTML = `
+            <div class="form-group">
+                <label>Aging Mechanism</label>
+                <select id="agingMechanism">
+                    <option value="hci_tddb">HCI/TDDB</option>
+                </select>
+            </div>
+        `;
+    }
+}
+
+// Update limits configuration UI
+function updateLimitsConfig(monitorType, config) {
+    limitsConfig.innerHTML = '';
+    
+    if (config.capabilities.includes('voltage_check') || config.capabilities.includes('current_check')) {
+        limitsConfig.innerHTML = `
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="limitMin">Minimum</label>
+                    <input type="number" id="limitMin" step="any" placeholder="e.g., -1.32">
+                </div>
+                <div class="form-group">
+                    <label for="limitMax">Maximum</label>
+                    <input type="number" id="limitMax" step="any" placeholder="e.g., 1.32">
+                </div>
+            </div>
+        `;
+    } else if (config.capabilities.includes('state_dependent')) {
+        limitsConfig.innerHTML = `
+            <div class="form-group">
+                <label for="limitOnMax">Maximum (ON state)</label>
+                <input type="number" id="limitOnMax" step="any" placeholder="e.g., 1.84">
+            </div>
+            <div class="form-group">
+                <label for="limitOffMax">Maximum (OFF state)</label>
+                <input type="number" id="limitOffMax" step="any" placeholder="e.g., 3.0">
+            </div>
+        `;
+    } else if (config.capabilities.includes('parameter_check')) {
+        limitsConfig.innerHTML = `
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="paramMin">Minimum</label>
+                    <input type="number" id="paramMin" step="any" placeholder="e.g., 0.3">
+                </div>
+                <div class="form-group">
+                    <label for="paramMax">Maximum</label>
+                    <input type="number" id="paramMax" step="any" placeholder="e.g., 0.7">
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Handle device method change
+function onDeviceMethodChange() {
+    const method = document.querySelector('input[name="deviceMethod"]:checked').value;
+    
+    directSubcircuits.style.display = method === 'direct' ? 'block' : 'none';
+    level1Groups.style.display = method === 'level1' ? 'block' : 'none';
+    level2Groups.style.display = method === 'level2' ? 'block' : 'none';
+    
+    updateSelectedDevices();
+}
+
+// Update selected devices display
+function updateSelectedDevices() {
+    const method = document.querySelector('input[name="deviceMethod"]:checked').value;
+    let selected = [];
+    
+    if (method === 'direct') {
+        const checkboxes = subcircuitList.querySelectorAll('input[type="checkbox"]:checked');
+        selected = Array.from(checkboxes).map(cb => cb.value);
+    } else if (method === 'level1') {
+        const groupName = level1GroupSelect.value;
+        if (groupName) {
+            const option = level1GroupSelect.selectedOptions[0];
+            selected = JSON.parse(option.dataset.subcircuits);
+        }
+    } else if (method === 'level2') {
+        const groupName = level2GroupSelect.value;
+        if (groupName) {
+            const option = level2GroupSelect.selectedOptions[0];
+            const level1Groups = JSON.parse(option.dataset.level1Groups);
+            // Expand level1 groups to subcircuits
+            level1Groups.forEach(l1 => {
+                const l1Data = deviceLibrary.level1_groups[l1];
+                if (l1Data) selected.push(...l1Data.subcircuits);
+            });
+        }
+    }
+    
+    selectedDevicesDisplay.textContent = selected.length > 0 ? selected.join(', ') : 'None';
 }
 
 // Handle form submission
 function handleSubmit(e) {
     e.preventDefault();
     
-    const monitorType = document.getElementById('monitorType').value;
-    const config = monitorConfigs[monitorType];
+    const method = document.querySelector('input[name="deviceMethod"]:checked').value;
+    const checkType = checkTypeSelect.value;
     
-    // Collect common parameters
-    const monitor = {
-        name: document.getElementById('monitorName').value,
-        monitor_type: monitorType,
-        model_name: document.getElementById('modelName').value,
-        section: document.getElementById('section').value,
-        device_pattern: document.getElementById('devicePattern').value,
-        parameters: {
-            tmin: document.getElementById('tmin').value,
-            tdelay: document.getElementById('tdelay').value,
-            vballmsg: document.getElementById('vballmsg').value,
-            stop: document.getElementById('stop').value
-        }
+    // Build rule object
+    const rule = {
+        name: document.getElementById('ruleName').value,
+        description: document.getElementById('ruleDescription').value,
+        applies_to: {},
+        check: {
+            type: mapCheckType(checkType)
+        },
+        limits: {}
     };
     
-    // Add tmaxfrac if specified
-    const tmaxfrac = document.getElementById('tmaxfrac').value;
-    if (tmaxfrac) {
-        monitor.parameters.tmaxfrac = tmaxfrac;
+    // Add device selection
+    if (method === 'direct') {
+        const checkboxes = subcircuitList.querySelectorAll('input[type="checkbox"]:checked');
+        rule.applies_to.subcircuits = Array.from(checkboxes).map(cb => cb.value);
+    } else if (method === 'level1') {
+        rule.applies_to.level1_group = level1GroupSelect.value;
+    } else if (method === 'level2') {
+        rule.applies_to.level2_group = level2GroupSelect.value;
     }
     
-    // Collect monitor-specific parameters
-    config.params.forEach(param => {
-        const value = document.getElementById(param.id).value;
-        if (value) {
-            monitor.parameters[param.id] = value;
-        }
-    });
+    // Add check configuration
+    const signalMeasure = document.getElementById('signalMeasure');
+    if (signalMeasure) {
+        rule.check.measure = signalMeasure.value;
+    }
     
-    // Add to monitors list
-    monitors.push(monitor);
+    const signalMessage = document.getElementById('signalMessage');
+    if (signalMessage && signalMessage.value) {
+        rule.message = signalMessage.value;
+    }
     
-    // Update UI
-    updateMonitorList();
+    // Add limits
+    const timeLimit = document.getElementById('timeLimit').value;
+    rule.limits.time_limit = timeLimit;
+    
+    const limitMin = document.getElementById('limitMin');
+    const limitMax = document.getElementById('limitMax');
+    if (limitMin || limitMax) {
+        rule.limits.steady = {};
+        if (limitMin && limitMin.value) rule.limits.steady.min = parseFloat(limitMin.value);
+        if (limitMax && limitMax.value) rule.limits.steady.max = parseFloat(limitMax.value);
+    }
+    
+    // Add rule to list
+    rules.push(rule);
+    updateRuleList();
     updateYamlPreview();
     clearForm();
     
-    // Show success message
-    alert('Monitor added successfully!');
+    alert('Rule added successfully!');
+}
+
+// Map check type to universal type
+function mapCheckType(monitorType) {
+    const config = monitorLibrary.monitors[monitorType];
+    if (config.capabilities.includes('voltage_check')) return 'voltage';
+    if (config.capabilities.includes('current_check')) return 'current';
+    if (config.capabilities.includes('parameter_check')) return 'parameter';
+    if (config.capabilities.includes('aging_check')) return 'aging';
+    return 'voltage';
 }
 
 // Clear form
 function clearForm() {
-    monitorForm.reset();
-    specificParamsDiv.style.display = 'none';
-    specificParamsContent.innerHTML = '';
+    ruleForm.reset();
+    checkConfigContent.innerHTML = '';
+    limitsConfig.innerHTML = '';
+    checkTypeHelp.textContent = '';
 }
 
-// Update monitor list
-function updateMonitorList() {
-    monitorCount.textContent = monitors.length;
+// Update rule list
+function updateRuleList() {
+    ruleCount.textContent = rules.length;
     
-    if (monitors.length === 0) {
-        monitorList.innerHTML = '<p class="empty-state">No monitors added yet. Use the form above to create monitors.</p>';
+    if (rules.length === 0) {
+        ruleList.innerHTML = '<p class="empty-state">No rules added yet. Use the form above to create rules.</p>';
+        ruleListPanel.style.display = 'none';
         return;
     }
     
-    monitorList.innerHTML = monitors.map((monitor, index) => `
-        <div class="monitor-item">
-            <div class="monitor-header">
-                <h4>${monitor.name}</h4>
-                <button class="btn btn-small btn-danger" onclick="removeMonitor(${index})">Remove</button>
+    ruleListPanel.style.display = 'block';
+    ruleList.innerHTML = rules.map((rule, index) => `
+        <div class="rule-item">
+            <div class="rule-header">
+                <h4>${rule.name}</h4>
+                <button class="btn btn-small btn-danger" onclick="removeRule(${index})">Remove</button>
             </div>
-            <div class="monitor-details">
-                <span class="badge">${monitor.monitor_type}</span>
-                <span class="detail">Model: ${monitor.model_name}</span>
-                <span class="detail">Device: ${monitor.device_pattern}</span>
+            <div class="rule-details">
+                <span class="badge">${rule.check.type}</span>
+                <span class="detail">Devices: ${getDeviceDisplay(rule.applies_to)}</span>
             </div>
         </div>
     `).join('');
 }
 
-// Remove monitor
-function removeMonitor(index) {
-    monitors.splice(index, 1);
-    updateMonitorList();
+// Get device display text
+function getDeviceDisplay(appliesTo) {
+    if (appliesTo.subcircuits) return appliesTo.subcircuits.join(', ');
+    if (appliesTo.level1_group) return `Level1: ${appliesTo.level1_group}`;
+    if (appliesTo.level2_group) return `Level2: ${appliesTo.level2_group}`;
+    return 'Unknown';
+}
+
+// Remove rule
+function removeRule(index) {
+    rules.splice(index, 1);
+    updateRuleList();
     updateYamlPreview();
 }
 
 // Update YAML preview
 function updateYamlPreview() {
-    const yaml = generateYaml();
-    yamlPreview.textContent = yaml;
-}
-
-// Generate YAML
-function generateYaml() {
-    let yaml = `version: "${globalConfig.version}"\n`;
-    yaml += `process: "${globalConfig.process}"\n`;
-    yaml += `date: "${globalConfig.date}"\n\n`;
+    const doc = {
+        version: "1.0",
+        process: "SMOS10HV",
+        date: new Date().toISOString().split('T')[0],
+        globals: {
+            timing: {
+                tmin: 0,
+                tdelay: 0,
+                vballmsg: 1.0,
+                stop: 0
+            },
+            time_limits: {
+                steady: 0,
+                transient_1pct: 0.01,
+                transient_10pct: 0.10,
+                review: -1
+            }
+        },
+        rules: rules
+    };
     
-    yaml += `global:\n`;
-    yaml += `  timing:\n`;
-    yaml += `    tmin: ${globalConfig.global.timing.tmin}\n`;
-    yaml += `    tdelay: ${globalConfig.global.timing.tdelay}\n`;
-    yaml += `    vballmsg: ${globalConfig.global.timing.vballmsg}\n`;
-    yaml += `    stop: ${globalConfig.global.timing.stop}\n`;
-    yaml += `  tmaxfrac:\n`;
-    yaml += `    level0: ${globalConfig.global.tmaxfrac.level0}\n`;
-    yaml += `    level1: ${globalConfig.global.tmaxfrac.level1}\n`;
-    yaml += `    level2: ${globalConfig.global.tmaxfrac.level2}\n`;
-    yaml += `    level3: ${globalConfig.global.tmaxfrac.level3}\n\n`;
-    
-    yaml += `parameters:\n`;
-    Object.entries(globalConfig.parameters).forEach(([key, value]) => {
-        yaml += `  ${key}: ${value}\n`;
-    });
-    yaml += `\n`;
-    
-    yaml += `monitors:\n`;
-    
-    if (monitors.length === 0) {
-        yaml += `  # Add monitors using the form\n`;
-    } else {
-        monitors.forEach(monitor => {
-            yaml += `  - name: "${monitor.name}"\n`;
-            yaml += `    monitor_type: ${monitor.monitor_type}\n`;
-            yaml += `    model_name: ${monitor.model_name}\n`;
-            yaml += `    section: ${monitor.section}\n`;
-            yaml += `    device_pattern: "${monitor.device_pattern}"\n`;
-            yaml += `    parameters:\n`;
-            
-            Object.entries(monitor.parameters).forEach(([key, value]) => {
-                // Check if value needs quotes
-                if (typeof value === 'string' && (value.includes(' ') || value.includes('(') || value.includes('"'))) {
-                    yaml += `      ${key}: "${value}"\n`;
-                } else {
-                    yaml += `      ${key}: ${value}\n`;
-                }
-            });
-            yaml += `\n`;
-        });
-    }
-    
-    return yaml;
+    yamlPreview.textContent = jsyaml.dump(doc, { indent: 2, lineWidth: -1 });
 }
 
 // Copy YAML to clipboard
@@ -311,12 +460,9 @@ function downloadYaml() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `soa_monitors_${globalConfig.date}.yaml`;
+    a.download = `soa_rules_${new Date().toISOString().split('T')[0]}.yaml`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
-
-// Initialize
-updateYamlPreview();

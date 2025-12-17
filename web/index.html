@@ -3,107 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOA Monitor Creator</title>
+    <title>SOA Rule Creator</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- js-yaml library for YAML parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🔧 SOA Monitor Creator</h1>
-            <p>Create Safe Operating Area monitors based on Verilog-A implementations</p>
-            <p class="header-note">Direct mapping to Spectre monitor models</p>
+            <h1>🔧 SOA Rule Creator</h1>
+            <p>Create universal SOA rules - model and monitor agnostic</p>
+            <p class="header-note">Generate YAML specifications from device and monitor libraries</p>
         </header>
 
-        <div class="main-content">
-            <!-- Left Panel: Monitor Form -->
+        <div class="loading" id="loading">
+            <p>Loading device and monitor libraries...</p>
+        </div>
+
+        <div class="main-content" id="mainContent" style="display: none;">
+            <!-- Left Panel: Rule Form -->
             <div class="panel form-panel">
-                <h2>Create New Monitor</h2>
+                <h2>Create New SOA Rule</h2>
                 
-                <form id="monitorForm">
-                    <!-- Basic Information -->
+                <form id="ruleForm">
+                    <!-- Step 1: Basic Information -->
                     <div class="form-section">
-                        <h3>Basic Information</h3>
+                        <h3>Step 1: Basic Information</h3>
                         
                         <div class="form-group">
-                            <label for="monitorName">Monitor Name *</label>
-                            <input type="text" id="monitorName" placeholder="e.g., Cap Low Oxide Risk" required>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="monitorType">Monitor Type *</label>
-                                <select id="monitorType" required>
-                                    <option value="">Select monitor type...</option>
-                                    <option value="ovcheck">ovcheck - Single branch voltage check</option>
-                                    <option value="ovcheck6">ovcheck6 - Multi-branch voltage check (up to 6)</option>
-                                    <option value="ovcheckva_mos2">ovcheckva_mos2 - MOS state-dependent check</option>
-                                    <option value="ovcheckva_pwl">ovcheckva_pwl - Piecewise linear check</option>
-                                    <option value="ovcheckva_ldmos_hci_tddb">ovcheckva_ldmos_hci_tddb - HCI/TDDB aging</option>
-                                    <option value="parcheckva3">parcheckva3 - Parameter check</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="modelName">Model Name *</label>
-                                <input type="text" id="modelName" placeholder="e.g., ovcheck_cap_low_oxrisk" required>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="section">Section Name *</label>
-                                <input type="text" id="section" placeholder="e.g., soacheck_cap_low_oxrisk_shared" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="devicePattern">Device Pattern *</label>
-                                <input type="text" id="devicePattern" placeholder="e.g., cap_low, nmos_core" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Common Parameters -->
-                    <div class="form-section">
-                        <h3>Common Parameters</h3>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="tmin">tmin</label>
-                                <input type="text" id="tmin" value="global_tmin">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="tdelay">tdelay</label>
-                                <input type="text" id="tdelay" value="global_tdelay">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="vballmsg">vballmsg</label>
-                                <input type="text" id="vballmsg" value="global_vballmsg">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="stop">stop</label>
-                                <input type="text" id="stop" value="global_stop">
-                            </div>
+                            <label for="ruleName">Rule Name *</label>
+                            <input type="text" id="ruleName" placeholder="e.g., NMOS Core Oxide Risk" required>
                         </div>
 
                         <div class="form-group">
-                            <label for="tmaxfrac">tmaxfrac (optional)</label>
-                            <input type="text" id="tmaxfrac" placeholder="e.g., tmaxfrac0, tmaxfrac3">
+                            <label for="ruleDescription">Description</label>
+                            <textarea id="ruleDescription" rows="2" placeholder="Brief description of this SOA rule"></textarea>
                         </div>
                     </div>
 
-                    <!-- Monitor-Specific Parameters (Dynamic) -->
-                    <div id="specificParams" class="form-section" style="display: none;">
-                        <h3>Monitor-Specific Parameters</h3>
-                        <div id="specificParamsContent"></div>
+                    <!-- Step 2: Select Check Type -->
+                    <div class="form-section">
+                        <h3>Step 2: Select Check Type</h3>
+                        
+                        <div class="form-group">
+                            <label for="checkType">Check Type *</label>
+                            <select id="checkType" required>
+                                <option value="">Select check type...</option>
+                            </select>
+                            <small id="checkTypeHelp" class="help-text"></small>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Select Devices -->
+                    <div class="form-section">
+                        <h3>Step 3: Select Devices/Subcircuits</h3>
+                        
+                        <div class="form-group">
+                            <label>Selection Method</label>
+                            <div class="radio-group">
+                                <label>
+                                    <input type="radio" name="deviceMethod" value="direct" checked>
+                                    Direct Subcircuits
+                                </label>
+                                <label>
+                                    <input type="radio" name="deviceMethod" value="level1">
+                                    Level 1 Group
+                                </label>
+                                <label>
+                                    <input type="radio" name="deviceMethod" value="level2">
+                                    Level 2 Group
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Direct Subcircuits -->
+                        <div id="directSubcircuits" class="device-selection">
+                            <label>Select Subcircuits *</label>
+                            <div id="subcircuitList" class="checkbox-list"></div>
+                        </div>
+
+                        <!-- Level 1 Group -->
+                        <div id="level1Groups" class="device-selection" style="display: none;">
+                            <label>Select Level 1 Group *</label>
+                            <select id="level1GroupSelect">
+                                <option value="">Select group...</option>
+                            </select>
+                        </div>
+
+                        <!-- Level 2 Group -->
+                        <div id="level2Groups" class="device-selection" style="display: none;">
+                            <label>Select Level 2 Group *</label>
+                            <select id="level2GroupSelect">
+                                <option value="">Select group...</option>
+                            </select>
+                        </div>
+
+                        <div class="selected-devices">
+                            <strong>Selected:</strong> <span id="selectedDevicesDisplay">None</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Configure Check -->
+                    <div class="form-section" id="checkConfig">
+                        <h3>Step 4: Configure Check</h3>
+                        <div id="checkConfigContent">
+                            <!-- Dynamic content based on check type -->
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Set Limits -->
+                    <div class="form-section">
+                        <h3>Step 5: Set Limits</h3>
+                        
+                        <div class="form-group">
+                            <label>Time Limit</label>
+                            <select id="timeLimit">
+                                <option value="steady">Steady State (never exceed)</option>
+                                <option value="transient_1pct">Transient 1% (0.01 of time)</option>
+                                <option value="transient_10pct">Transient 10% (0.10 of time)</option>
+                                <option value="review">Review Only (-1)</option>
+                            </select>
+                        </div>
+
+                        <div id="limitsConfig">
+                            <!-- Dynamic content based on check type -->
+                        </div>
                     </div>
 
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Add Monitor</button>
+                        <button type="submit" class="btn btn-primary">Add Rule</button>
                         <button type="button" class="btn btn-secondary" id="clearForm">Clear Form</button>
                     </div>
                 </form>
@@ -112,7 +140,7 @@
             <!-- Right Panel: YAML Preview -->
             <div class="panel preview-panel">
                 <div class="panel-header">
-                    <h2>YAML Preview</h2>
+                    <h2>Universal YAML Preview</h2>
                     <div class="panel-actions">
                         <button class="btn btn-small" id="copyYaml">Copy</button>
                         <button class="btn btn-small" id="downloadYaml">Download</button>
@@ -123,39 +151,29 @@
 process: "SMOS10HV"
 date: "2024-12-16"
 
-global:
+globals:
   timing:
     tmin: 0
     tdelay: 0
     vballmsg: 1.0
     stop: 0
-  tmaxfrac:
-    level0: 0
-    level1: 0.01
-    level2: 0.10
-    level3: -1
+  time_limits:
+    steady: 0
+    transient_1pct: 0.01
+    transient_10pct: 0.10
+    review: -1
 
-parameters:
-  global_tmin: 0
-  global_tdelay: 0
-  global_vballmsg: 1.0
-  global_stop: 0
-  tmaxfrac0: 0
-  tmaxfrac1: 0.01
-  tmaxfrac2: 0.10
-  tmaxfrac3: -1
-
-monitors:
-  # Add monitors using the form
+rules:
+  # Add rules using the form
 </pre>
             </div>
         </div>
 
-        <!-- Monitor List -->
-        <div class="panel list-panel">
-            <h2>Added Monitors (<span id="monitorCount">0</span>)</h2>
-            <div id="monitorList" class="monitor-list">
-                <p class="empty-state">No monitors added yet. Use the form above to create monitors.</p>
+        <!-- Rule List -->
+        <div class="panel list-panel" id="ruleListPanel" style="display: none;">
+            <h2>Added Rules (<span id="ruleCount">0</span>)</h2>
+            <div id="ruleList" class="rule-list">
+                <p class="empty-state">No rules added yet. Use the form above to create rules.</p>
             </div>
         </div>
     </div>
